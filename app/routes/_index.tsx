@@ -1,5 +1,48 @@
 import type { MetaFunction } from "@remix-run/node";
 
+import React, { useRef, useState } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+
+import { json } from "@remix-run/node";
+import { loadXMLAsJSON } from "~/functions/loadXMLAsJSON";
+
+import { useLoaderData } from "@remix-run/react";
+
+export const loader = async ({ params }: any) => {
+  const { filename } = params; // Access the dynamic parameter
+  const filePath = `path/to/your/xmlfiles/${filename}.xml`; // Construct the file path
+
+  // Use the function to load and convert the XML
+  const jsonData = await loadXMLAsJSON(filePath);
+
+  // Return the JSON data as a response
+  return json(jsonData);
+};
+
+function Box(props: any) {
+  // This reference will give us direct access to the mesh
+  const meshRef = useRef();
+  // Set up state for the hovered and active state
+  const [hovered, setHover] = useState(false);
+  const [active, setActive] = useState(false);
+  // Subscribe this component to the render-loop, rotate the mesh every frame
+  useFrame((state, delta) => (meshRef.current.rotation.x += delta));
+  // Return view, these are regular three.js elements expressed in JSX
+  return (
+    <mesh
+      {...props}
+      ref={meshRef}
+      scale={active ? 1.5 : 1}
+      onClick={(event) => setActive(!active)}
+      onPointerOver={(event) => setHover(true)}
+      onPointerOut={(event) => setHover(false)}
+    >
+      <boxGeometry args={[1, 1, 1]} />
+      <meshStandardMaterial color={hovered ? "hotpink" : "orange"} />
+    </mesh>
+  );
+}
+
 export const meta: MetaFunction = () => {
   return [
     { title: "New Remix App" },
@@ -8,34 +51,28 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Index() {
+  const [cursor, setCursor] = useState("default");
+
+  const data = useLoaderData();
+
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.8" }}>
-      <h1>Welcome to Remix</h1>
-      <ul>
-        <li>
-          <a
-            target="_blank"
-            href="https://remix.run/tutorials/blog"
-            rel="noreferrer"
-          >
-            15m Quickstart Blog Tutorial
-          </a>
-        </li>
-        <li>
-          <a
-            target="_blank"
-            href="https://remix.run/tutorials/jokes"
-            rel="noreferrer"
-          >
-            Deep Dive Jokes App Tutorial
-          </a>
-        </li>
-        <li>
-          <a target="_blank" href="https://remix.run/docs" rel="noreferrer">
-            Remix Docs
-          </a>
-        </li>
-      </ul>
+    <div id="canvas-container" style={{ cursor: cursor }}>
+      <Canvas>
+        <ambientLight intensity={Math.PI / 2} />
+        <spotLight
+          position={[10, 10, 10]}
+          angle={0.15}
+          penumbra={1}
+          decay={0}
+          intensity={Math.PI}
+        />
+        <pointLight position={[-10, -10, -10]} decay={0} intensity={Math.PI} />
+        <Box position={[-1.2, 0, 0]} />
+        <Box position={[1.2, 0, 0]} />
+      </Canvas>
+      <div>
+        <pre>{JSON.stringify(data, null, 2)}</pre>
+      </div>
     </div>
   );
 }
