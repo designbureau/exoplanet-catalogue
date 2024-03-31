@@ -3,22 +3,6 @@ import type { MetaFunction } from "@remix-run/node";
 import React, { useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 
-import { json } from "@remix-run/node";
-import { loadXMLAsJSON } from "~/functions/loadXMLAsJSON";
-
-import { useLoaderData } from "@remix-run/react";
-
-export const loader = async ({ params }: any) => {
-  const { filename } = params; // Access the dynamic parameter
-  const filePath = `path/to/your/xmlfiles/${filename}.xml`; // Construct the file path
-
-  // Use the function to load and convert the XML
-  const jsonData = await loadXMLAsJSON(filePath);
-
-  // Return the JSON data as a response
-  return json(jsonData);
-};
-
 function Box(props: any) {
   // This reference will give us direct access to the mesh
   const meshRef = useRef();
@@ -53,8 +37,6 @@ export const meta: MetaFunction = () => {
 export default function Index() {
   const [cursor, setCursor] = useState("default");
 
-  const data = useLoaderData();
-
   return (
     <div id="canvas-container" style={{ cursor: cursor }}>
       <Canvas>
@@ -70,9 +52,6 @@ export default function Index() {
         <Box position={[-1.2, 0, 0]} />
         <Box position={[1.2, 0, 0]} />
       </Canvas>
-      <div>
-        <pre>{JSON.stringify(data, null, 2)}</pre>
-      </div>
     </div>
   );
 }
