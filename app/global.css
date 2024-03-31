@@ -23,3 +23,45 @@ body {
   background: rgba(var(--background-black), 1);
   font-size: 100%;
 }
+
+* {
+  font-size: 10px;
+}
+
+.star {
+  background-color: yellow;
+  border-radius: 100000px;
+  width: 100%;
+  max-width: 500px;
+  height: auto;
+  aspect-ratio: 1/1;
+  color: black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+.planet {
+  background-color: blue;
+  color: white;
+  border-radius: 100000px;
+  width: 100%;
+  max-width: 50px;
+  height: auto;
+  aspect-ratio: 1/1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.binary {
+  margin: 20px auto;
+  border: 1px solid white;
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+}

@@ -9,7 +9,7 @@ export async function loadXMLAsJSON(filePath: string) {
 
     // Convert XML to JSON
     const result = await parseStringPromise(xmlData, {
-      explicitArray: false,
+      explicitArray: true,
       ignoreAttrs: true,
     });
 
