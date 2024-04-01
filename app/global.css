@@ -65,3 +65,33 @@ body {
   justify-content: center;
   align-items: center;
 }
+
+.navigation {
+  position: fixed;
+  z-index: 99;
+  display: grid;
+  height: 100vh;
+  transform: translateX(-100%);
+  transition: all 0.25s linear;
+  background: rgba(var(--background-darker), 0.9);
+  border-right: 1px solid rgba(var(--border), 0.9);
+  color: var(--text);
+  width: 100%;
+  max-width: clamp(200px, calc(100vw - 60px), 300px);
+}
+
+.navigationToggle {
+  position: absolute;
+  transform: translateX(100%);
+  background: rgba(var(--background-darker), 0.9);
+  border: 1px solid rgba(var(--border), 0.9);
+  border-left: none;
+  border-radius: 0 4px 4px 0;
+  width: 60px;
+  height: 60px;
+  right: 1px;
+}
+
+.navigation.active {
+  transform: translateX(0);
+}

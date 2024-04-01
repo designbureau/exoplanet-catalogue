@@ -4,7 +4,7 @@ import { RefContext } from "./RefContext";
 const Menu = ({ data }) => {
   if (!data) return;
 
-  console.log({ data });
+  // console.log({ data });
 
   const { refs } = useContext(RefContext);
 
@@ -13,7 +13,7 @@ const Menu = ({ data }) => {
   };
 
   const generateMenuItems = (items, isBinary) => {
-    console.log({ items });
+    // console.log({ items });
 
     return items.map((item, index) => {
       const name = item.name ? item.name[0] : "Unnamed";
@@ -37,7 +37,7 @@ const Menu = ({ data }) => {
   };
 
   return (
-    <nav>
+    <nav className="fixed right-0 bottom-0 z-10">
       <ul>
         {data.star
           ? generateMenuItems(data.star)
