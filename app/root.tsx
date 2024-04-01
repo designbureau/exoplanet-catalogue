@@ -9,6 +9,7 @@ import {
 import type { LinksFunction } from "@remix-run/node";
 import tailwind from "~/tailwind.css?url";
 import global from "~/global.css?url";
+import SystemMenu from "~/components/SystemMenu";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: tailwind },
@@ -25,6 +26,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
+        {/* <SystemMenu/> */}
         {children}
         <ScrollRestoration />
         <Scripts />
