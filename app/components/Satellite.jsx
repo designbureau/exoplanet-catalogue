@@ -1,11 +1,10 @@
 import { useRef, useContext, useEffect } from "react";
 import { RefContext } from "./RefContext";
-import Sattelite from "./Satellite";
 
-const Planet = ({ data }) => {
+const Satellite = ({ data }) => {
   const ref = useRef();
   const { addRef } = useContext(RefContext);
-  const name = data.name ? data.name[0] : "Unnamed planet";
+  const name = data.name ? data.name[0] : "Unnamed satellite";
 
   useEffect(() => {
     addRef(name, ref);
@@ -13,7 +12,7 @@ const Planet = ({ data }) => {
 
   return (
     <div
-      className="planet"
+      className="satellite"
       ref={ref}
       data-name={name}
       onClick={(e) => {
@@ -21,14 +20,10 @@ const Planet = ({ data }) => {
         console.log(ref.current);
       }}
     >
-      {/* <p>Planet: {name}</p> */}
+      {/* <p>Satellite: {name}</p> */}
       {/* Render other properties as needed */}
-      {/* {data.satellite &&
-        data.satellite.map((satellite, index) => (
-          <Sattelite key={index} data={satellite} />
-        ))} */}
     </div>
   );
 };
 
-export default Planet;
+export default Satellite;

@@ -46,9 +46,15 @@ const App = ({ data }: any) => {
 
   return (
     <RefProvider>
-      <Menu data={data} />
-      <Binary data={data} />
-      {/* <pre>{JSON.stringify(data, null, 2)}</pre> */}
+      <div className="w-full h-svh flex justify-center items-center">
+        <Menu data={data} />
+        <Binary data={data} />
+      </div>
+      <div className="max-w-5xl">
+        <pre className=" whitespace-pre-wrap ">
+          {JSON.stringify(data, null, 2)}
+        </pre>
+      </div>
     </RefProvider>
   );
 };

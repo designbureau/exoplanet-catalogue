@@ -40,6 +40,8 @@ body {
   justify-content: center;
   align-items: center;
   padding: 20px;
+  flex-wrap: wrap;
+  cursor: pointer;
 }
 .planet {
   background-color: blue;
@@ -53,6 +55,23 @@ body {
   justify-content: center;
   align-items: center;
   padding: 20px;
+  flex-wrap: wrap;
+  cursor: pointer;
+}
+
+.satellite {
+  background-color: red;
+  color: white;
+  border-radius: 100000px;
+  width: 100%;
+  max-width: 20px;
+  height: auto;
+  aspect-ratio: 1/1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 5px;
+  cursor: pointer;
 }
 
 .binary {
@@ -65,6 +84,7 @@ body {
   justify-content: center;
   align-items: center;
   aspect-ratio: 1/1;
+  cursor: pointer;
 }
 
 .navigation {
@@ -95,4 +115,14 @@ body {
 
 .navigation.active {
   transform: translateX(0);
+}
+
+.system-nav {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  background: rgb(var(--background-darker));
+  border: 1px solid rgb(var(--border));
+  padding: 20px;
+  z-index: 99;
 }
