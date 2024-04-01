@@ -36,7 +36,7 @@ export default function SystemsLayout() {
         </button>
         <SystemMenu xmlFiles={xmlFiles} setNavActive={setNavActive} />
       </aside>
-      <main className="w-full h-svh flex justify-center items-center">
+      <main className="w-full">
         <Outlet />
       </main>
     </div>

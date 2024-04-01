@@ -27,9 +27,14 @@ const Menu = ({ data }) => {
       if (item.planet) {
         children = [...item.planet, ...children];
       }
+      // if (item.satellite) {
+      //   children = [...item.satellite, ...children];
+      // }
       return (
-        <ul key={index}>
-          <li onClick={() => handleClick(name)}>{name}</li>
+        <ul key={index} className="ml-3">
+          <li className="cursor-pointer" onClick={() => handleClick(name)}>
+            {name}
+          </li>
           {children.length > 0 && generateMenuItems(children, true)}
         </ul>
       );
@@ -37,7 +42,7 @@ const Menu = ({ data }) => {
   };
 
   return (
-    <nav className="fixed right-0 bottom-0 z-10">
+    <nav className="fixed right-0 bottom-0 z-10 system-nav">
       <ul>
         {data.star
           ? generateMenuItems(data.star)
