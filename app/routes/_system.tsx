@@ -1,6 +1,6 @@
 import { Outlet } from "@remix-run/react";
 import SystemMenu from "~/components/SystemMenu";
-
+import { useState } from "react";
 import { useLoaderData } from "@remix-run/react";
 import { getXmlFilesList } from "~/utils/getXmlFilesList";
 import { json } from "@remix-run/node";
@@ -17,10 +17,24 @@ interface LoaderData {
 export default function SystemsLayout() {
   const { xmlFiles } = useLoaderData<LoaderData>();
 
+  const [navActive, setNavActive] = useState<boolean>(false);
+
+  const navHandler = () => {
+    setNavActive(!navActive);
+  };
+
   return (
     <div className="flex items-start">
-      <aside className="max-w-[300px] w-full h-svh overflow-y-auto">
-        <SystemMenu xmlFiles={xmlFiles} />
+      <aside className={`navigation ${navActive ? "active" : ""}`}>
+        <button
+          className={`navigationToggle ${navActive ? "active" : ""}`}
+          onClick={() => {
+            navHandler();
+          }}
+        >
+          {navActive ? "Close" : "Menu"}
+        </button>
+        <SystemMenu xmlFiles={xmlFiles} setNavActive={setNavActive} />
       </aside>
       <main className="w-full">
         <Outlet />
