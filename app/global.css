@@ -56,14 +56,15 @@ body {
 }
 
 .binary {
-  margin: 20px auto;
+  /* margin: 20px auto; */
   border: 1px solid white;
-  border-radius: 10px;
+  border-radius: 100vw;
   padding: 20px;
-  display: flex;
+  display: inline-flex;
   gap: 20px;
   justify-content: center;
   align-items: center;
+  aspect-ratio: 1/1;
 }
 
 .navigation {
