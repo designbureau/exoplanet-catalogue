@@ -1,5 +1,5 @@
 import { json } from "@remix-run/node";
-import { loadXMLAsJSON } from "~/functions/loadXMLAsJSON";
+import { loadXMLAsJSON } from "~/utils/loadXMLAsJSON";
 import { useLoaderData } from "@remix-run/react";
 import { fileURLToPath } from "url";
 import path from "path";
@@ -7,8 +7,6 @@ import { useEffect, useContext, useState } from "react";
 import { RefContext, RefProvider } from "~/components/RefContext";
 import Binary from "~/components/Binary";
 import Menu from "~/components/Menu";
-import { parseString } from "xml2js";
-import { data } from "~/data/data";
 
 export const loader = async ({ params }: any) => {
   const __filename = fileURLToPath(import.meta.url);
@@ -30,7 +28,7 @@ export const loader = async ({ params }: any) => {
 };
 
 const Root = () => {
-  const data = useLoaderData();
+  const data = useLoaderData<any>();
 
   return (
     <RefProvider>
@@ -39,7 +37,7 @@ const Root = () => {
   );
 };
 
-const App = ({ data }) => {
+const App = ({ data }: any) => {
   const { resetRefs } = useContext(RefContext);
 
   useEffect(() => {
