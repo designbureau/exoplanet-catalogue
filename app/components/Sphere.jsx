@@ -15,15 +15,17 @@ const Sphere = ({ data }) => {
 
   useFrame((state, delta) => (ref.current.rotation.x += delta));
 
-  let x = Math.random() * 10 * 0.5 - 1;
-  let y = Math.random() * 10 * 0.5 - 1;
-  let z = Math.random() * 10 * 0.5 - 1;
+  const [pos, setPos] = useState({
+    x: Math.random() * 20 * 0.5 - 1,
+    y: Math.random() * 20 * 0.5 - 1,
+    z: Math.random() * 20 * 0.5 - 1,
+  });
 
   return (
     <mesh
       ref={ref}
       name={name}
-      position={[x, y, z]}
+      position={[pos.x, pos.y, pos.z]}
       onClick={(e) => {
         e.stopPropagation();
         console.log(ref.current);

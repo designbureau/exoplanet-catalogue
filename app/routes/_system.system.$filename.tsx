@@ -8,7 +8,7 @@ import { RefContext, RefProvider } from "~/components/RefContext";
 import Binary from "~/components/Binary";
 import BinaryNew from "~/components/BinaryNew";
 import Menu from "~/components/Menu";
-import { OrbitControls } from "@react-three/drei";
+import { OrbitControls, CameraControls } from "@react-three/drei";
 
 import { Canvas, useFrame } from "@react-three/fiber";
 
@@ -110,7 +110,7 @@ const App = ({ data }: any) => {
             intensity={Math.PI}
           />
           <BinaryNew data={data} />
-          <OrbitControls />
+          <CameraControls />
         </Canvas>
       </div>
     </RefProvider>
