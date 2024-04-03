@@ -36,7 +36,7 @@ const Menu = ({ data }) => {
           >
             {name}
           </li>
-          {children.length > 0 && <>{children}</>}
+          {children && <>{children}</>}
         </ul>
       );
     });
