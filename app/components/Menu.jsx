@@ -4,19 +4,18 @@ import { RefContext } from "./RefContext";
 const Menu = ({ data }) => {
   if (!data) return;
 
-  // console.log({ data });
-
-  const { refs } = useContext(RefContext);
+  const { setActiveByName, refs } = useContext(RefContext);
 
   const handleClick = (name) => {
-    console.log(`${name} ref`, refs[name]);
+    setActiveByName(name);
+    const elementRef = refs[name];
+    elementRef && console.log(elementRef.current);
   };
 
   const generateMenuItems = (items, isBinary) => {
-    // console.log({ items });
-
     return items.map((item, index) => {
       const name = item.name ? item.name[0] : "Unnamed";
+
       let children = [];
       if (item.binary) {
         children = [...item.binary, ...children];

@@ -1,8 +1,9 @@
 import { useRef, useContext, useEffect } from "react";
 import { RefContext } from "./RefContext";
-import Sphere from "./Sphere";
+import Planet from "./Planet";
+import Star from "./Star";
 
-const BinaryNew = ({ data }) => {
+const BinaryBasic = ({ data }) => {
   if (!data) return;
 
   const ref = useRef();
@@ -14,27 +15,28 @@ const BinaryNew = ({ data }) => {
   }, [name, addRef]);
 
   return (
-    <group
-      // className="binary"
+    <div
+      className="binary"
       ref={ref}
-      name={name}
-      // onClick={(e) => {
-      //   e.stopPropagation();
-      //   console.log(ref.current);
-      // }}
+      data-name={name}
+      onClick={(e) => {
+        e.stopPropagation();
+        console.log(ref.current);
+      }}
     >
+      {/* <p>Binary: {name}</p> */}
       {data.star &&
-        data.star.map((star, index) => <Sphere key={index} data={star} />)}
+        data.star.map((star, index) => <Star key={index} data={star} />)}
       {data.planet &&
         data.planet.map((planet, index) => (
-          <Sphere key={index} data={planet} />
+          <Planet key={index} data={planet} />
         ))}
       {data.binary &&
         data.binary.map((binary, index) => (
-          <BinaryNew key={index} data={binary} />
+          <BinaryBasic key={index} data={binary} />
         ))}
-    </group>
+    </div>
   );
 };
 
-export default BinaryNew;
+export default BinaryBasic;

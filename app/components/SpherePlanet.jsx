@@ -2,16 +2,21 @@ import { useFrame } from "@react-three/fiber";
 import { useRef, useContext, useEffect, useState } from "react";
 import { RefContext } from "./RefContext";
 
-const Sphere = ({ data }) => {
+const SpherePlanet = ({ data }) => {
   const ref = useRef();
-  const { addRef } = useContext(RefContext);
-  const name = data.name ? data.name[0] : "Unnamed sphere";
+  const { addRef, activeRef, setActive } = useContext(RefContext);
 
-  const [active, setActive] = useState(false);
+  const name = data.name ? data.name[0] : "Unnamed sphere";
 
   useEffect(() => {
     addRef(name, ref);
   }, [name, addRef]);
+
+  const handleClick = (e) => {
+    e.stopPropagation();
+    console.log(ref);
+    setActive(ref);
+  };
 
   useFrame((state, delta) => (ref.current.rotation.x += delta));
 
@@ -21,21 +26,19 @@ const Sphere = ({ data }) => {
     z: Math.random() * 20 * 0.5 - 1,
   });
 
+  const isActive = activeRef === ref;
+
   return (
     <mesh
       ref={ref}
       name={name}
       position={[pos.x, pos.y, pos.z]}
-      onClick={(e) => {
-        e.stopPropagation();
-        console.log(ref.current);
-        setActive(!active);
-      }}
+      onClick={handleClick}
     >
       <sphereGeometry args={[1, 256, 256]} />
-      <meshStandardMaterial color={active ? "hotpink" : "orange"} />
+      <meshStandardMaterial color={isActive ? "hotpink" : "orange"} />
     </mesh>
   );
 };
 
-export default Sphere;
+export default SpherePlanet;
