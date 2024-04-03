@@ -6,10 +6,11 @@ export const RefProvider = ({ children }) => {
   const [refs, setRefs] = useState({});
   const [activeRef, setActiveRef] = useState(null);
 
-  const addRef = useCallback((name, ref) => {
+  const addRef = useCallback((name, type, ref) => {
+    const uniqueKey = `${type}-${name}`;
     setRefs((prevRefs) => ({
       ...prevRefs,
-      [name]: ref,
+      [uniqueKey]: ref,
     }));
   }, []);
 
@@ -19,9 +20,10 @@ export const RefProvider = ({ children }) => {
   }, []);
 
   const setActiveByName = useCallback(
-    (name) => {
-      if (refs[name]) {
-        setActiveRef(refs[name]);
+    (name, type) => {
+      const uniqueKey = `${type}-${name}`;
+      if (refs[uniqueKey]) {
+        setActiveRef(refs[uniqueKey]);
       }
     },
     [refs]

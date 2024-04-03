@@ -7,7 +7,7 @@ const SphereStar = ({ data }) => {
   const ref = useRef();
   const { addRef, activeRef, setActive } = useContext(RefContext);
 
-  const name = data.name ? data.name[0] : "Unnamed sphere";
+  const name = data.name ? data.name[0] : "Unnamed star";
 
   const handleClick = (e) => {
     e.stopPropagation();
@@ -16,8 +16,8 @@ const SphereStar = ({ data }) => {
   };
 
   useEffect(() => {
-    addRef(name, ref);
-  }, [name, addRef]);
+    addRef(name, "star", ref);
+  }, [name, addRef, ref]);
 
   useFrame((state, delta) => (ref.current.rotation.x += delta));
 

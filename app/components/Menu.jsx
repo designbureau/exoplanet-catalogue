@@ -6,35 +6,37 @@ const Menu = ({ data }) => {
 
   const { setActiveByName, refs } = useContext(RefContext);
 
-  const handleClick = (name) => {
-    setActiveByName(name);
-    const elementRef = refs[name];
-    elementRef && console.log(elementRef.current);
+  const handleClick = (name, type) => {
+    const uniqueKey = `${type}-${name}`;
+    setActiveByName(name, type);
+    const elementRef = refs[uniqueKey];
+    if (elementRef && elementRef.current) {
+      console.log(elementRef.current);
+    }
   };
 
-  const generateMenuItems = (items, isBinary) => {
+  const generateMenuItems = (items, type) => {
     return items.map((item, index) => {
       const name = item.name ? item.name[0] : "Unnamed";
 
       let children = [];
       if (item.binary) {
-        children = [...item.binary, ...children];
+        children = [...children, ...generateMenuItems(item.binary, "binary")];
+      } else if (item.star) {
+        children = [...children, ...generateMenuItems(item.star, "star")];
+      } else if (item.planet) {
+        children = [...children, ...generateMenuItems(item.planet, "planet")];
       }
-      if (item.star) {
-        children = [...item.star, ...children];
-      }
-      if (item.planet) {
-        children = [...item.planet, ...children];
-      }
-      // if (item.satellite) {
-      //   children = [...item.satellite, ...children];
-      // }
+
       return (
         <ul key={index} className="ml-3">
-          <li className="cursor-pointer" onClick={() => handleClick(name)}>
+          <li
+            className="cursor-pointer"
+            onClick={() => handleClick(name, type)}
+          >
             {name}
           </li>
-          {children.length > 0 && generateMenuItems(children, true)}
+          {children.length > 0 && <>{children}</>}
         </ul>
       );
     });
@@ -43,18 +45,12 @@ const Menu = ({ data }) => {
   return (
     <nav className="fixed right-0 bottom-0 z-10 system-nav">
       <ul>
-        {data.star
-          ? generateMenuItems(data.star)
-          : generateMenuItems(data.binary, true)}
+        {data.binary && generateMenuItems(data.binary, "binary")}
+        {data.star && generateMenuItems(data.star, "star")}
+        {data.planet && generateMenuItems(data.planet, "planet")}
       </ul>
     </nav>
   );
-
-  // return (
-  //   <nav>
-  //     <ul>{generateMenuItems(data.binary)}</ul>
-  //   </nav>
-  // );
 };
 
 export default Menu;

@@ -55,8 +55,8 @@ const App = ({ data }: any) => {
         <Menu data={data} />
         <BinaryBasic data={data} />
       </div> */}
-
-      {/* <div className="max-w-5xl">
+      {/* 
+      <div className="max-w-5xl">
         <pre className=" whitespace-pre-wrap ">
           {JSON.stringify(data, null, 2)}
         </pre>
