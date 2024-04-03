@@ -11,8 +11,8 @@ const Binary = ({ data }) => {
   const name = data.name ? data.name[0] : "Unnamed binary";
 
   useEffect(() => {
-    addRef(name, ref);
-  }, [name, addRef]);
+    addRef(name, "binary", ref);
+  }, [name, addRef, ref]);
 
   const handleClick = (e) => {
     e.stopPropagation();

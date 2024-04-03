@@ -6,11 +6,11 @@ const SpherePlanet = ({ data }) => {
   const ref = useRef();
   const { addRef, activeRef, setActive } = useContext(RefContext);
 
-  const name = data.name ? data.name[0] : "Unnamed sphere";
+  const name = data.name ? data.name[0] : "Unnamed planet";
 
   useEffect(() => {
-    addRef(name, ref);
-  }, [name, addRef]);
+    addRef(name, "planet", ref);
+  }, [name, addRef, ref]);
 
   const handleClick = (e) => {
     e.stopPropagation();
