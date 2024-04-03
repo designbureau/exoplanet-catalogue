@@ -45,7 +45,7 @@ const Root = () => {
 const App = ({ data }: any) => {
   const { resetRefs, activeRef } = useContext(RefContext);
   const [cursor, setCursor] = useState("default");
-  const cameraControlsRef = useRef();
+  const cameraControlsRef = useRef<any>();
 
   useEffect(() => {
     resetRefs();
@@ -54,9 +54,8 @@ const App = ({ data }: any) => {
   useEffect(() => {
     if (activeRef?.current && cameraControlsRef.current) {
       const objectPosition = new THREE.Vector3();
-      activeRef.current.getWorldPosition(objectPosition);
 
-      console.log({ objectPosition });
+      activeRef.current.getWorldPosition(objectPosition);
 
       cameraControlsRef.current.setTarget(
         objectPosition.x,
@@ -69,16 +68,6 @@ const App = ({ data }: any) => {
 
   return (
     <>
-      {/* <div className="w-full h-svh flex justify-center items-center">
-        <Menu data={data} />
-        <BinaryBasic data={data} />
-      </div> */}
-      {/* 
-      <div className="max-w-5xl">
-        <pre className=" whitespace-pre-wrap ">
-          {JSON.stringify(data, null, 2)}
-        </pre>
-      </div> */}
       <Menu data={data} />
       <div id="canvas-container" style={{ cursor: cursor }}>
         <Canvas dpr={[1, 2]}>
@@ -99,6 +88,14 @@ const App = ({ data }: any) => {
           <CameraControls ref={cameraControlsRef} />
         </Canvas>
       </div>
+      {/* <div className="w-full h-svh flex justify-center items-center">
+        <BinaryBasic data={data} />
+      </div>
+      <div className="max-w-5xl">
+        <pre className=" whitespace-pre-wrap ">
+          {JSON.stringify(data, null, 2)}
+        </pre>
+      </div> */}
     </>
   );
 };

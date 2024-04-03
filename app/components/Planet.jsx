@@ -1,6 +1,5 @@
 import { useRef, useContext, useEffect } from "react";
 import { RefContext } from "./RefContext";
-import Sattelite from "./Satellite";
 
 const Planet = ({ data }) => {
   const ref = useRef();
@@ -20,14 +19,7 @@ const Planet = ({ data }) => {
         e.stopPropagation();
         console.log(ref.current);
       }}
-    >
-      {/* <p>Planet: {name}</p> */}
-      {/* Render other properties as needed */}
-      {/* {data.satellite &&
-        data.satellite.map((satellite, index) => (
-          <Sattelite key={index} data={satellite} />
-        ))} */}
-    </div>
+    ></div>
   );
 };
 

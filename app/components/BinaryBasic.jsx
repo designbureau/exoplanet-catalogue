@@ -24,7 +24,6 @@ const BinaryBasic = ({ data }) => {
         console.log(ref.current);
       }}
     >
-      {/* <p>Binary: {name}</p> */}
       {data.star &&
         data.star.map((star, index) => <Star key={index} data={star} />)}
       {data.planet &&
