@@ -9,6 +9,7 @@ import BinaryBasic from "~/components/BinaryBasic";
 import Binary from "~/components/Binary";
 import Menu from "~/components/Menu";
 import { CameraControls } from "@react-three/drei";
+import * as THREE from "three";
 
 import { Canvas } from "@react-three/fiber";
 
@@ -42,15 +43,32 @@ const Root = () => {
 };
 
 const App = ({ data }: any) => {
-  const { resetRefs } = useContext(RefContext);
+  const { resetRefs, activeRef } = useContext(RefContext);
   const [cursor, setCursor] = useState("default");
+  const cameraControlsRef = useRef();
 
   useEffect(() => {
     resetRefs();
   }, [data, resetRefs]);
 
+  useEffect(() => {
+    if (activeRef?.current && cameraControlsRef.current) {
+      const objectPosition = new THREE.Vector3();
+      activeRef.current.getWorldPosition(objectPosition);
+
+      console.log({ objectPosition });
+
+      cameraControlsRef.current.setTarget(
+        objectPosition.x,
+        objectPosition.y,
+        objectPosition.z,
+        true
+      );
+    }
+  }, [activeRef]);
+
   return (
-    <RefProvider>
+    <>
       {/* <div className="w-full h-svh flex justify-center items-center">
         <Menu data={data} />
         <BinaryBasic data={data} />
@@ -78,10 +96,10 @@ const App = ({ data }: any) => {
             intensity={Math.PI}
           />
           <Binary data={data} />
-          <CameraControls />
+          <CameraControls ref={cameraControlsRef} />
         </Canvas>
       </div>
-    </RefProvider>
+    </>
   );
 };
 
