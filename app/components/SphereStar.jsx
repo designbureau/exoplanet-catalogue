@@ -38,7 +38,7 @@ const SphereStar = ({ data }) => {
         onClick={handleClick}
       >
         <sphereGeometry args={[1, 256, 256]} />
-        <meshStandardMaterial color={isActive ? "hotpink" : "orange"} />
+        <meshStandardMaterial color={isActive ? "green" : "orange"} />
       </mesh>
       {data.planet &&
         data.planet.map((planet, index) => (
