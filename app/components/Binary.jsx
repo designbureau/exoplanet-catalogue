@@ -24,15 +24,15 @@ const Binary = ({ data }) => {
 
   return (
     <group ref={ref} name={name} active={isActive} onClick={handleClick}>
+      {data.binary &&
+        data.binary.map((binary, index) => (
+          <Binary key={index} data={binary} />
+        ))}
       {data.star &&
         data.star.map((star, index) => <SphereStar key={index} data={star} />)}
       {data.planet &&
         data.planet.map((planet, index) => (
           <SpherePlanet key={index} data={planet} />
-        ))}
-      {data.binary &&
-        data.binary.map((binary, index) => (
-          <Binary key={index} data={binary} />
         ))}
     </group>
   );

@@ -5,6 +5,7 @@ export const RefContext = React.createContext();
 export const RefProvider = ({ children }) => {
   const [refs, setRefs] = useState({});
   const [activeRef, setActiveRef] = useState(null);
+  const [activeMenuItem, setActiveMenuItem] = useState(null);
 
   const addRef = useCallback((name, type, ref) => {
     const uniqueKey = `${type}-${name}`;
@@ -12,6 +13,9 @@ export const RefProvider = ({ children }) => {
       ...prevRefs,
       [uniqueKey]: ref,
     }));
+    if (ref.current && !ref.current.metadata) {
+      Object.assign(ref.current, { metadata: { name, type, uniqueKey } });
+    }
   }, []);
 
   const resetRefs = useCallback(() => {
@@ -24,18 +28,30 @@ export const RefProvider = ({ children }) => {
       const uniqueKey = `${type}-${name}`;
       if (refs[uniqueKey]) {
         setActiveRef(refs[uniqueKey]);
+        setActiveMenuItem(uniqueKey);
       }
     },
     [refs]
   );
 
   const setActive = useCallback((ref) => {
-    setActiveRef(ref);
+    if (ref.current && ref.current.metadata) {
+      setActiveRef(ref);
+      setActiveMenuItem(ref.current.metadata.uniqueKey);
+    }
   }, []);
 
   return (
     <RefContext.Provider
-      value={{ refs, addRef, resetRefs, activeRef, setActive, setActiveByName }}
+      value={{
+        refs,
+        addRef,
+        resetRefs,
+        activeRef,
+        setActive,
+        setActiveByName,
+        activeMenuItem,
+      }}
     >
       {children}
     </RefContext.Provider>
