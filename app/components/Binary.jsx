@@ -1,41 +1,40 @@
 import { useRef, useContext, useEffect } from "react";
 import { RefContext } from "./RefContext";
-import Planet from "./Planet";
-import Star from "./Star";
+import SphereStar from "./SphereStar";
+import SpherePlanet from "./SpherePlanet";
 
 const Binary = ({ data }) => {
   if (!data) return;
 
   const ref = useRef();
-  const { addRef } = useContext(RefContext);
+  const { addRef, activeRef, setActive } = useContext(RefContext);
   const name = data.name ? data.name[0] : "Unnamed binary";
 
   useEffect(() => {
     addRef(name, ref);
   }, [name, addRef]);
 
+  const handleClick = (e) => {
+    e.stopPropagation();
+    console.log(ref);
+    setActive(ref);
+  };
+
+  const isActive = activeRef === ref;
+
   return (
-    <div
-      className="binary"
-      ref={ref}
-      data-name={name}
-      onClick={(e) => {
-        e.stopPropagation();
-        console.log(ref.current);
-      }}
-    >
-      {/* <p>Binary: {name}</p> */}
+    <group ref={ref} name={name} active={isActive} onClick={handleClick}>
       {data.star &&
-        data.star.map((star, index) => <Star key={index} data={star} />)}
+        data.star.map((star, index) => <SphereStar key={index} data={star} />)}
       {data.planet &&
         data.planet.map((planet, index) => (
-          <Planet key={index} data={planet} />
+          <SpherePlanet key={index} data={planet} />
         ))}
       {data.binary &&
         data.binary.map((binary, index) => (
           <Binary key={index} data={binary} />
         ))}
-    </div>
+    </group>
   );
 };
 
