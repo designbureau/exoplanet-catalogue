@@ -56,11 +56,11 @@ const App = ({ data }: any) => {
   }, [data, resetRefs]);
 
   useEffect(() => {
+    // https://codesandbox.io/p/sandbox/cameracontrols-basic-sew669?file=%2Fsrc%2FApp.js
     if (activeRef?.current && cameraControlsRef.current) {
       const objectPosition = new THREE.Vector3();
 
       activeRef.current.getWorldPosition(objectPosition);
-
       cameraControlsRef.current.setTarget(
         objectPosition.x,
         objectPosition.y,
@@ -92,14 +92,14 @@ const App = ({ data }: any) => {
           <CameraControls ref={cameraControlsRef} />
         </Canvas>
       </div>
-      {/* <div className="w-full h-svh flex justify-center items-center">
+      <div className="w-full h-svh flex justify-center items-center">
         <BinaryBasic data={data} />
       </div>
       <div className="max-w-5xl">
         <pre className=" whitespace-pre-wrap ">
           {JSON.stringify(data, null, 2)}
         </pre>
-      </div> */}
+      </div>
     </>
   );
 };
