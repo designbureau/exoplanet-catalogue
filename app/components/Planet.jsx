@@ -3,12 +3,13 @@ import { RefContext } from "./RefContext";
 
 const Planet = ({ data }) => {
   const ref = useRef();
-  const { addRef } = useContext(RefContext);
+  const { addRef, activeRef, setActive } = useContext(RefContext);
+
   const name = data.name ? data.name[0] : "Unnamed planet";
 
   useEffect(() => {
-    addRef(name, ref);
-  }, [name, addRef]);
+    addRef(name, "planet", ref);
+  }, [name, addRef, ref]);
 
   return (
     <div

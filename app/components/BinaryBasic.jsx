@@ -7,12 +7,13 @@ const BinaryBasic = ({ data }) => {
   if (!data) return;
 
   const ref = useRef();
-  const { addRef } = useContext(RefContext);
+
+  const { addRef, activeRef, setActive } = useContext(RefContext);
   const name = data.name ? data.name[0] : "Unnamed binary";
 
   useEffect(() => {
-    addRef(name, ref);
-  }, [name, addRef]);
+    addRef(name, "binary", ref);
+  }, [name, addRef, ref]);
 
   return (
     <div

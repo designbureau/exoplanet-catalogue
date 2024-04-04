@@ -1,12 +1,15 @@
 import { useFrame } from "@react-three/fiber";
 import { useRef, useContext, useEffect, useState } from "react";
 import { RefContext } from "./RefContext";
+import { getSemimajoraxis } from "../utils/helperFunctions";
 
 const SpherePlanet = ({ data }) => {
   const ref = useRef();
   const { addRef, activeRef, setActive } = useContext(RefContext);
-
   const name = data.name ? data.name[0] : "Unnamed planet";
+
+  const semimajoraxis = getSemimajoraxis({ data });
+  console.log({ semimajoraxis });
 
   useEffect(() => {
     addRef(name, "planet", ref);

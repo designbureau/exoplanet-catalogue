@@ -4,12 +4,12 @@ import Planet from "./Planet";
 
 const Star = ({ data }) => {
   const ref = useRef();
-  const { addRef } = useContext(RefContext);
+  const { addRef, activeRef, setActive } = useContext(RefContext);
   const name = data.name ? data.name[0] : "Unnamed star";
 
   useEffect(() => {
-    addRef(name, ref);
-  }, [name, addRef]);
+    addRef(name, "star", ref);
+  }, [name, addRef, ref]);
 
   return (
     <div
