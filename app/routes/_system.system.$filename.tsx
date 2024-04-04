@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import path from "path";
 import { useEffect, useContext, useState, useRef } from "react";
 import { RefContext, RefProvider } from "~/components/RefContext";
+import { EnvContext, EnvProvider } from "~/components/EnvContext";
 import BinaryBasic from "~/components/BinaryBasic";
 import Binary from "~/components/Binary";
 import Menu from "~/components/Menu";
@@ -36,9 +37,11 @@ const Root = () => {
   const data = useLoaderData<any>();
 
   return (
-    <RefProvider>
-      <App data={data.system} />
-    </RefProvider>
+    <EnvProvider>
+      <RefProvider>
+        <App data={data.system} />
+      </RefProvider>
+    </EnvProvider>
   );
 };
 
@@ -46,6 +49,7 @@ const App = ({ data }: any) => {
   const { resetRefs, activeRef } = useContext(RefContext);
   const [cursor, setCursor] = useState("default");
   const cameraControlsRef = useRef<any>();
+  const { Constants } = useContext(EnvContext);
 
   useEffect(() => {
     resetRefs();
