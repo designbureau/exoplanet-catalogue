@@ -1,7 +1,7 @@
 import { useRef, useContext, useEffect } from "react";
 import { RefContext } from "./RefContext";
-import Planet from "./Planet";
-import Star from "./Star";
+import PlanetBasic from "./PlanetBasic";
+import StarBasic from "./StarBasic";
 
 const BinaryBasic = ({ data }) => {
   if (!data) return;
@@ -26,10 +26,10 @@ const BinaryBasic = ({ data }) => {
       }}
     >
       {data.star &&
-        data.star.map((star, index) => <Star key={index} data={star} />)}
+        data.star.map((star, index) => <StarBasic key={index} data={star} />)}
       {data.planet &&
         data.planet.map((planet, index) => (
-          <Planet key={index} data={planet} />
+          <PlanetBasic key={index} data={planet} />
         ))}
       {data.binary &&
         data.binary.map((binary, index) => (

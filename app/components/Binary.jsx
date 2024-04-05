@@ -1,7 +1,7 @@
 import { useRef, useContext, useEffect } from "react";
 import { RefContext } from "./RefContext";
-import SphereStar from "./SphereStar";
-import SpherePlanet from "./SpherePlanet";
+import Star from "./Star";
+import Planet from "./Planet";
 
 const Binary = ({ data }) => {
   if (!data) return;
@@ -29,10 +29,10 @@ const Binary = ({ data }) => {
           <Binary key={index} data={binary} />
         ))}
       {data.star &&
-        data.star.map((star, index) => <SphereStar key={index} data={star} />)}
+        data.star.map((star, index) => <Star key={index} data={star} />)}
       {data.planet &&
         data.planet.map((planet, index) => (
-          <SpherePlanet key={index} data={planet} />
+          <Planet key={index} data={planet} />
         ))}
     </group>
   );

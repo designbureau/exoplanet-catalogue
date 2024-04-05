@@ -49,7 +49,7 @@ const App = ({ data }: any) => {
   const { resetRefs, activeRef } = useContext(RefContext);
   const [cursor, setCursor] = useState("default");
   const cameraControlsRef = useRef<any>();
-  const { Constants } = useContext(EnvContext);
+  // const { Constants } = useContext(EnvContext);
 
   useEffect(() => {
     resetRefs();
