@@ -28,6 +28,7 @@ const Star = ({ data }) => {
   });
 
   const isActive = activeRef === ref;
+  const colorProps = isActive ? { color: "green" } : { color: "orange" };
 
   return (
     <group>
@@ -38,7 +39,7 @@ const Star = ({ data }) => {
         onClick={handleClick}
       >
         <sphereGeometry args={[1, 256, 256]} />
-        <meshStandardMaterial color={isActive ? "green" : "orange"} />
+        <meshStandardMaterial {...colorProps} />
       </mesh>
       {data.planet &&
         data.planet.map((planet, index) => (
