@@ -14,7 +14,7 @@ export const getSemimajoraxis = ({ data }: any) => {
   let semimajoraxis = parseFloat(semimajoraxisValue);
   semimajoraxis = isNaN(semimajoraxis) ? Constants.distance.au : semimajoraxis;
 
-  // semimajoraxis = semimajoraxis * Constants.distance.au;
+  semimajoraxis = semimajoraxis * Constants.distance.au;
 
   return semimajoraxis;
 };
