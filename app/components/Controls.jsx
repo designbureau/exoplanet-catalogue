@@ -10,7 +10,7 @@ const Controls = () => {
 
   useEffect(() => {
     // https://codesandbox.io/p/sandbox/cameracontrols-basic-sew669?file=%2Fsrc%2FApp.js
-    if (activeRef?.current && cameraControlsRef.current) {
+    if (cameraControlsRef.current && activeRef?.current?.getWorldPosition) {
       const objectPosition = new THREE.Vector3();
 
       activeRef.current.getWorldPosition(objectPosition);
@@ -28,7 +28,7 @@ const Controls = () => {
   useFrame((state, delta) => {
     const elapsedTime = state.clock.getElapsedTime();
     // console.log({ elapsedTime });
-    if (activeRef) {
+    if (activeRef && activeRef.current && cameraControlsRef.current) {
       const objectPosition = new THREE.Vector3();
       activeRef.current.getWorldPosition(objectPosition);
 
