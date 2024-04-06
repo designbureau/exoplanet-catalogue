@@ -11,8 +11,7 @@ import Binary from "~/components/Binary";
 import Menu from "~/components/Menu";
 import { CameraControls } from "@react-three/drei";
 import * as THREE from "three";
-
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 
 export const loader = async ({ params }: any) => {
   const __filename = fileURLToPath(import.meta.url);
@@ -74,7 +73,7 @@ const App = ({ data }: any) => {
     <>
       <Menu data={data} />
       <div id="canvas-container" style={{ cursor: cursor }}>
-        <Canvas dpr={[1, 2]}>
+        <Canvas dpr={[1, 2]} camera={{ far: 100000000, near: 0.001, fov: 50 }}>
           <ambientLight intensity={Math.PI / 2} />
           <spotLight
             position={[10, 10, 10]}

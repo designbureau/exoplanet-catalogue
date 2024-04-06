@@ -1,3 +1,5 @@
+import * as THREE from "three";
+
 import { useFrame } from "@react-three/fiber";
 import { useRef, useContext, useEffect, useState } from "react";
 import { RefContext } from "./RefContext";
@@ -31,11 +33,33 @@ const Planet = ({ data }) => {
   const radius = getRadius({ data });
   const ellipse = getEllipse(semimajoraxis, eccentricity);
   const periapsis = getPeriapsis(semimajoraxis, eccentricity) - semimajoraxis;
-
-  console.log({ data });
-
   const planetTexture = PlanetTexture(mass, radius, name);
-  console.log({ planetTexture });
+
+  // console.log({
+  //   semimajoraxis,
+  //   periasteron,
+  //   inclination,
+  //   eccentricity,
+  //   period,
+  //   periapsis,
+  //   ellipse,
+  //   mass,
+  //   radius,
+  //   scale,
+  // });
+
+  useEffect(() => {
+    addRef(name, "planet", ref);
+  }, [name, addRef, ref]);
+
+  const handleClick = (e) => {
+    e.stopPropagation();
+    console.log(ref);
+    setActive(ref);
+  };
+
+  const isActive = activeRef === ref;
+  const colorProps = isActive ? { color: "green" } : {};
 
   /* https://www.aanda.org/articles/aa/full_html/2017/08/aa29922-16/aa29922-16.html */
   /* 
@@ -68,50 +92,52 @@ const Planet = ({ data }) => {
   //Relative to sol radius
   scale = scale * Constants.radius.jupiter * Constants.radius.scale;
 
-  console.log({
-    semimajoraxis,
-    periasteron,
-    inclination,
-    eccentricity,
-    period,
-    periapsis,
-    ellipse,
-    mass,
-    radius,
-    scale,
+  const speed = 0.0005;
+
+  useFrame((state, delta) => {
+    const elapsedTime = state.clock.getElapsedTime();
+    ref.current.rotation.x = Math.PI * 0.5;
+    ref.current.rotation.y += 0.001;
+    ref.current.position.x =
+      ellipse.xRadius * Math.cos((elapsedTime / period) * speed);
+    ref.current.position.y =
+      ellipse.yRadius * Math.sin((elapsedTime / period) * speed);
   });
 
-  useEffect(() => {
-    addRef(name, "planet", ref);
-  }, [name, addRef, ref]);
+  let position = [0, 0, 0];
+  position = [periapsis, 0, 0];
 
-  const handleClick = (e) => {
-    e.stopPropagation();
-    console.log(ref);
-    setActive(ref);
-  };
-
-  useFrame((state, delta) => (ref.current.rotation.x += delta * 0.5));
-
-  const [pos, setPos] = useState({
-    x: Math.random() * 20 * 0.5 - 1,
-    y: Math.random() * 20 * 0.5 - 1,
-    z: Math.random() * 20 * 0.5 - 1,
-  });
-
-  const isActive = activeRef === ref;
-  const colorProps = isActive ? { color: "green" } : {};
+  //Orbits
+  const curve = new THREE.EllipseCurve(
+    0,
+    0, // ax, aY
+    ellipse.xRadius,
+    ellipse.yRadius, // xRadius, yRadius
+    0,
+    2 * Math.PI, // aStartAngle, aEndAngle
+    false, // aClockwise
+    0 // aRotation
+  );
+  const orbitRef = useRef();
+  const points = curve.getPoints(1000);
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  geometry.name = name;
 
   return (
-    <mesh
-      ref={ref}
-      name={name}
-      position={[pos.x, pos.y, pos.z]}
-      onClick={handleClick}
-    >
-      <sphereGeometry args={[1, 256, 256]} />
-      <meshStandardMaterial map={planetTexture} {...colorProps} />
-    </mesh>
+    <group position={position} rotation={[(inclination * Math.PI) / 90, 0, 0]}>
+      <line ref={orbitRef} geometry={geometry}>
+        <lineBasicMaterial
+          attach="material"
+          color={"#ffffff"}
+          opacity={0.25}
+          transparent={true}
+        />
+      </line>
+      <mesh ref={ref} name={name} onClick={handleClick}>
+        <sphereGeometry args={[scale, 256, 256]} />
+        <meshStandardMaterial map={planetTexture} {...colorProps} />
+      </mesh>
+    </group>
   );
 };
 

@@ -1,4 +1,3 @@
-// import { TextureLoader } from "three/src/loaders/TextureLoader";
 import { useLoader } from "@react-three/fiber";
 import { TextureLoader } from "three";
 
