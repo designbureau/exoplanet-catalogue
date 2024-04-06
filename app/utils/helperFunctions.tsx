@@ -1,5 +1,6 @@
 import { useContext } from "react";
 import { EnvContext } from "~/components/EnvContext";
+import chroma from "chroma-js";
 
 export const getSemimajoraxis = ({ data }: any) => {
   const { Constants } = useContext(EnvContext);
@@ -104,4 +105,80 @@ export const getRadius = ({ data }: any) => {
   const radiusValue =
     typeof data.radius === "object" ? data.radius._ : data.radius;
   return parseFloat(radiusValue ?? "0");
+};
+
+export const getTemperature = ({ data }: any) => {
+  let temperature =
+    parseFloat(data.temperature?.[0]?._ ?? data.temperature?._) || null;
+  const spectraltype = data.spectraltype?.[0]?.[0] || "M"; //M is the most common type of star so is an appropriate default
+
+  switch (spectraltype) {
+    case "M":
+      temperature = 3000;
+      break;
+    case "K":
+      temperature = 4500;
+      break;
+    case "G":
+      temperature = 5500;
+      break;
+    case "F":
+      temperature = 6500;
+      break;
+    case "A":
+      temperature = 8000;
+      break;
+    case "B":
+      temperature = 20000;
+      break;
+    case "O":
+      temperature = 40000;
+      break;
+    default:
+      temperature = 6500;
+      break;
+  }
+  return temperature;
+};
+
+export const getColor = ({ temperature }: any) => {
+  const color = chroma.temperature(temperature).hex("rgb");
+  const color_light = chroma
+    .temperature(temperature + (temperature / 100) * 50)
+    .hex("rgb");
+  const color_dark = chroma
+    .temperature(temperature - (temperature / 100) * 50)
+    .hex("rgb");
+
+  return { color, color_light, color_dark };
+};
+
+interface Position {
+  x: number;
+  y: number;
+  z: number;
+}
+
+interface OrbitParameters {
+  separation: number;
+  positionAngleDegrees: number;
+}
+
+export const getPosition = ({
+  separation,
+  positionAngleDegrees,
+}: OrbitParameters): Position => {
+  const { Constants } = useContext(EnvContext);
+
+  // Convert position angle from degrees to radians
+  const positionAngleRadians = positionAngleDegrees * (Math.PI / 180);
+
+  // Calculate x and y using trigonometry
+  const x = separation * Constants.distance.au * Math.sin(positionAngleRadians);
+  const y = separation * Constants.distance.au * Math.cos(positionAngleRadians);
+
+  // Assuming z is 0 for a 2D plane
+  const z = 0;
+
+  return { x, y, z };
 };

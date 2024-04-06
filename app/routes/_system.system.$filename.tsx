@@ -1,17 +1,16 @@
+import path from "path";
 import { json } from "@remix-run/node";
 import { loadXMLAsJSON } from "~/utils/loadXMLAsJSON";
 import { useLoaderData } from "@remix-run/react";
 import { fileURLToPath } from "url";
-import path from "path";
 import { useEffect, useContext, useState, useRef } from "react";
 import { RefContext, RefProvider } from "~/components/RefContext";
-import { EnvContext, EnvProvider } from "~/components/EnvContext";
+import { EnvProvider } from "~/components/EnvContext";
 import BinaryBasic from "~/components/BinaryBasic";
 import Binary from "~/components/Binary";
 import Menu from "~/components/Menu";
-import { CameraControls } from "@react-three/drei";
-import * as THREE from "three";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
+import Controls from "~/components/Controls";
 
 export const loader = async ({ params }: any) => {
   const __filename = fileURLToPath(import.meta.url);
@@ -47,48 +46,18 @@ const Root = () => {
 const App = ({ data }: any) => {
   const { resetRefs, activeRef } = useContext(RefContext);
   const [cursor, setCursor] = useState("default");
-  const cameraControlsRef = useRef<any>();
-  // const { Constants } = useContext(EnvContext);
 
   useEffect(() => {
     resetRefs();
   }, [data, resetRefs]);
-
-  useEffect(() => {
-    // https://codesandbox.io/p/sandbox/cameracontrols-basic-sew669?file=%2Fsrc%2FApp.js
-    if (activeRef?.current && cameraControlsRef.current) {
-      const objectPosition = new THREE.Vector3();
-
-      activeRef.current.getWorldPosition(objectPosition);
-      cameraControlsRef.current.setTarget(
-        objectPosition.x,
-        objectPosition.y,
-        objectPosition.z,
-        true
-      );
-    }
-  }, [activeRef]);
 
   return (
     <>
       <Menu data={data} />
       <div id="canvas-container" style={{ cursor: cursor }}>
         <Canvas dpr={[1, 2]} camera={{ far: 100000000, near: 0.001, fov: 50 }}>
-          <ambientLight intensity={Math.PI / 2} />
-          <spotLight
-            position={[10, 10, 10]}
-            angle={0.15}
-            penumbra={1}
-            decay={0}
-            intensity={Math.PI}
-          />
-          <pointLight
-            position={[-10, -10, -10]}
-            decay={0}
-            intensity={Math.PI}
-          />
           <Binary data={data} />
-          <CameraControls ref={cameraControlsRef} />
+          <Controls />
         </Canvas>
       </div>
       <div className="w-full h-svh flex justify-center items-center">

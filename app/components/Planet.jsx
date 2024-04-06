@@ -59,7 +59,7 @@ const Planet = ({ data }) => {
   };
 
   const isActive = activeRef === ref;
-  const colorProps = isActive ? { color: "green" } : {};
+  // const colorProps = isActive ? { color: "green" } : {};
 
   /* https://www.aanda.org/articles/aa/full_html/2017/08/aa29922-16/aa29922-16.html */
   /* 
@@ -75,18 +75,18 @@ const Planet = ({ data }) => {
     const earthMasses = mass * Constants.mass.jupiter_mass_in_earth_masses;
     if (earthMasses < 124) {
       scale = mass ** 0.55;
-      console.log("mass radius proportion smaller planets", "Mass ** 0.55");
+      // console.log("mass radius proportion smaller planets", "Mass ** 0.55");
     } else {
       scale = mass ** 0.01;
-      console.log("mass radius proportion larger planets", "Mass ** 0.01");
+      // console.log("mass radius proportion larger planets", "Mass ** 0.01");
     }
   }
 
   if (radius > 0) {
     scale = radius;
-    console.log("scale set by radius");
+    // console.log("scale set by radius");
   } else {
-    console.log("scale set by mass");
+    // console.log("scale set by mass");
   }
 
   //Relative to sol radius
@@ -135,7 +135,10 @@ const Planet = ({ data }) => {
       </line>
       <mesh ref={ref} name={name} onClick={handleClick}>
         <sphereGeometry args={[scale, 256, 256]} />
-        <meshStandardMaterial map={planetTexture} {...colorProps} />
+        <meshStandardMaterial
+          map={planetTexture}
+          // {...colorProps}
+        />
       </mesh>
     </group>
   );
