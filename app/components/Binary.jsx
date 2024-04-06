@@ -8,18 +8,31 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
   if (!data) return;
 
   const ref = useRef();
-  const { addRef, activeRef, setActive } = useContext(RefContext);
+  const { addRef, activeRef, setActiveByName } = useContext(RefContext);
   const name = data.name ? data.name[0] : "Unnamed binary";
 
   useEffect(() => {
     addRef(name, "binary", ref);
   }, [name, addRef, ref]);
 
-  const handleClick = (e) => {
-    e.stopPropagation();
-    console.log(ref);
-    setActive(ref);
-  };
+  useEffect(() => {
+    // Assuming the binary data structure and that stars are listed under data.star
+    if (data.star && data.star.length > 0) {
+      const firstStarName = data.star[0].name
+        ? data.star[0].name[0]
+        : "Unnamed star";
+      // Use a timeout to ensure all refs are set before trying to access them
+      setTimeout(() => {
+        setActiveByName(firstStarName, "star");
+      }, 0);
+    }
+  }, [data, setActiveByName]);
+
+  // const handleClick = (e) => {
+  //   e.stopPropagation();
+  //   console.log(ref);
+  //   setActive(ref);
+  // };
 
   // Calculate the binary's own position based on separation and position angle from its parent
   const separation = parseFloat(data.separation?.[0] ?? 0);
