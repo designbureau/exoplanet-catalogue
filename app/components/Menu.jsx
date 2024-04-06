@@ -7,12 +7,14 @@ const Menu = ({ data }) => {
   const { setActiveByName, refs, activeMenuItem } = useContext(RefContext);
 
   const handleClick = (name, type) => {
+    // if (type != "binary") {
     const uniqueKey = `${type}-${name}`;
     setActiveByName(name, type);
     const elementRef = refs[uniqueKey];
     if (elementRef && elementRef.current) {
       console.log(elementRef.current);
     }
+    // }
   };
 
   const generateMenuItems = (items, type) => {
