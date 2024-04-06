@@ -56,6 +56,7 @@ const App = ({ data }: any) => {
       <Menu data={data} />
       <div id="canvas-container" style={{ cursor: cursor }}>
         <Canvas dpr={[1, 2]} camera={{ far: 100000000, near: 0.001, fov: 50 }}>
+          <ambientLight intensity={0.03} />
           <Binary data={data} />
           <Controls />
         </Canvas>

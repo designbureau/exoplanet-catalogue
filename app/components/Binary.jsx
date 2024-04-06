@@ -35,7 +35,10 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
   // };
 
   // Calculate the binary's own position based on separation and position angle from its parent
-  const separation = parseFloat(data.separation?.[0] ?? 0);
+  const separation = parseFloat(
+    data.separation?.[0] ?? data.semimajoraxis?.[0] ?? 0
+  );
+
   const positionAngleDegrees = parseFloat(data.positionangle?.[0] ?? 0);
   const binaryPosition = getPosition({ separation, positionAngleDegrees });
 
