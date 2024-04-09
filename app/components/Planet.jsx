@@ -45,7 +45,6 @@ const Planet = ({ data }) => {
   //   ellipse,
   //   mass,
   //   radius,
-  //   scale,
   // });
 
   useEffect(() => {
@@ -119,7 +118,7 @@ const Planet = ({ data }) => {
     0 // aRotation
   );
   const orbitRef = useRef();
-  const points = curve.getPoints(100000);
+  const points = curve.getPoints(1000);
   const geometry = new THREE.BufferGeometry().setFromPoints(points);
   geometry.name = name;
 

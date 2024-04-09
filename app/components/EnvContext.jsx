@@ -17,7 +17,8 @@ export const EnvProvider = ({ children }) => {
       scale: 2,
     },
     distance: {
-      au: 215.032 * 11,
+      // au: 215.032 * 11,
+      au: 2000,
       au_sol_radius: 215.032,
     },
   };

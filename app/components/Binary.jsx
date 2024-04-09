@@ -11,6 +11,8 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
   const { addRef, activeRef, setActiveByName } = useContext(RefContext);
   const name = data.name ? data.name[0] : "Unnamed binary";
 
+  console.log("distance", data.distance);
+
   useEffect(() => {
     addRef(name, "binary", ref);
   }, [name, addRef, ref]);
@@ -36,7 +38,7 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
 
   // Calculate the binary's own position based on separation and position angle from its parent
   const separation = parseFloat(
-    data.separation?.[0] ?? data.semimajoraxis?.[0] ?? 0
+    data.separation?.[0] ?? data.semimajoraxis?.[0] ?? 16 // average 16AU default
   );
 
   const positionAngleDegrees = parseFloat(data.positionangle?.[0] ?? 0);
@@ -82,6 +84,7 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
           <Star
             key={index}
             data={star}
+            distance={data.distance}
             position={index === 0 ? firstStarPosition : secondStarPosition}
           />
         ))}
