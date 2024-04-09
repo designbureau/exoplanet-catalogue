@@ -1,9 +1,14 @@
-import { useFrame } from "@react-three/fiber";
+import { useFrame, extend } from "@react-three/fiber";
 import { useRef, useContext, useEffect, useState } from "react";
 import { RefContext } from "./RefContext";
 import { EnvContext } from "./EnvContext";
+import {
+  getHabitableZone,
+  calculateHZFromMassAndType,
+} from "../utils/getHabitableZone";
 import Planet from "./Planet";
 // import { LayerMaterial, Fresnel } from "lamina";
+import * as THREE from "three";
 
 import {
   getMass,
@@ -12,8 +17,10 @@ import {
   getColor,
 } from "../utils/helperFunctions";
 
-const Star = ({ data, position }) => {
+const Star = ({ data, position, distance }) => {
   const ref = useRef();
+
+  console.log("star", { data });
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
   const { Constants } = useContext(EnvContext);
@@ -37,6 +44,34 @@ const Star = ({ data, position }) => {
   // console.log({ temperature });
   // console.log({ color });
 
+  const magnitudeToIntensity = (magnitude) => {
+    const minIntensity = 1; // Minimum intensity value
+    const maxIntensity = 5; // Maximum intensity value
+    const base = 10; // Base for the exponential function
+
+    // Convert magnitude to a raw intensity value using an exponential scale
+    let rawIntensity = Math.pow(base, -magnitude / 2.5);
+
+    // Normalize the raw intensity to be within the range [minIntensity, maxIntensity]
+    // This is a simple linear normalization; you might need to adjust it based on your data
+    let normalizedIntensity =
+      ((rawIntensity - minIntensity) / (1 - minIntensity)) *
+        (maxIntensity - minIntensity) +
+      minIntensity;
+
+    // Clamp the value to ensure it's within the desired range
+    normalizedIntensity = Math.max(
+      minIntensity,
+      Math.min(maxIntensity, normalizedIntensity)
+    );
+
+    return isNaN(normalizedIntensity) ? 2 : normalizedIntensity;
+  };
+
+  const intensity = magnitudeToIntensity(data.magV);
+
+  console.log({ intensity });
+
   let scale = 1;
 
   if (mass > 0) {
@@ -53,18 +88,38 @@ const Star = ({ data, position }) => {
 
   useFrame((state, delta) => (ref.current.rotation.x += delta));
 
-  const [pos, setPos] = useState({
-    x: Math.random() * 1000 - 1,
-    y: Math.random() * 1000 - 1,
-    z: Math.random() * 1000 - 1,
-  });
-
   const isActive = activeRef === ref;
   const colorProps = isActive ? { color: color } : { color: color };
 
+  // const habitableZone = getHabitableZone({ data, distance });
+
+  const spectraltype = data.spectraltype?.[0]?.[0] || "M";
+
+  const habitableZone = calculateHZFromMassAndType({ mass, spectraltype });
+
+  console.log({ habitableZone });
+
   return (
     <group position={[position.x, position.y, position.z]}>
-      <pointLight color={color} intensity={2} distance={30000} />
+      <pointLight color={color} intensity={intensity} distance={30000} />
+      {habitableZone && (
+        <mesh>
+          <ringGeometry
+            args={[
+              habitableZone.innerRadiusAU,
+              habitableZone.outerRadiusAU,
+              128,
+            ]}
+          />
+          <meshBasicMaterial
+            transparent={true}
+            opacity={0.15}
+            color={0x008080}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
+
       <mesh ref={ref} name={name} onClick={handleClick}>
         <sphereGeometry args={[scale, 256, 256]} />
         <meshMatcapMaterial color={color} />

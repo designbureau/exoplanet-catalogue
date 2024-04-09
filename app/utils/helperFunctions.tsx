@@ -13,11 +13,9 @@ export const getSemimajoraxis = ({ data }: any) => {
 
   // Parse the extracted value as a float, providing a default value of 10 if the result is NaN
   let semimajoraxis = parseFloat(semimajoraxisValue);
-  semimajoraxis = isNaN(semimajoraxis) ? Constants.distance.au : semimajoraxis;
+  semimajoraxis = isNaN(semimajoraxis) ? 1 : semimajoraxis;
 
-  semimajoraxis = semimajoraxis * Constants.distance.au;
-
-  return semimajoraxis;
+  return semimajoraxis * Constants.distance.au;
 };
 
 export const getPeriod = ({ data }: any) => {
@@ -174,8 +172,8 @@ export const getPosition = ({
   const positionAngleRadians = positionAngleDegrees * (Math.PI / 180);
 
   // Calculate x and y using trigonometry
-  const x = separation * Constants.distance.au * Math.sin(positionAngleRadians);
-  const y = separation * Constants.distance.au * Math.cos(positionAngleRadians);
+  const x = separation * Math.sin(positionAngleRadians);
+  const y = separation * Math.cos(positionAngleRadians);
 
   // Assuming z is 0 for a 2D plane
   const z = 0;

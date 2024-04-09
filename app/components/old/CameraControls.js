@@ -8,7 +8,16 @@ import CameraControls from "camera-controls";
 controls.install({ THREE });
 extend({ controls });
 
-const Controls = ({focus, initialTarget, setInitialTarget, clicked, setClicked, follow, dragged, setDragged }) => {
+const Controls = ({
+  focus,
+  initialTarget,
+  setInitialTarget,
+  clicked,
+  setClicked,
+  follow,
+  dragged,
+  setDragged,
+}) => {
   let width = window.innerWidth;
   let height = window.innerHeight;
   const camera = useThree((state) => state.camera);
@@ -16,8 +25,6 @@ const Controls = ({focus, initialTarget, setInitialTarget, clicked, setClicked, 
   const controls = useMemo(() => new CameraControls(camera, gl.domElement), []);
   const [keyDown, setKeyDown] = useState(false);
   const [sensitivity, setSensitivity] = useState(5.0);
-
-
 
   let radius = 1;
   focus && focus.current
@@ -29,7 +36,7 @@ const Controls = ({focus, initialTarget, setInitialTarget, clicked, setClicked, 
   camera.fov = 50;
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
-  controls.minDistance = radius + (radius * 0.2);
+  controls.minDistance = radius + radius * 0.2;
   controls.maxDistance = 1000000;
 
   // console.log({camera})
@@ -40,14 +47,14 @@ const Controls = ({focus, initialTarget, setInitialTarget, clicked, setClicked, 
     if (clicked) {
       console.log({ clicked });
 
-      //TODO: could probably compare if current focus changes? 
-      if(!dragged){
+      //TODO: could probably compare if current focus changes?
+      if (!dragged) {
         controls.fitToBox(focus.current, true);
       }
-      if(dragged){
+      if (dragged) {
         setDragged(!dragged);
       }
-      
+
       // let vectorInit = new THREE.Vector3();
       // focus.current.getWorldPosition(vectorInit);
       // controls.setLookAt(vectorInit.x,vectorInit.y,vectorInit.z, vectorInit.x,vectorInit.y, vectorInit.z, true);
@@ -67,12 +74,11 @@ const Controls = ({focus, initialTarget, setInitialTarget, clicked, setClicked, 
     right: "right",
     plus: "plus",
     minus: "minus",
-    enter:"enter",
+    enter: "enter",
   });
 
   let vector = new THREE.Vector3();
 
-  
   // if(keyDown){
   //   controls.infinityDolly = true;
   //   controls.dollyToCursor = true;
@@ -82,15 +88,11 @@ const Controls = ({focus, initialTarget, setInitialTarget, clicked, setClicked, 
   //   controls.dollyToCursor = false;
   // }
 
-  
-
   return useFrame((state, delta) => {
     const elapsedTime = state.clock.getElapsedTime();
 
-
-   
     if (keys.plus.down) {
-      setSensitivity(sensitivity + 0.1)
+      setSensitivity(sensitivity + 0.1);
     }
     if (keys.minus.down) {
       setSensitivity(sensitivity - 0.1);
@@ -100,19 +102,19 @@ const Controls = ({focus, initialTarget, setInitialTarget, clicked, setClicked, 
     }
 
     if (keys.a.pressed) {
-      controls.truck((-0.5 * sensitivity) * delta * elapsedTime, 0, true);
+      controls.truck(-0.5 * sensitivity * delta * elapsedTime, 0, true);
       setKeyDown(true);
     }
     if (keys.d.pressed) {
-      controls.truck((0.5 * sensitivity) * delta * elapsedTime, 0, true);
+      controls.truck(0.5 * sensitivity * delta * elapsedTime, 0, true);
       setKeyDown(true);
     }
     if (keys.w.pressed) {
-      controls.dolly((0.5 * sensitivity) * delta * elapsedTime, true);
+      controls.dolly(0.5 * sensitivity * delta * elapsedTime, true);
       setKeyDown(true);
     }
     if (keys.s.pressed) {
-      controls.dolly((-0.5 * sensitivity) * delta * elapsedTime, true);
+      controls.dolly(-0.5 * sensitivity * delta * elapsedTime, true);
       setKeyDown(true);
     }
 
@@ -176,30 +178,24 @@ const Controls = ({focus, initialTarget, setInitialTarget, clicked, setClicked, 
     if (focus && focus.current) {
       focus.current.getWorldPosition(vector);
       if (keyDown === false) {
-        if(initialTarget){
+        if (initialTarget) {
           controls.moveTo(vector.x, vector.y, vector.z, false);
           setInitialTarget(false);
-        }
-        else{
-          // controls.lerpLookAt( currentPosition.x,currentPosition.y,currentPosition.z, currentPosition.x,currentPosition.y,currentPosition.a, vector.x, vector.y, vector.z, vector.x, vector.y, vector.z, 100, true );  
-         
-         //Could use a toggle to switch state between different follow modes
+        } else {
+          // controls.lerpLookAt( currentPosition.x,currentPosition.y,currentPosition.z, currentPosition.x,currentPosition.y,currentPosition.a, vector.x, vector.y, vector.z, vector.x, vector.y, vector.z, 100, true );
+
+          //Could use a toggle to switch state between different follow modes
           // controls.setTarget(vector.x, vector.y, vector.z, true);
 
-          if(follow){
+          if (follow) {
             controls.moveTo(vector.x, vector.y, vector.z, false);
-          }
-          else{
+          } else {
             controls.setTarget(vector.x, vector.y, vector.z, true);
           }
-
 
           // controls.lerpLookAt(currentPosition, vector.x, vector.y, vector.z, true)
 
           // lerpLookAt( positionAX, positionAY, positionAZ, targetAX, targetAY, targetAZ, positionBX, positionBY, positionBZ, targetBX, targetBY, targetBZ, t, enableTransition )
-
-
-
 
           // if(clicked){
           //   controls.moveTo(vector.x, vector.y, vector.z, true);
@@ -209,8 +205,6 @@ const Controls = ({focus, initialTarget, setInitialTarget, clicked, setClicked, 
           //   controls.moveTo(vector.x, vector.y, vector.z, false);
           // }
         }
-       
-
       }
     }
     return controls.update(delta);

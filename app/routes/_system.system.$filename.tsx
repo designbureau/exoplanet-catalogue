@@ -46,6 +46,7 @@ const Root = () => {
 const App = ({ data }: any) => {
   const { resetRefs, activeRef } = useContext(RefContext);
   const [cursor, setCursor] = useState("default");
+  const [follow, setFollow] = useState(true);
 
   useEffect(() => {
     resetRefs();
@@ -54,21 +55,26 @@ const App = ({ data }: any) => {
   return (
     <>
       <Menu data={data} />
+      <div className="controls bottom-0 left-0 fixed z-10">
+        <button className=" outline-0 p-3" onClick={() => setFollow(!follow)}>
+          {follow ? "Following" : "Not following"}
+        </button>
+      </div>
       <div id="canvas-container" style={{ cursor: cursor }}>
         <Canvas dpr={[1, 2]} camera={{ far: 100000000, near: 0.001, fov: 50 }}>
-          <ambientLight intensity={0.03} />
+          <ambientLight intensity={0.05} />
           <Binary data={data} />
-          <Controls />
+          <Controls follow={follow} />
         </Canvas>
       </div>
-      <div className="w-full h-svh flex justify-center items-center">
+      {/* <div className="w-full h-svh flex justify-center items-center">
         <BinaryBasic data={data} />
-      </div>
-      <div className="max-w-5xl">
+      </div> */}
+      {/* <div className="max-w-5xl">
         <pre className=" whitespace-pre-wrap ">
           {JSON.stringify(data, null, 2)}
         </pre>
-      </div>
+      </div> */}
     </>
   );
 };
