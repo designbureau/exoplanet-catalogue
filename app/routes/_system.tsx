@@ -27,7 +27,9 @@ export default function SystemsLayout() {
     <div className="flex items-start">
       <aside className={`navigation ${navActive ? "active" : ""}`}>
         <button
-          className={`navigationToggle ${navActive ? "active" : ""}`}
+          className={`navigationToggle outline-none ${
+            navActive ? "active" : ""
+          }`}
           onClick={() => {
             navHandler();
           }}

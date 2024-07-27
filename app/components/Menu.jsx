@@ -39,7 +39,7 @@ const Menu = ({ data }) => {
       return (
         <ul key={`${type}-${name}`} className="ml-3">
           <li
-            className={`cursor-pointer ${isActive ? "text-red-500" : ""}`}
+            className={`cursor-pointer ${isActive ? "text-cyan-400" : ""}`}
             data-name={`${type}-${name}`}
             onClick={() => handleClick(name, type)}
           >

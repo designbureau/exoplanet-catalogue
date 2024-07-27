@@ -2,27 +2,50 @@ import type { MetaFunction } from "@remix-run/node";
 
 import React, { useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
+import { OrbitControls, shaderMaterial } from "@react-three/drei";
+import { fresnel } from "../shaders/fresnel";
+import { AdditiveBlending, MultiplyBlending, NormalBlending } from "three";
+import PlanetTexture from "../utils/PlanetTextures";
 
-function Box(props: any) {
+const material = {
+  uniforms: {
+    u_opacity: { value: 0.7 },
+    u_lightPosition: { value: [-10, -10, -10] }, // Set default light position
+  },
+  vertexShader: fresnel.vertexShader,
+  fragmentShader: fresnel.fragmentShader,
+  transparent: true,
+  blending: AdditiveBlending,
+};
+
+function Sphere(props: any) {
+  const planetTexture = PlanetTexture(0, 0, "Mars");
+
   // This reference will give us direct access to the mesh
   const meshRef = useRef<any>();
   // Set up state for the hovered and active state
-  const [hovered, setHover] = useState(false);
-  const [active, setActive] = useState(false);
   // Subscribe this component to the render-loop, rotate the mesh every frame
-  useFrame((state, delta) => (meshRef.current.rotation.x += delta));
+  // useFrame((state, delta) => (meshRef.current.rotation.x += delta));
   // Return view, these are regular three.js elements expressed in JSX
   return (
-    <mesh
-      {...props}
-      ref={meshRef}
-      scale={active ? 1.5 : 1}
-      onClick={(event) => setActive(!active)}
-      onPointerOver={(event) => setHover(true)}
-      onPointerOut={(event) => setHover(false)}
-    >
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color={hovered ? "hotpink" : "orange"} />
+    <mesh {...props} ref={meshRef} scale={1}>
+      <sphereGeometry args={[1, 256, 256]} />
+      <meshStandardMaterial map={planetTexture} />
+    </mesh>
+  );
+}
+
+function Fresnel(props: any) {
+  // This reference will give us direct access to the mesh
+  const meshRef = useRef<any>();
+  // Set up state for the hovered and active state
+  // Subscribe this component to the render-loop, rotate the mesh every frame
+  // useFrame((state, delta) => (meshRef.current.rotation.x += delta));
+  // Return view, these are regular three.js elements expressed in JSX
+  return (
+    <mesh {...props} ref={meshRef} scale={1.01}>
+      <sphereGeometry args={[1, 256, 256]} />
+      <shaderMaterial attach="material" args={[material]} />
     </mesh>
   );
 }
@@ -35,22 +58,19 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Index() {
-  const [cursor, setCursor] = useState("default");
-
   return (
-    <div id="canvas-container" style={{ cursor: cursor }}>
+    <div id="canvas-container">
       <Canvas>
-        <ambientLight intensity={Math.PI / 2} />
-        <spotLight
-          position={[10, 10, 10]}
-          angle={0.15}
-          penumbra={1}
+        <ambientLight intensity={0.005} />
+        <pointLight
+          position={[-10, -10, -10]}
           decay={0}
-          intensity={Math.PI}
+          intensity={1}
+          castShadow
         />
-        <pointLight position={[-10, -10, -10]} decay={0} intensity={Math.PI} />
-        <Box position={[-1.2, 0, 0]} />
-        <Box position={[1.2, 0, 0]} />
+        <Fresnel position={[0, 0, 0]} />
+        <Sphere position={[0, 0, 0]} />
+        <OrbitControls />
       </Canvas>
     </div>
   );
