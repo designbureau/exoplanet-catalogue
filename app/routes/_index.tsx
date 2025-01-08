@@ -14,11 +14,12 @@ function GasGiantShader(props) {
       scale: { value: 10.0 },
       swirl_strength: { value: 0.2 },
       swirl_speed: { value: 0.005 },
-      swirl_tightness: { value: 2.0 },
-      noise_speed: { value: 0.125 },
+      swirl_tightness: { value: 1.0 },
+      noise_speed: { value: 0.005 },
       warp_intensity: { value: 3.0 },
       warp_frequency: { value: 0.9 },
       warp_scale: { value: 0.9 },
+      displacementScale: { value: 0.1 }, // New uniform for fragment shader displacement scale
       color1: { value: new THREE.Color(0.2, 0.1, 0.2) },
       color2: { value: new THREE.Color(0.5, 0.6, 0.9) },
       color3: { value: new THREE.Color(1.2, 0.4, 0.2) },
@@ -44,6 +45,7 @@ function GasGiantShader(props) {
       uniform float warp_intensity;
       uniform float warp_frequency;
       uniform float warp_scale;
+      uniform float displacementScale; // Use this to scale the fragment displacement effect
       uniform vec3 color1;
       uniform vec3 color2;
       uniform vec3 color3;
@@ -113,6 +115,9 @@ function GasGiantShader(props) {
         st = warpNoise(st, warp_intensity, warp_frequency, warp_scale);
         st += vec3(0.0, 0.0, u_time * noise_speed);
 
+        // Displace the texture coordinates in the fragment shader
+        st += vNormal * displacementScale * fbm(st.xy + u_time);
+
         vec3 color = mix(color1, color2, fbm(st.xy));
         color = mix(color, color3, fbm(st.zy));
         color = mix(color, color4, fbm(st.xz));
@@ -165,7 +170,7 @@ export default function Index() {
         <ambientLight intensity={0.05} />
         <pointLight position={[5, 5, 5]} intensity={20} />
         <GasGiantShader position={[0, 0, 0]} />
-        <ShadowSphere position={[0, 0, 0]} />
+        {/* <ShadowSphere position={[0, 0, 0]} /> */}
         <OrbitControls />
       </Canvas>
     </div>

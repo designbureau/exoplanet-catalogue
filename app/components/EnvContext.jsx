@@ -14,7 +14,7 @@ export const EnvProvider = ({ children }) => {
       sol: 11,
       jupiter: 1,
       earth: 11.209,
-      scale: 2,
+      scale: 1,
     },
     distance: {
       // au: 215.032 * 11,
