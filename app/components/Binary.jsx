@@ -1,5 +1,6 @@
 import { useRef, useContext, useEffect } from "react";
 import { RefContext } from "./RefContext";
+import { EnvContext } from "./EnvContext";
 import Star from "./Star";
 import Planet from "./Planet";
 import { getPosition } from "../utils/helperFunctions";
@@ -9,6 +10,7 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
 
   const ref = useRef();
   const { addRef, activeRef, setActiveByName } = useContext(RefContext);
+  const { Constants } = useContext(EnvContext);
   const name = data.name ? data.name[0] : "Unnamed binary";
 
   console.log("distance", data.distance);
@@ -37,9 +39,10 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
   // };
 
   // Calculate the binary's own position based on separation and position angle from its parent
-  const separation = parseFloat(
-    data.separation?.[0] ?? data.semimajoraxis?.[0] ?? 16 // average 16AU default
-  );
+  const separation =
+    parseFloat(
+      data.separation?.[0] ?? data.semimajoraxis?.[0] ?? 16 // average 16AU default
+    ) * Constants.distance.au;
 
   const positionAngleDegrees = parseFloat(data.positionangle?.[0] ?? 0);
   const binaryPosition = getPosition({ separation, positionAngleDegrees });
