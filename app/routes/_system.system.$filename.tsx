@@ -1,12 +1,10 @@
 import path from "path";
-import { json } from "@remix-run/node";
+import { useLoaderData } from "react-router";
 import { loadXMLAsJSON } from "~/utils/loadXMLAsJSON";
-import { useLoaderData } from "@remix-run/react";
 import { fileURLToPath } from "url";
-import { useEffect, useContext, useState, useRef } from "react";
+import { useEffect, useContext, useState } from "react";
 import { RefContext, RefProvider } from "~/components/RefContext";
 import { EnvProvider } from "~/components/EnvContext";
-import BinaryBasic from "~/components/BinaryBasic";
 import Binary from "~/components/Binary";
 import Menu from "~/components/Menu";
 import { Canvas } from "@react-three/fiber";
@@ -28,7 +26,7 @@ export const loader = async ({ params }: any) => {
 
   const jsonData = await loadXMLAsJSON(filePath);
 
-  return json(jsonData);
+  return jsonData;
 };
 
 const Root = () => {
@@ -45,7 +43,6 @@ const Root = () => {
 
 const App = ({ data }: any) => {
   const { resetRefs, activeRef } = useContext(RefContext);
-  const [cursor, setCursor] = useState("default");
   const [follow, setFollow] = useState(true);
 
   useEffect(() => {
@@ -60,21 +57,13 @@ const App = ({ data }: any) => {
           {follow ? "Following" : "Not following"}
         </button>
       </div>
-      <div id="canvas-container" style={{ cursor: cursor }}>
+      <div id="canvas-container">
         <Canvas dpr={[1, 2]} camera={{ far: 100000000, near: 0.001, fov: 50 }}>
           <ambientLight intensity={0.05} />
           <Binary data={data} />
           <Controls follow={follow} />
         </Canvas>
       </div>
-      {/* <div className="w-full h-svh flex justify-center items-center">
-        <BinaryBasic data={data} />
-      </div> */}
-      {/* <div className="max-w-5xl">
-        <pre className=" whitespace-pre-wrap ">
-          {JSON.stringify(data, null, 2)}
-        </pre>
-      </div> */}
     </>
   );
 };
