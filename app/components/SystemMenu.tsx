@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "@remix-run/react";
+import { Link, useNavigate } from "react-router";
 
 const SystemMenu = ({ xmlFiles, setNavActive }: any) => {
   const [searchQuery, setSearchQuery] = useState("");

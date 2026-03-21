@@ -1,13 +1,11 @@
-import { Outlet } from "@remix-run/react";
+import { Outlet, useLoaderData } from "react-router";
 import SystemMenu from "~/components/SystemMenu";
 import { useState } from "react";
-import { useLoaderData } from "@remix-run/react";
 import { getXmlFilesList } from "~/utils/getXmlFilesList";
-import { json } from "@remix-run/node";
 
 export const loader = async () => {
   const xmlFiles = await getXmlFilesList();
-  return json({ xmlFiles });
+  return { xmlFiles };
 };
 
 interface LoaderData {

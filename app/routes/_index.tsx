@@ -1,4 +1,4 @@
-import { MetaFunction } from "@remix-run/node";
+import type { MetaFunction } from "react-router";
 import React, { useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
