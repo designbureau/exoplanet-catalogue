@@ -3,62 +3,61 @@ import { RefContext } from "./RefContext";
 import { EnvContext } from "./EnvContext";
 import Star from "./Star";
 import Planet from "./Planet";
-import { getPosition } from "../utils/helperFunctions";
+import { getPosition, getMass } from "../utils/helperFunctions";
 
 const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
-  if (!data) return;
+  if (!data) return null;
 
   const ref = useRef();
   const { addRef, activeRef, setActiveByName } = useContext(RefContext);
   const { Constants } = useContext(EnvContext);
   const name = data.name ? data.name[0] : "Unnamed binary";
 
-  console.log("distance", data.distance);
-
   useEffect(() => {
     addRef(name, "binary", ref);
   }, [name, addRef, ref]);
 
   useEffect(() => {
-    // Assuming the binary data structure and that stars are listed under data.star
     if (data.star && data.star.length > 0) {
       const firstStarName = data.star[0].name
         ? data.star[0].name[0]
         : "Unnamed star";
-      // Use a timeout to ensure all refs are set before trying to access them
       setTimeout(() => {
         setActiveByName(firstStarName, "star");
       }, 0);
     }
   }, [data, setActiveByName]);
 
-  // const handleClick = (e) => {
-  //   e.stopPropagation();
-  //   console.log(ref);
-  //   setActive(ref);
-  // };
-
-  // Calculate the binary's own position based on separation and position angle from its parent
+  // Binary separation in scene units
   const separation =
     parseFloat(
-      data.separation?.[0] ?? data.semimajoraxis?.[0] ?? 16 // average 16AU default
+      data.separation?.[0] ?? data.semimajoraxis?.[0] ?? 16
     ) * Constants.distance.au;
 
   const positionAngleDegrees = parseFloat(data.positionangle?.[0] ?? 0);
-  const binaryPosition = getPosition({ separation, positionAngleDegrees });
 
-  // Adjust the binary's position based on the parentPosition
-  const adjustedBinaryPosition = {
-    x: parentPosition.x + binaryPosition.x,
-    y: parentPosition.y + binaryPosition.y,
-    z: parentPosition.z + binaryPosition.z,
-  };
+  // Position stars symmetrically around the binary center of mass
+  // If masses are known, weight the offset; otherwise split evenly
+  const stars = data.star || [];
+  let mass1 = stars[0] ? getMass({ data: stars[0] }) : 1;
+  let mass2 = stars[1] ? getMass({ data: stars[1] }) : 1;
+  // Default to equal masses if unknown
+  if (mass1 <= 0) mass1 = 1;
+  if (mass2 <= 0) mass2 = 1;
+  const totalMass = mass1 + mass2;
 
-  const firstStarPosition = { ...adjustedBinaryPosition };
-  const secondStarPosition = getPosition({ separation, positionAngleDegrees });
-  secondStarPosition.x += adjustedBinaryPosition.x;
-  secondStarPosition.y += adjustedBinaryPosition.y;
-  secondStarPosition.z += adjustedBinaryPosition.z;
+  // Star 1 offset from center: -separation * m2 / (m1 + m2)
+  // Star 2 offset from center: +separation * m1 / (m1 + m2)
+  const offset1 = getPosition({
+    separation: separation * (mass2 / totalMass),
+    positionAngleDegrees: positionAngleDegrees + 180, // opposite direction
+  });
+  const offset2 = getPosition({
+    separation: separation * (mass1 / totalMass),
+    positionAngleDegrees,
+  });
+
+  const starPositions = [offset1, offset2];
 
   const isActive = activeRef === ref;
 
@@ -67,30 +66,31 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
       ref={ref}
       name={name}
       active={isActive}
-      // onClick={handleClick}
-      position={[
-        adjustedBinaryPosition.x,
-        adjustedBinaryPosition.y,
-        adjustedBinaryPosition.z,
-      ]}
+      position={[parentPosition.x, parentPosition.y, parentPosition.z]}
     >
       {data.binary &&
-        data.binary.map((binary, index) => (
-          <Binary
-            key={index}
-            data={binary}
-            parentPosition={adjustedBinaryPosition}
-          />
-        ))}
-      {data.star &&
-        data.star.map((star, index) => (
-          <Star
-            key={index}
-            data={star}
-            distance={data.distance}
-            position={index === 0 ? firstStarPosition : secondStarPosition}
-          />
-        ))}
+        data.binary.map((binary, index) => {
+          // Nested binaries get offset from this binary's center
+          const nestedOffset = getPosition({
+            separation: parseFloat(binary.separation?.[0] ?? binary.semimajoraxis?.[0] ?? 16) * Constants.distance.au,
+            positionAngleDegrees: parseFloat(binary.positionangle?.[0] ?? 0),
+          });
+          return (
+            <Binary
+              key={index}
+              data={binary}
+              parentPosition={nestedOffset}
+            />
+          );
+        })}
+      {stars.map((star, index) => (
+        <Star
+          key={index}
+          data={star}
+          distance={data.distance}
+          position={starPositions[index] || { x: 0, y: 0, z: 0 }}
+        />
+      ))}
       {data.planet &&
         data.planet.map((planet, index) => (
           <Planet key={index} data={planet} />

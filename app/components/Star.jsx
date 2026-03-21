@@ -1,13 +1,11 @@
-import { useFrame, extend } from "@react-three/fiber";
-import { useRef, useContext, useEffect, useState } from "react";
+import { useFrame } from "@react-three/fiber";
+import { useRef, useContext, useEffect } from "react";
 import { RefContext } from "./RefContext";
 import { EnvContext } from "./EnvContext";
 import {
-  getHabitableZone,
   calculateHZFromMassAndType,
 } from "../utils/getHabitableZone";
 import Planet from "./Planet";
-// import { LayerMaterial, Fresnel } from "lamina";
 import * as THREE from "three";
 
 import {
@@ -20,8 +18,6 @@ import {
 const Star = ({ data, position, distance }) => {
   const ref = useRef();
 
-  console.log("star", { data });
-
   const { addRef, activeRef, setActive } = useContext(RefContext);
   const { Constants } = useContext(EnvContext);
 
@@ -29,7 +25,6 @@ const Star = ({ data, position, distance }) => {
 
   const handleClick = (e) => {
     e.stopPropagation();
-    console.log(ref);
     setActive(ref);
   };
 
@@ -40,26 +35,19 @@ const Star = ({ data, position, distance }) => {
   const mass = getMass({ data });
   const radius = getRadius({ data });
   const temperature = getTemperature({ data });
-  const { color, color_dark, color_light } = getColor({ temperature });
-  // console.log({ temperature });
-  // console.log({ color });
+  const { color } = getColor({ temperature });
 
   const magnitudeToIntensity = (magnitude) => {
-    const minIntensity = 1; // Minimum intensity value
-    const maxIntensity = 5; // Maximum intensity value
-    const base = 10; // Base for the exponential function
+    const minIntensity = 1;
+    const maxIntensity = 5;
+    const base = 10;
 
-    // Convert magnitude to a raw intensity value using an exponential scale
     let rawIntensity = Math.pow(base, -magnitude / 2.5);
-
-    // Normalize the raw intensity to be within the range [minIntensity, maxIntensity]
-    // This is a simple linear normalization; you might need to adjust it based on your data
     let normalizedIntensity =
       ((rawIntensity - minIntensity) / (1 - minIntensity)) *
         (maxIntensity - minIntensity) +
       minIntensity;
 
-    // Clamp the value to ensure it's within the desired range
     normalizedIntensity = Math.max(
       minIntensity,
       Math.min(maxIntensity, normalizedIntensity)
@@ -70,34 +58,20 @@ const Star = ({ data, position, distance }) => {
 
   const intensity = magnitudeToIntensity(data.magV);
 
-  console.log({ intensity });
-
   let scale = 1;
-
   if (mass > 0) {
     scale = mass;
-    // console.log("star mass", mass);
   }
-
   if (radius > 0) {
     scale = radius;
-    // console.log("star radius", radius);
   }
 
   scale = scale * Constants.radius.sol * Constants.radius.scale;
 
   useFrame((state, delta) => (ref.current.rotation.x += delta));
 
-  const isActive = activeRef === ref;
-  const colorProps = isActive ? { color: color } : { color: color };
-
-  // const habitableZone = getHabitableZone({ data, distance });
-
   const spectraltype = data.spectraltype?.[0]?.[0] || "M";
-
-  const habitableZone = calculateHZFromMassAndType({ mass, spectraltype });
-
-  console.log({ habitableZone });
+  const habitableZone = calculateHZFromMassAndType({ mass, spectraltype, Constants });
 
   return (
     <group position={[position.x, position.y, position.z]}>
