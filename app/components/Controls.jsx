@@ -44,16 +44,11 @@ const Controls = ({ follow }) => {
       );
 
       cameraControlsRef.current.fitToBox(activeRef.current, true);
-      // cameraControlsRef.current.rotate(
-      //   90 * THREE.MathUtils.DEG2RAD,
-      //   80 * THREE.MathUtils.DEG2RAD
-      // );
     }
   }, [activeRef]);
 
   useFrame((state, delta) => {
     const elapsedTime = state.clock.getElapsedTime();
-    // console.log({ elapsedTime });
     if (
       cameraControlsRef.current &&
       activeRef?.current?.getWorldPosition instanceof Function
@@ -76,8 +71,6 @@ const Controls = ({ follow }) => {
           true
         );
       }
-
-      // console.log({ follow });
 
       if (keys.plus.down) {
         setSensitivity(sensitivity + 0.1);
