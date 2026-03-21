@@ -1,17 +1,30 @@
-import { useContext } from "react";
-import { EnvContext } from "~/components/EnvContext";
 import chroma from "chroma-js";
 
-export const getSemimajoraxis = ({ data }: any) => {
-  const { Constants } = useContext(EnvContext);
+interface Constants {
+  mass: {
+    sol: number;
+    jupiter: number;
+    earth: number;
+    jupiter_mass_in_earth_masses: number;
+  };
+  radius: {
+    sol: number;
+    jupiter: number;
+    earth: number;
+    scale: number;
+  };
+  distance: {
+    au: number;
+    au_sol_radius: number;
+  };
+}
 
-  // Extract the first semimajoraxis value, if it exists, and parse it as a float
+export const getSemimajoraxis = ({ data, Constants }: { data: any; Constants: Constants }) => {
   const semimajoraxisValue =
     data.semimajoraxis?.[0]?.["_"] ??
     data.semimajoraxis?.[0] ??
     data.semimajoraxis;
 
-  // Parse the extracted value as a float, providing a default value of 10 if the result is NaN
   let semimajoraxis = parseFloat(semimajoraxisValue);
   semimajoraxis = isNaN(semimajoraxis) ? 1 : semimajoraxis;
 
@@ -26,7 +39,6 @@ export const getPeriod = ({ data }: any) => {
     data.period?.[0] ??
     data.period;
 
-  // Parse the extracted value as a float, providing a default value of 365 if the result is NaN
   let period = parseFloat(periodValue);
   period = isNaN(period) ? 365 : period;
 
@@ -34,11 +46,9 @@ export const getPeriod = ({ data }: any) => {
 };
 
 export const getEccentricity = ({ data }: any) => {
-  // Attempt to extract the eccentricity value from planet details
   const eccentricityValue =
     data.eccentricity?.[0]?.["_"] ?? data.eccentricity?.[0];
 
-  // Parse the extracted value as a float, providing a default value of 0 if the result is NaN
   let eccentricity = parseFloat(eccentricityValue);
   eccentricity = isNaN(eccentricity) ? 0 : eccentricity;
 
@@ -46,11 +56,9 @@ export const getEccentricity = ({ data }: any) => {
 };
 
 export const getInclination = ({ data }: any) => {
-  // Attempt to extract the inclination value from planet details
   const inclinationValue =
     data.inclination?.[0]?.["_"] ?? data.inclination?.[0];
 
-  // Parse the extracted value as a float, providing a default value of 0 if the result is NaN
   let inclination = parseFloat(inclinationValue);
   inclination = isNaN(inclination) ? 0 : inclination;
 
@@ -59,7 +67,6 @@ export const getInclination = ({ data }: any) => {
 
 export const getPeriastron = ({ data }: any) => {
   const periastron = parseFloat(data.periastron?.[0] ?? 0);
-
   return periastron;
 };
 
@@ -105,41 +112,29 @@ export const getRadius = ({ data }: any) => {
   return parseFloat(radiusValue ?? "0");
 };
 
-export const getTemperature = ({ data }: any) => {
-  let temperature =
-    parseFloat(data.temperature?.[0]?._ ?? data.temperature?._) || null;
-  const spectraltype = data.spectraltype?.[0]?.[0] || "M"; //M is the most common type of star so is an appropriate default
-
-  switch (spectraltype) {
-    case "M":
-      temperature = 3000;
-      break;
-    case "K":
-      temperature = 4500;
-      break;
-    case "G":
-      temperature = 5500;
-      break;
-    case "F":
-      temperature = 6500;
-      break;
-    case "A":
-      temperature = 8000;
-      break;
-    case "B":
-      temperature = 20000;
-      break;
-    case "O":
-      temperature = 40000;
-      break;
-    default:
-      temperature = 6500;
-      break;
-  }
-  return temperature;
+const spectralTypeTemperatures: Record<string, number> = {
+  M: 3000,
+  K: 4500,
+  G: 5500,
+  F: 6500,
+  A: 8000,
+  B: 20000,
+  O: 40000,
 };
 
-export const getColor = ({ temperature }: any) => {
+export const getTemperature = ({ data }: any) => {
+  // Try to get actual temperature from data first
+  const parsedTemp = parseFloat(data.temperature?.[0]?._ ?? data.temperature?._);
+  if (!isNaN(parsedTemp) && parsedTemp > 0) {
+    return parsedTemp;
+  }
+
+  // Fall back to spectral type estimate
+  const spectraltype = data.spectraltype?.[0]?.[0] || "M";
+  return spectralTypeTemperatures[spectraltype] ?? 6500;
+};
+
+export const getColor = ({ temperature }: { temperature: number }) => {
   const color = chroma.temperature(temperature).hex("rgb");
   const color_light = chroma
     .temperature(temperature + (temperature / 100) * 50)
@@ -157,7 +152,7 @@ interface Position {
   z: number;
 }
 
-interface OrbitParameters {
+interface PositionParams {
   separation: number;
   positionAngleDegrees: number;
 }
@@ -165,17 +160,11 @@ interface OrbitParameters {
 export const getPosition = ({
   separation,
   positionAngleDegrees,
-}: OrbitParameters): Position => {
-  const { Constants } = useContext(EnvContext);
-
-  // Convert position angle from degrees to radians
+}: PositionParams): Position => {
   const positionAngleRadians = positionAngleDegrees * (Math.PI / 180);
 
-  // Calculate x and y using trigonometry
   const x = separation * Math.sin(positionAngleRadians);
   const y = separation * Math.cos(positionAngleRadians);
-
-  // Assuming z is 0 for a 2D plane
   const z = 0;
 
   return { x, y, z };
