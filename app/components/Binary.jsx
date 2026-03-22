@@ -94,7 +94,7 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
       ))}
       {data.planet &&
         data.planet.map((planet, index) => (
-          <Planet key={index} data={planet} />
+          <Planet key={index} data={planet} starData={{ temperature: 5500, mass: 1, radius: 1 }} />
         ))}
     </group>
   );
