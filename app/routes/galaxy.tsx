@@ -8,7 +8,7 @@ import {
   getSystemPositions,
   type SystemPosition,
 } from "~/utils/parseSystemPositions";
-import MilkyWay from "~/components/MilkyWay";
+import MilkyWay, { defaultParams, type MilkyWayParams } from "~/components/MilkyWay";
 
 export const meta: MetaFunction = () => [
   { title: "Galaxy Map - Exoplanet Explorer" },
@@ -248,7 +248,13 @@ function GalacticReference({ onSolClick }: { onSolClick: () => void }) {
 export default function GalaxyMap() {
   const { systems } = useLoaderData<{ systems: SystemPosition[] }>();
   const [selected, setSelected] = useState<SystemPosition | null>(null);
+  const [galaxyParams, setGalaxyParams] = useState<MilkyWayParams>(defaultParams);
+  const [galaxyScale, setGalaxyScale] = useState(15);
   const navigate = useNavigate();
+
+  const updateParam = (key: keyof MilkyWayParams, value: number) => {
+    setGalaxyParams((prev) => ({ ...prev, [key]: value }));
+  };
 
   return (
     <div className="relative h-screen w-screen">
@@ -281,6 +287,56 @@ export default function GalaxyMap() {
         </div>
       </div>
 
+      {/* Galaxy controls */}
+      <div className="fixed bottom-2 right-2 z-10 flex flex-col gap-1 rounded-md bg-black/60 px-3 py-2 backdrop-blur-sm">
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <label className="w-20 shrink-0">Galaxy scale</label>
+          <input
+            type="range"
+            min={0.5}
+            max={30}
+            step={0.1}
+            value={galaxyScale}
+            onChange={(e) => setGalaxyScale(parseFloat(e.target.value))}
+            className="w-16 accent-cyan-400"
+          />
+          <span className="w-12 tabular-nums text-right">{galaxyScale}x</span>
+        </div>
+        {([
+          { key: "barAngle", label: "Bar angle", min: 0, max: 90, step: 1, unit: "°" },
+          { key: "armAngle", label: "Arm angle", min: 0, max: 90, step: 1, unit: "°" },
+          { key: "armStart", label: "Arm start", min: 1000, max: 8000, step: 100, unit: "pc" },
+          { key: "secondaryStart", label: "Sec start", min: 1000, max: 8000, step: 100, unit: "pc" },
+          { key: "pitchPrimary", label: "Pri pitch", min: 5, max: 25, step: 0.5, unit: "°" },
+          { key: "pitchSecondary", label: "Sec pitch", min: 5, max: 25, step: 0.5, unit: "°" },
+          { key: "secondaryOffset", label: "Arm offset", min: 45, max: 170, step: 1, unit: "°" },
+          { key: "armWidth", label: "Arm width", min: 400, max: 3000, step: 50, unit: "pc" },
+          { key: "armTaper", label: "Arm taper", min: 0.5, max: 3, step: 0.1, unit: "x" },
+          { key: "discScatter", label: "Disc scatter", min: 1, max: 10, step: 0.5, unit: "x" },
+          { key: "discWidth", label: "Disc width", min: 0.5, max: 5, step: 0.1, unit: "x" },
+          { key: "discDensity", label: "Disc density", min: 0.5, max: 3, step: 0.1, unit: "x" },
+          { key: "discScale", label: "Disc scale", min: 0.5, max: 2, step: 0.05, unit: "x" },
+          { key: "discRotation", label: "Disc rotate", min: -90, max: 90, step: 1, unit: "°" },
+          { key: "barLength", label: "Bar length", min: 1000, max: 8000, step: 100, unit: "pc" },
+          { key: "barWidth", label: "Bar width", min: 200, max: 3000, step: 50, unit: "pc" },
+          { key: "bulgeSize", label: "Bulge size", min: 400, max: 3000, step: 50, unit: "pc" },
+        ] as const).map(({ key, label, min, max, step, unit }) => (
+          <div key={key} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <label className="w-20 shrink-0">{label}</label>
+            <input
+              type="range"
+              min={min}
+              max={max}
+              step={step}
+              value={galaxyParams[key]}
+              onChange={(e) => updateParam(key, parseFloat(e.target.value))}
+              className="w-16 accent-cyan-400"
+            />
+            <span className="w-12 tabular-nums text-right">{galaxyParams[key]}{unit}</span>
+          </div>
+        ))}
+      </div>
+
       {/* Selected system info */}
       {selected && (
         <div className="fixed top-2 right-2 z-10 rounded-md bg-black/80 px-4 py-3 backdrop-blur-sm">
@@ -300,14 +356,14 @@ export default function GalaxyMap() {
       <Canvas
         camera={{
           position: [0, 500, 1000],
-          far: 200000,
+          far: 1000000,
           near: 0.1,
           fov: 60,
         }}
       >
         <color attach="background" args={["#050510"]} />
         <ambientLight intensity={0.1} />
-        <MilkyWay sunPosition={[0, 0, 0]} scale={1} />
+        <MilkyWay sunPosition={[0, 0, 0]} scale={galaxyScale} params={galaxyParams} />
         <StarField systems={systems} onSelect={setSelected} />
         <ZodiacRing />
         <GalacticReference onSolClick={() => setSelected({
@@ -322,7 +378,7 @@ export default function GalaxyMap() {
           enableDamping
           dampingFactor={0.1}
           minDistance={10}
-          maxDistance={50000}
+          maxDistance={500000}
         />
       </Canvas>
     </div>
