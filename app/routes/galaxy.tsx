@@ -8,6 +8,7 @@ import {
   getSystemPositions,
   type SystemPosition,
 } from "~/utils/parseSystemPositions";
+import MilkyWay from "~/components/MilkyWay";
 
 export const meta: MetaFunction = () => [
   { title: "Galaxy Map - Exoplanet Explorer" },
@@ -299,13 +300,14 @@ export default function GalaxyMap() {
       <Canvas
         camera={{
           position: [0, 500, 1000],
-          far: 100000,
+          far: 200000,
           near: 0.1,
           fov: 60,
         }}
       >
         <color attach="background" args={["#050510"]} />
         <ambientLight intensity={0.1} />
+        <MilkyWay sunPosition={[0, 0, 0]} scale={1} />
         <StarField systems={systems} onSelect={setSelected} />
         <ZodiacRing />
         <GalacticReference onSolClick={() => setSelected({
@@ -320,7 +322,7 @@ export default function GalaxyMap() {
           enableDamping
           dampingFactor={0.1}
           minDistance={10}
-          maxDistance={5000}
+          maxDistance={50000}
         />
       </Canvas>
     </div>
