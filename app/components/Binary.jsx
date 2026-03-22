@@ -10,7 +10,7 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
 
   const ref = useRef();
   const { addRef, activeRef, setActiveByName } = useContext(RefContext);
-  const { Constants } = useContext(EnvContext);
+  const { Constants, binaryDistanceFactor } = useContext(EnvContext);
   const name = data.name ? data.name[0] : "Unnamed binary";
 
   useEffect(() => {
@@ -28,8 +28,8 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
     }
   }, [data, setActiveByName]);
 
-  // Binary separation in scene units (scaled down 10x vs planet orbits for visual clarity)
-  const binaryDistanceScale = Constants.distance.au * 0.1;
+  // Binary separation in scene units (adjustable via UI)
+  const binaryDistanceScale = Constants.distance.au * binaryDistanceFactor;
   const separation =
     parseFloat(
       data.separation?.[0] ?? data.semimajoraxis?.[0] ?? 16

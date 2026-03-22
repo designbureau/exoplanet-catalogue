@@ -20,11 +20,11 @@ import {
 const Planet = ({ data }) => {
   const ref = useRef();
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor } = useContext(EnvContext);
 
   const name = data.name ? data.name[0] : "Unnamed planet";
 
-  const semimajoraxis = getSemimajoraxis({ data, Constants });
+  const semimajoraxis = getSemimajoraxis({ data, Constants }) * planetDistanceFactor;
   const period = getPeriod({ data });
   const eccentricity = getEccentricity({ data });
   const inclination = getInclination({ data });
