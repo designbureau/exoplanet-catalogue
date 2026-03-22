@@ -28,11 +28,12 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
     }
   }, [data, setActiveByName]);
 
-  // Binary separation in scene units
+  // Binary separation in scene units (scaled down 10x vs planet orbits for visual clarity)
+  const binaryDistanceScale = Constants.distance.au * 0.1;
   const separation =
     parseFloat(
       data.separation?.[0] ?? data.semimajoraxis?.[0] ?? 16
-    ) * Constants.distance.au;
+    ) * binaryDistanceScale;
 
   const positionAngleDegrees = parseFloat(data.positionangle?.[0] ?? 0);
 
@@ -72,7 +73,7 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
         data.binary.map((binary, index) => {
           // Nested binaries get offset from this binary's center
           const nestedOffset = getPosition({
-            separation: parseFloat(binary.separation?.[0] ?? binary.semimajoraxis?.[0] ?? 16) * Constants.distance.au,
+            separation: parseFloat(binary.separation?.[0] ?? binary.semimajoraxis?.[0] ?? 16) * binaryDistanceScale,
             positionAngleDegrees: parseFloat(binary.positionangle?.[0] ?? 0),
           });
           return (
