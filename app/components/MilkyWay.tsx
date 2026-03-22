@@ -57,6 +57,8 @@ export interface MilkyWayParams {
   barLength: number;          // bar half-length (pc)
   barWidth: number;           // bar half-width (pc)
   bulgeSize: number;          // bulge radius (pc)
+  bulgeDensity: number;       // bulge particle multiplier (0.5-3)
+  bulgeFlattening: number;    // 0 = fully spherical, 1 = very flat (0-1)
 }
 
 export const defaultParams: MilkyWayParams = {
@@ -77,6 +79,8 @@ export const defaultParams: MilkyWayParams = {
   barLength: 4700,
   barWidth: 1200,
   bulgeSize: 1200,
+  bulgeDensity: 1,
+  bulgeFlattening: 0.2,
 };
 
 interface MilkyWayProps {
@@ -176,14 +180,16 @@ export default function MilkyWay({ sunPosition, scale = 1, params = defaultParam
     }
 
     // 2. Central bulge - older, redder population
-    for (let i = 0; i < BULGE_PARTICLES; i++) {
+    const bulgeCount = Math.floor(BULGE_PARTICLES * params.bulgeDensity);
+    const zScale = 1 - params.bulgeFlattening; // 1 = sphere, 0 = flat disc
+    for (let i = 0; i < bulgeCount; i++) {
       const r = Math.abs(gaussRandom(rand, params.bulgeSize));
       const theta = rand() * 2 * Math.PI;
       const phi = Math.asin(2 * rand() - 1);
 
       const gx = r * Math.cos(phi) * Math.cos(theta);
       const gy = r * Math.cos(phi) * Math.sin(theta);
-      const gz = r * Math.sin(phi) * 0.5; // flattened
+      const gz = r * Math.sin(phi) * zScale;
 
       const brightness = 0.4 + rand() * 0.45;
       addParticle(gx, gy, gz, brightness, brightness * 0.8, brightness * 0.5);

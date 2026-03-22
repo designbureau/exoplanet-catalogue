@@ -9,6 +9,7 @@ import {
   type SystemPosition,
 } from "~/utils/parseSystemPositions";
 import MilkyWay, { defaultParams, type MilkyWayParams } from "~/components/MilkyWay";
+import { ZODIAC_CONSTELLATIONS, type ConstellationStar } from "~/data/zodiacConstellations";
 
 export const meta: MetaFunction = () => [
   { title: "Galaxy Map - Exoplanet Explorer" },
@@ -125,71 +126,106 @@ function SelectionMarker({ system }: { system: SystemPosition }) {
   );
 }
 
-// Ecliptic ring with zodiac constellation labels
-const OBLIQUITY = 23.44 * (Math.PI / 180); // Earth's axial tilt
-const ZODIAC_RADIUS = 800; // scene units
-
-const zodiacSigns = [
-  { name: "Aries", mid: 15 },
-  { name: "Taurus", mid: 45 },
-  { name: "Gemini", mid: 75 },
-  { name: "Cancer", mid: 105 },
-  { name: "Leo", mid: 135 },
-  { name: "Virgo", mid: 165 },
-  { name: "Libra", mid: 195 },
-  { name: "Scorpio", mid: 225 },
-  { name: "Sagittarius", mid: 255 },
-  { name: "Capricorn", mid: 285 },
-  { name: "Aquarius", mid: 315 },
-  { name: "Pisces", mid: 345 },
-];
-
-// Convert ecliptic longitude to equatorial RA/Dec, then to scene Cartesian
-function eclipticToScene(lambdaDeg: number, radius: number): [number, number, number] {
-  const lambda = (lambdaDeg * Math.PI) / 180;
-  const ra = Math.atan2(Math.sin(lambda) * Math.cos(OBLIQUITY), Math.cos(lambda));
-  const dec = Math.asin(Math.sin(lambda) * Math.sin(OBLIQUITY));
-  // Same mapping as StarField: x = cos(dec)*cos(ra), y→z, z→y
-  const x = radius * Math.cos(dec) * Math.cos(ra);
-  const z = radius * Math.cos(dec) * Math.sin(ra); // RA axis → scene Z
-  const y = radius * Math.sin(dec); // Dec axis → scene Y
-  return [x, y, z];
+// Convert RA (decimal hours) / Dec (decimal degrees) / Distance (parsecs) to scene coords
+// Same mapping as StarField: x = cos(dec)*cos(ra), y = sin(dec), z = cos(dec)*sin(ra)
+function starToScene(star: ConstellationStar): [number, number, number] {
+  const raRad = (star.ra * 15 * Math.PI) / 180;
+  const decRad = (star.dec * Math.PI) / 180;
+  const d = star.distance;
+  return [
+    d * Math.cos(decRad) * Math.cos(raRad),
+    d * Math.sin(decRad),
+    d * Math.cos(decRad) * Math.sin(raRad),
+  ];
 }
 
-function ZodiacRing() {
-  const ringGeometry = useMemo(() => {
-    const points: THREE.Vector3[] = [];
-    for (let deg = 0; deg <= 360; deg += 2) {
-      const [x, y, z] = eclipticToScene(deg, ZODIAC_RADIUS);
-      points.push(new THREE.Vector3(x, y, z));
-    }
-    return new THREE.BufferGeometry().setFromPoints(points);
+function ConstellationLines({ visible }: { visible: boolean }) {
+  if (!visible) return null;
+  const { lines, starPoints, labels } = useMemo(() => {
+    const allLines: { points: THREE.Vector3[]; }[] = [];
+    const allStars: THREE.Vector3[] = [];
+    const allLabels: { position: [number, number, number]; name: string }[] = [];
+
+    Object.values(ZODIAC_CONSTELLATIONS).forEach((constellation) => {
+      const positions = constellation.stars.map(starToScene);
+
+      // Star points
+      positions.forEach((pos) => allStars.push(new THREE.Vector3(...pos)));
+
+      // Connection lines
+      constellation.connections.forEach(([a, b]) => {
+        allLines.push({
+          points: [
+            new THREE.Vector3(...positions[a]),
+            new THREE.Vector3(...positions[b]),
+          ],
+        });
+      });
+
+      // Label at centroid of constellation
+      const cx = positions.reduce((s, p) => s + p[0], 0) / positions.length;
+      const cy = positions.reduce((s, p) => s + p[1], 0) / positions.length;
+      const cz = positions.reduce((s, p) => s + p[2], 0) / positions.length;
+      allLabels.push({ position: [cx, cy + 5, cz], name: constellation.name });
+    });
+
+    return { lines: allLines, starPoints: allStars, labels: allLabels };
   }, []);
+
+  const starGeo = useMemo(() => {
+    const positions = new Float32Array(starPoints.length * 3);
+    starPoints.forEach((v, i) => {
+      positions[i * 3] = v.x;
+      positions[i * 3 + 1] = v.y;
+      positions[i * 3 + 2] = v.z;
+    });
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    return geo;
+  }, [starPoints]);
 
   return (
     <group>
-      <lineLoop geometry={ringGeometry}>
-        <lineBasicMaterial color="#4a3a6a" transparent opacity={0.4} />
-      </lineLoop>
-      {zodiacSigns.map((sign) => {
-        const [x, y, z] = eclipticToScene(sign.mid, ZODIAC_RADIUS + 15);
+      {/* Constellation star points */}
+      <points geometry={starGeo}>
+        <pointsMaterial
+          size={1.5}
+          sizeAttenuation={false}
+          color="#ffeedd"
+          transparent
+          opacity={0.85}
+          depthWrite={false}
+        />
+      </points>
+
+      {/* Connection lines */}
+      {lines.map((line, i) => {
+        const geo = new THREE.BufferGeometry().setFromPoints(line.points);
         return (
-          <Html
-            key={sign.name}
-            position={[x, y, z]}
-            center
-            zIndexRange={[0, 0]}
-            style={{ pointerEvents: "none" }}
-          >
-            <span className="text-[8px] text-purple-300/50 whitespace-nowrap">
-              {sign.name}
-            </span>
-          </Html>
+          <line key={i} geometry={geo}>
+            <lineBasicMaterial color="#aa8855" transparent opacity={0.6} />
+          </line>
         );
       })}
+
+      {/* Constellation name labels */}
+      {labels.map((label) => (
+        <Html
+          key={label.name}
+          position={label.position}
+          center
+          zIndexRange={[0, 0]}
+          style={{ pointerEvents: "none" }}
+        >
+          <span className="text-[9px] text-amber-200/60 whitespace-nowrap">
+            {label.name}
+          </span>
+        </Html>
+      ))}
     </group>
   );
 }
+
 
 // Subtle grid/axes at origin to show galactic reference
 function GalacticReference({ onSolClick }: { onSolClick: () => void }) {
@@ -250,6 +286,8 @@ export default function GalaxyMap() {
   const [selected, setSelected] = useState<SystemPosition | null>(null);
   const [galaxyParams, setGalaxyParams] = useState<MilkyWayParams>(defaultParams);
   const [galaxyScale, setGalaxyScale] = useState(15);
+  const [showZodiac, setShowZodiac] = useState(false);
+  const [showControls, setShowControls] = useState(false);
   const navigate = useNavigate();
 
   const updateParam = (key: keyof MilkyWayParams, value: number) => {
@@ -269,6 +307,12 @@ export default function GalaxyMap() {
         <div className="rounded-md bg-black/60 px-3 py-1.5 text-[10px] text-muted-foreground backdrop-blur-sm">
           {systems.length.toLocaleString()} systems
         </div>
+        <button
+          onClick={() => setShowZodiac(!showZodiac)}
+          className={`rounded-md px-3 py-1.5 text-[10px] backdrop-blur-sm ${showZodiac ? "bg-amber-900/40 text-amber-300" : "bg-black/60 text-muted-foreground"}`}
+        >
+          {showZodiac ? "Zodiac on" : "Zodiac off"}
+        </button>
       </div>
 
       {/* Legend */}
@@ -288,7 +332,13 @@ export default function GalaxyMap() {
       </div>
 
       {/* Galaxy controls */}
-      <div className="fixed bottom-2 right-2 z-10 flex flex-col gap-1 rounded-md bg-black/60 px-3 py-2 backdrop-blur-sm">
+      <button
+        onClick={() => setShowControls(!showControls)}
+        className="fixed bottom-2 right-2 z-20 rounded-md bg-black/60 px-3 py-1.5 text-[10px] text-muted-foreground backdrop-blur-sm hover:text-foreground"
+      >
+        {showControls ? "Hide controls" : "Controls"}
+      </button>
+      {showControls && <div className="fixed bottom-8 right-2 z-10 flex flex-col gap-1 rounded-md bg-black/60 px-3 py-2 backdrop-blur-sm">
         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
           <label className="w-20 shrink-0">Galaxy scale</label>
           <input
@@ -320,6 +370,8 @@ export default function GalaxyMap() {
           { key: "barLength", label: "Bar length", min: 1000, max: 8000, step: 100, unit: "pc" },
           { key: "barWidth", label: "Bar width", min: 200, max: 3000, step: 50, unit: "pc" },
           { key: "bulgeSize", label: "Bulge size", min: 400, max: 3000, step: 50, unit: "pc" },
+          { key: "bulgeDensity", label: "Bulge density", min: 0.5, max: 3, step: 0.1, unit: "x" },
+          { key: "bulgeFlattening", label: "Bulge flat", min: 0, max: 0.9, step: 0.05, unit: "" },
         ] as const).map(({ key, label, min, max, step, unit }) => (
           <div key={key} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
             <label className="w-20 shrink-0">{label}</label>
@@ -335,7 +387,7 @@ export default function GalaxyMap() {
             <span className="w-12 tabular-nums text-right">{galaxyParams[key]}{unit}</span>
           </div>
         ))}
-      </div>
+      </div>}
 
       {/* Selected system info */}
       {selected && (
@@ -365,7 +417,7 @@ export default function GalaxyMap() {
         <ambientLight intensity={0.1} />
         <MilkyWay sunPosition={[0, 0, 0]} scale={galaxyScale} params={galaxyParams} />
         <StarField systems={systems} onSelect={setSelected} />
-        <ZodiacRing />
+        <ConstellationLines visible={showZodiac} />
         <GalacticReference onSolClick={() => setSelected({
           name: "Solar System",
           filename: "Sun",
