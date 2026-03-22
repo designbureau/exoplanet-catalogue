@@ -73,7 +73,7 @@ function StarField({
       if (!pointsRef.current) return;
 
       raycaster.setFromCamera(pointer, camera);
-      raycaster.params.Points = { threshold: 5 };
+      raycaster.params.Points = { threshold: 2 };
       const intersects = raycaster.intersectObject(pointsRef.current);
 
       if (intersects.length > 0 && intersects[0].index !== undefined) {
@@ -194,25 +194,27 @@ function ZodiacRing() {
 function GalacticReference({ onSolClick }: { onSolClick: () => void }) {
   return (
     <group>
-      {/* Sun / origin marker - visible sphere + larger click target */}
-      <mesh position={[0, 0, 0]}>
-        <sphereGeometry args={[0.5, 16, 16]} />
-        <meshBasicMaterial color="#ffdd44" />
-      </mesh>
+      {/* Sun / origin marker */}
       <mesh
         position={[0, 0, 0]}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSolClick();
-        }}
+        onClick={(e) => { e.stopPropagation(); onSolClick(); }}
         onPointerOver={() => (document.body.style.cursor = "pointer")}
         onPointerOut={() => (document.body.style.cursor = "default")}
       >
-        <sphereGeometry args={[4, 16, 16]} />
-        <meshBasicMaterial visible={false} />
+        <sphereGeometry args={[0.5, 16, 16]} />
+        <meshBasicMaterial color="#ffdd44" />
       </mesh>
-      <Html position={[0, 3, 0]} center zIndexRange={[0, 0]} style={{ pointerEvents: "none" }}>
-        <span className="text-[9px] font-medium text-yellow-300 drop-shadow-[0_0_4px_rgba(255,221,68,0.6)]">Sol</span>
+      <Html position={[0, 3, 0]} center>
+        <div
+          role="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSolClick();
+          }}
+          className="cursor-pointer select-none rounded px-3 py-1 text-[10px] font-medium text-yellow-300 drop-shadow-[0_0_4px_rgba(255,221,68,0.6)] hover:bg-yellow-300/10 hover:text-yellow-100"
+        >
+          Sol
+        </div>
       </Html>
       {/* Equatorial plane - circular grid (rings + radial lines) */}
       <group rotation={[-Math.PI / 2, 0, 0]}>
@@ -233,7 +235,7 @@ function GalacticReference({ onSolClick }: { onSolClick: () => void }) {
           const geo = new THREE.BufferGeometry().setFromPoints(points);
           return (
             <line key={i} geometry={geo}>
-              <lineBasicMaterial color="#445566" transparent opacity={0.4} />
+              <lineBasicMaterial color="#556677" transparent opacity={0.6} />
             </line>
           );
         })}
@@ -304,6 +306,8 @@ export default function GalaxyMap() {
       >
         <color attach="background" args={["#050510"]} />
         <ambientLight intensity={0.1} />
+        <StarField systems={systems} onSelect={setSelected} />
+        <ZodiacRing />
         <GalacticReference onSolClick={() => setSelected({
           name: "Solar System",
           filename: "Sun",
@@ -311,8 +315,6 @@ export default function GalaxyMap() {
           distance: 0,
           planetCount: 8,
         })} />
-        <ZodiacRing />
-        <StarField systems={systems} onSelect={setSelected} />
         {selected && <SelectionMarker system={selected} />}
         <OrbitControls
           enableDamping
