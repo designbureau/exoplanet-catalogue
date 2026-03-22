@@ -45,6 +45,12 @@ export default function Index() {
           <p className="mt-2 text-muted-foreground">
             {systemNames.length.toLocaleString()} star systems from the Open Exoplanet Catalogue
           </p>
+          <Link
+            to="/galaxy"
+            className="mt-3 inline-block rounded-md bg-cyan-900/40 px-4 py-2 text-sm text-cyan-400 transition-colors hover:bg-cyan-900/60"
+          >
+            View Galaxy Map
+          </Link>
 
           {/* Search */}
           <div className="relative mt-6">
