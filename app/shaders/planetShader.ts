@@ -234,20 +234,27 @@ const terrestrialFragment = `
 
   ${noiseLib}
 
-  // Compute continental height using multiplicative layering + domain warp
+  // Compute continental height using low-frequency noise + domain warp
   float computeContinent(vec3 p) {
-    // Domain warp for organic continent shapes
-    vec3 wp = p + 0.3 * vec3(
-      fbm3d(p * 2.0),
-      fbm3d(p * 2.0 + vec3(5.2)),
-      fbm3d(p * 2.0 + vec3(9.7))
+    // Strong domain warp at very low frequency for organic continent shapes
+    vec3 wp = p + 0.6 * vec3(
+      fbm3d(p * 0.4),
+      fbm3d(p * 0.4 + vec3(5.2)),
+      fbm3d(p * 0.4 + vec3(9.7))
     );
 
-    // Multiplicative layering
-    float h1 = noise3d(wp * 1.5);
-    float h2 = noise3d(wp * 4.0);
-    float h3 = noise3d(wp * 12.0);
-    return h1 * (1.0 + h2 * 0.4) * (1.0 + h3 * 0.15);
+    // Very low frequency base for massive continents and ocean basins
+    float h1 = noise3d(wp * 0.25);
+    // Secondary layer for sub-continental features
+    float h2 = noise3d(wp * 0.7);
+    // Coastline detail warp
+    vec3 wp2 = wp + 0.12 * vec3(
+      noise3d(wp * 2.5 + vec3(17.0)),
+      noise3d(wp * 2.5 + vec3(31.0)),
+      noise3d(wp * 2.5 + vec3(47.0))
+    );
+    float h3 = noise3d(wp2 * 2.0);
+    return h1 * 0.6 + h2 * 0.3 + h3 * 0.1;
   }
 
   void main() {
@@ -263,8 +270,8 @@ const terrestrialFragment = `
     vec3 bumpGrad = vec3(continent - cx, continent - cy, continent - cz) / eps;
     vec3 bumpNormal = normalize(vNormal + bumpGrad * 0.08);
 
-    // Sea level threshold
-    float seaLevel = 0.42;
+    // Sea level threshold (tuned for additive continent noise range)
+    float seaLevel = 0.45;
     float isLand = smoothstep(seaLevel - 0.02, seaLevel + 0.02, continent);
 
     // Ocean colour (deeper = darker)
