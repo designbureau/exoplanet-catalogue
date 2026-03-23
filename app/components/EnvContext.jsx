@@ -25,11 +25,11 @@ export const EnvProvider = ({ children }) => {
 
   // Atmosphere controls
   const [atmosIntensity, setAtmosIntensity] = useState(0.3);
-  const [atmosFalloff, setAtmosFalloff] = useState(1.4);
-  const [glowIntensity, setGlowIntensity] = useState(1.5);
-  const [glowScale, setGlowScale] = useState(3.0);
-  const [glowFalloff, setGlowFalloff] = useState(1.5);
-  const [glowInner, setGlowInner] = useState(0.3);
+  const [atmosFalloff, setAtmosFalloff] = useState(1.0);
+  const [glowIntensity, setGlowIntensity] = useState(0.9);
+  const [glowScale, setGlowScale] = useState(1.15);
+  const [glowFalloff, setGlowFalloff] = useState(1.25);
+  const [glowInner, setGlowInner] = useState(0.0);
 
   const Constants = useMemo(() => ({
     mass: {

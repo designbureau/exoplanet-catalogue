@@ -342,43 +342,46 @@ const terrestrialFragment = `
 
   // Compute continental height using cloud noise + ridged terrain (LOD-aware)
   float computeContinent(vec3 p) {
-    // Domain warp (simplified at low LOD)
+    // Domain warp at very low frequency for continent-scale distortion
     vec3 wp;
     if (u_lod > 0.5) {
-      wp = p + 0.6 * vec3(
-        fbm3d(p * 0.4),
-        fbm3d(p * 0.4 + vec3(5.2)),
-        fbm3d(p * 0.4 + vec3(9.7))
+      wp = p + 0.5 * vec3(
+        fbm3d(p * 0.2),
+        fbm3d(p * 0.2 + vec3(5.2)),
+        fbm3d(p * 0.2 + vec3(9.7))
       );
     } else {
-      wp = p + 0.4 * vec3(
-        noise3d(p * 0.4),
-        noise3d(p * 0.4 + vec3(5.2)),
-        noise3d(p * 0.4 + vec3(9.7))
+      wp = p + 0.3 * vec3(
+        noise3d(p * 0.2),
+        noise3d(p * 0.2 + vec3(5.2)),
+        noise3d(p * 0.2 + vec3(9.7))
       );
     }
 
-    // Very low frequency base for massive continents and ocean basins
-    float h1 = noise3d(wp * 0.25);
+    // Very low frequency base: big clumped continents and wide ocean basins
+    float h1 = noise3d(wp * 0.15);
+    // Secondary low-freq layer for continent grouping
+    float h1b = noise3d(wp * 0.1 + vec3(42.0)) * 0.3;
 
-    // Cloud noise for organic coastlines (LOD-aware)
-    float h2 = cloudNoise_lod(wp, 0.6) * 0.35;
+    // Cloud noise for organic coastline detail (LOD-aware, lower freq)
+    float h2 = cloudNoise_lod(wp, 0.35) * 0.2;
 
-    // Ridged noise + coastline detail only at high LOD
+    // Ridged noise + coastline detail only at high LOD (reduced contribution)
     float h3 = 0.0;
     float h4 = 0.0;
     if (u_lod > 0.5) {
-      h3 = ridgedNoise(wp + vec3(h1 * 0.5), 1.2) * 0.15;
-      vec3 wp2 = wp + 0.12 * vec3(
-        noise3d(wp * 2.5 + vec3(17.0)),
-        noise3d(wp * 2.5 + vec3(31.0)),
-        noise3d(wp * 2.5 + vec3(47.0))
+      h3 = ridgedNoise(wp + vec3(h1 * 0.5), 0.8) * 0.08;
+      vec3 wp2 = wp + 0.08 * vec3(
+        noise3d(wp * 1.5 + vec3(17.0)),
+        noise3d(wp * 1.5 + vec3(31.0)),
+        noise3d(wp * 1.5 + vec3(47.0))
       );
-      h4 = noise3d(wp2 * 2.0) * 0.08;
+      h4 = noise3d(wp2 * 1.2) * 0.05;
     }
 
-    float raw = h1 * 0.5 + h2 + h3 + h4;
-    return enhanceContrast(raw, 0.45, 1.4);
+    // Base dominates, detail layers are subtle
+    float raw = (h1 + h1b) * 0.55 + h2 + h3 + h4;
+    return enhanceContrast(raw, 0.48, 1.6);
   }
 
   void main() {
@@ -397,8 +400,8 @@ const terrestrialFragment = `
       bumpNormal = normalize(vNormal + bumpGrad * 0.08);
     }
 
-    // Sea level threshold
-    float seaLevel = 0.45;
+    // Sea level threshold (higher = more ocean, fewer but bigger continents)
+    float seaLevel = 0.50;
     float isLand = smoothstep(seaLevel - 0.02, seaLevel + 0.02, continent);
 
     // Noise layers for colour variation

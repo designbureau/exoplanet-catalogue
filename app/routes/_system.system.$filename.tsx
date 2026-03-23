@@ -71,8 +71,8 @@ const App = ({ data }: any) => {
     glowInner, setGlowInner,
   } = useContext(EnvContext);
   const [follow, setFollow] = useState(true);
-  const [nebulaDensity, setNebulaDensity] = useState(1.2);
-  const [nebulaBrightness, setNebulaBrightness] = useState(0.5);
+  const [nebulaDensity, setNebulaDensity] = useState(0.8);
+  const [nebulaBrightness, setNebulaBrightness] = useState(0.45);
 
   useEffect(() => {
     resetRefs();
