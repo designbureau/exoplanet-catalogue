@@ -655,7 +655,7 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       emissiveIntensity: { value: params.emissiveIntensity },
       u_atmosColor: { value: params.atmosColor },
       u_atmosIntensity: { value: params.atmosIntensity },
-      u_atmosFalloff: { value: 1.0 },
+      u_atmosFalloff: { value: 1.4 },
       u_lod: { value: 0.0 },
     },
     vertexShader,

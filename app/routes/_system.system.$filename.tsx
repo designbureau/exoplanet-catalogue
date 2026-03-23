@@ -65,6 +65,10 @@ const App = ({ data }: any) => {
     showHabitableZone, setShowHabitableZone,
     atmosIntensity, setAtmosIntensity,
     atmosFalloff, setAtmosFalloff,
+    glowIntensity, setGlowIntensity,
+    glowScale, setGlowScale,
+    glowFalloff, setGlowFalloff,
+    glowInner, setGlowInner,
   } = useContext(EnvContext);
   const [follow, setFollow] = useState(true);
   const [nebulaDensity, setNebulaDensity] = useState(1.2);
@@ -192,6 +196,62 @@ const App = ({ data }: any) => {
             className="w-16 accent-cyan-400"
           />
           <span className="w-7 tabular-nums text-right">{atmosFalloff.toFixed(1)}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <label htmlFor="glow-intensity" className="w-14 shrink-0">Glow</label>
+          <input
+            id="glow-intensity"
+            type="range"
+            min="0"
+            max="5"
+            step="0.1"
+            value={glowIntensity}
+            onChange={(e) => setGlowIntensity(parseFloat(e.target.value))}
+            className="w-16 accent-cyan-400"
+          />
+          <span className="w-7 tabular-nums text-right">{glowIntensity.toFixed(1)}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <label htmlFor="glow-scale" className="w-14 shrink-0">G.Scale</label>
+          <input
+            id="glow-scale"
+            type="range"
+            min="1.0"
+            max="10.0"
+            step="0.05"
+            value={glowScale}
+            onChange={(e) => setGlowScale(parseFloat(e.target.value))}
+            className="w-16 accent-cyan-400"
+          />
+          <span className="w-7 tabular-nums text-right">{glowScale.toFixed(2)}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <label htmlFor="glow-falloff" className="w-14 shrink-0">G.Fall</label>
+          <input
+            id="glow-falloff"
+            type="range"
+            min="0.1"
+            max="5"
+            step="0.05"
+            value={glowFalloff}
+            onChange={(e) => setGlowFalloff(parseFloat(e.target.value))}
+            className="w-16 accent-cyan-400"
+          />
+          <span className="w-7 tabular-nums text-right">{glowFalloff.toFixed(2)}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <label htmlFor="glow-inner" className="w-14 shrink-0">G.Inner</label>
+          <input
+            id="glow-inner"
+            type="range"
+            min="0"
+            max="0.9"
+            step="0.01"
+            value={glowInner}
+            onChange={(e) => setGlowInner(parseFloat(e.target.value))}
+            className="w-16 accent-cyan-400"
+          />
+          <span className="w-7 tabular-nums text-right">{glowInner.toFixed(2)}</span>
         </div>
       </div>
       <div id="canvas-container">

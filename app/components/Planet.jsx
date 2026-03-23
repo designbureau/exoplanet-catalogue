@@ -17,12 +17,13 @@ import {
 } from "../utils/helperFunctions";
 import { classifyPlanet } from "../utils/planetClassification";
 import { createPlanetMaterial } from "../shaders/planetShader";
-import { getAtmosphereParams, createAtmosphereMaterial } from "../shaders/atmosphereShader";
+import { getAtmosphereParams, createGlowSpriteMaterial, updateGlowTexture } from "../shaders/atmosphereShader";
 
 const Planet = ({ data, starData }) => {
   const ref = useRef();
+  const glowRef = useRef();
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowInner } = useContext(EnvContext);
 
   const name = data.name ? data.name[0] : "Unnamed planet";
 
@@ -55,10 +56,10 @@ const Planet = ({ data, starData }) => {
     });
     const shader = createPlanetMaterial(params);
     const atmosParams = getAtmosphereParams(params.type, starData?.temperature || 5500);
-    const atmos = atmosParams ? createAtmosphereMaterial(atmosParams) : null;
+    const glowMat = atmosParams ? createGlowSpriteMaterial(atmosParams) : null;
     return {
       shaderMaterial: shader,
-      atmosphereMaterial: atmos,
+      atmosphereMaterial: glowMat,
       atmosphereScale: atmosParams?.thickness || 1.0,
     };
   }, [mass, radius, rawSMA, starData?.temperature, starData?.mass, starData?.radius]);
@@ -113,12 +114,20 @@ const Planet = ({ data, starData }) => {
       shaderMaterial.uniforms.u_lod.value = isActive ? 1.0 : 0.0;
     }
 
-    // Atmosphere controls
+    // Atmosphere controls — update both surface rim and outer glow
     if (shaderMaterial.uniforms.u_atmosIntensity) {
       shaderMaterial.uniforms.u_atmosIntensity.value = atmosIntensity;
     }
     if (shaderMaterial.uniforms.u_atmosFalloff) {
       shaderMaterial.uniforms.u_atmosFalloff.value = atmosFalloff;
+    }
+    if (atmosphereMaterial) {
+      atmosphereMaterial.opacity = glowIntensity;
+      updateGlowTexture(atmosphereMaterial, glowFalloff, glowInner);
+    }
+    // Sync glow sprite position with orbiting planet
+    if (glowRef.current && ref.current) {
+      glowRef.current.position.copy(ref.current.position);
     }
   });
 
@@ -147,6 +156,13 @@ const Planet = ({ data, starData }) => {
       <mesh ref={ref} name={name} onClick={handleClick} material={shaderMaterial}>
         <sphereGeometry args={[scale, 32, 32]} />
       </mesh>
+      {atmosphereMaterial && glowIntensity > 0 && (
+        <sprite
+          ref={glowRef}
+          material={atmosphereMaterial}
+          scale={[scale * glowScale * 2.5, scale * glowScale * 2.5, 1]}
+        />
+      )}
     </group>
   );
 };
