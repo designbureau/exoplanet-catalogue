@@ -394,38 +394,89 @@ const terrestrialFragment = `
       bumpNormal = normalize(vNormal + bumpGrad * 0.08);
     }
 
-    // Sea level threshold (tuned for additive continent noise range)
+    // Sea level threshold
     float seaLevel = 0.45;
     float isLand = smoothstep(seaLevel - 0.02, seaLevel + 0.02, continent);
 
-    // Ocean colour (deeper = darker)
-    vec3 deepOcean = color1 * 0.6;
-    vec3 shallowOcean = color1;
-    float oceanDepth = smoothstep(0.2, seaLevel, continent);
-    vec3 oceanColor = mix(deepOcean, shallowOcean, oceanDepth);
-
-    // Land colour varies with height, moisture, and ridged features
-    float landHeight = (continent - seaLevel) / (1.0 - seaLevel);
+    // Noise layers for colour variation
     float moisture = (u_lod > 0.5) ? cloudNoise(p * 0.5 + vec3(33.0), 1.0) : noise3d(p * 0.5 + vec3(33.0));
     float mountainRidge = (u_lod > 0.5) ? ridgedNoise(p, 2.0) : 0.0;
+    float microNoise = noise3d(p * 8.0);
+    float warpNoise = noise3d(p * 3.0 + vec3(77.0));
 
-    vec3 lowland = color2;
+    // Ocean: 3-zone depth with colour variation
+    vec3 deepOcean = color1 * 0.5;
+    vec3 midOcean = color1 * 0.85;
+    vec3 shallowOcean = color1 * 1.1 + vec3(0.02, 0.04, 0.03);
+    float oceanDepth = smoothstep(0.15, seaLevel, continent);
+    vec3 oceanColor = mix(deepOcean, midOcean, smoothstep(0.0, 0.5, oceanDepth));
+    oceanColor = mix(oceanColor, shallowOcean, smoothstep(0.6, 1.0, oceanDepth));
+    // Subtle colour shift from depth noise
+    oceanColor += vec3(-0.01, 0.01, 0.015) * microNoise;
+
+    // Coastal zone: sand/reef tint where land meets water
+    float coastalBand = smoothstep(seaLevel - 0.04, seaLevel - 0.01, continent) * (1.0 - isLand);
+    vec3 coastalColor = mix(color2, color3, 0.5) * 0.8 + vec3(0.06, 0.05, 0.02);
+    oceanColor = mix(oceanColor, coastalColor, coastalBand * 0.6);
+
+    // Land: multi-zone with noise-driven variation
+    float landHeight = (continent - seaLevel) / (1.0 - seaLevel);
+
+    // Beach/shore zone
+    vec3 shoreColor = mix(color2, color3, 0.3) + vec3(0.08, 0.06, 0.02);
+    float isShore = 1.0 - smoothstep(0.0, 0.08, landHeight);
+
+    // Lowland with moisture-driven variation
+    vec3 lowWet = color2 * 1.1 + vec3(-0.005, 0.015, -0.005);  // slightly lusher
+    vec3 lowDry = mix(color2, color3, 0.4);  // drier/browner
+    vec3 lowland = mix(lowWet, lowDry, smoothstep(0.45, 0.3, moisture));
+    // Micro-variation within lowlands
+    lowland += vec3(0.02, -0.01, -0.02) * warpNoise;
+
+    // Highland with ridge influence
     vec3 highland = color3;
+    highland += vec3(0.03, 0.01, -0.02) * mountainRidge;
+    // Rocky exposed areas
+    vec3 exposedRock = color3 * 0.7 + color4 * 0.3;
+
+    // Peak/snow zone
     vec3 peaks = color4;
 
-    vec3 landColor = mix(lowland, highland, smoothstep(0.1, 0.5, landHeight));
-    landColor = mix(landColor, peaks, smoothstep(0.5, 0.8, landHeight));
-    // Ridged areas get more rocky highland colour
-    landColor = mix(landColor, highland * 0.9, mountainRidge * 0.3);
-    // Dry areas are more brown
-    landColor = mix(landColor, highland * 0.8, smoothstep(0.5, 0.3, moisture) * 0.3);
+    // Blend terrain zones with wide, overlapping transitions
+    vec3 landColor = mix(shoreColor, lowland, smoothstep(0.02, 0.12, landHeight));
+    // Gradual green-to-brown blend driven by both height and moisture
+    float brownBlend = smoothstep(0.1, 0.55, landHeight) * (0.6 + 0.4 * (1.0 - moisture));
+    landColor = mix(landColor, highland, brownBlend);
+    landColor = mix(landColor, exposedRock, mountainRidge * smoothstep(0.2, 0.5, landHeight) * 0.5);
+    landColor = mix(landColor, peaks, smoothstep(0.6, 0.88, landHeight));
+
+    // Surface texture variation
+    landColor *= 0.92 + 0.16 * microNoise;
 
     vec3 surfaceColor = mix(oceanColor, landColor, isLand);
 
-    // Ice caps at poles (use original vPosition.y for latitude)
-    float latitude = abs(vPosition.y);
-    float iceCap = smoothstep(0.7, 0.85, latitude + fbm3d(p * 5.0) * 0.15);
-    surfaceColor = mix(surfaceColor, vec3(0.92, 0.94, 0.96), iceCap);
+    // Ice caps at poles: asymmetric, chaotic edges using domain-warped noise
+    float northLat = vPosition.y;
+    float southLat = -vPosition.y;
+    // Irregular but roughly circular cap edges (like Earth/Mars poles)
+    // Broad lobes with clean edges
+    float northNoise = noise3d(p * 1.5 + vec3(11.0)) * 0.1
+                     + noise3d(p * 3.5 + vec3(23.0)) * 0.05;
+    float southNoise = noise3d(p * 1.5 + vec3(53.0)) * 0.12
+                     + noise3d(p * 3.5 + vec3(67.0)) * 0.06;
+    // Asymmetric cap sizes via seed
+    float northStart = 0.85 + u_seed.x * 0.06;
+    float southStart = 0.83 + u_seed.y * 0.08;
+    float northCap = smoothstep(northStart, northStart + 0.04, northLat + northNoise);
+    float southCap = smoothstep(southStart, southStart + 0.04, southLat + southNoise);
+    float iceCap = max(northCap, southCap);
+    // Frost fringe
+    float northFringe = smoothstep(northStart - 0.04, northStart, northLat + northNoise) * (1.0 - northCap);
+    float southFringe = smoothstep(southStart - 0.04, southStart, southLat + southNoise) * (1.0 - southCap);
+    float iceFringe = max(northFringe, southFringe) * 0.2;
+    vec3 iceColor = vec3(0.82, 0.85, 0.9) + vec3(0.04, 0.03, 0.02) * microNoise;
+    surfaceColor = mix(surfaceColor, mix(surfaceColor, iceColor, 0.4), iceFringe);
+    surfaceColor = mix(surfaceColor, iceColor, iceCap);
 
     // Cloud layer: swirling cyclonic patterns (skip at low LOD)
     float clouds = 0.0;
