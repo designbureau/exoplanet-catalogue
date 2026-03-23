@@ -146,6 +146,50 @@ const noiseLib = `
   vec3 seededPos(vec3 p, float s) {
     return p + u_seed * s;
   }
+
+  // LOD-aware noise: fewer octaves when u_lod is 0
+  uniform float u_lod;
+
+  float fbm3d_lod(vec3 p) {
+    float v = 0.0, a = 0.5;
+    int octaves = (u_lod > 0.5) ? 5 : 2;
+    for (int i = 0; i < 5; i++) {
+      if (i >= octaves) break;
+      v += a * noise3d(p);
+      p = p * 2.01 + vec3(100.0);
+      a *= 0.5;
+    }
+    return v;
+  }
+
+  float ridgedNoise_lod(vec3 p, float freq) {
+    float v = 0.0, a = 0.5;
+    p = p * freq;
+    int octaves = (u_lod > 0.5) ? 6 : 2;
+    for (int i = 0; i < 6; i++) {
+      if (i >= octaves) break;
+      float n = noise3d(p);
+      n = 2.0 * (0.5 - abs(0.5 - n));
+      v += a * n;
+      p = p * 2.03 + vec3(13.7, 29.3, 41.1);
+      a *= 0.5;
+    }
+    return pow(clamp(v, 0.0, 1.0), 3.0);
+  }
+
+  float cloudNoise_lod(vec3 p, float freq) {
+    float v = 0.0, a = 0.5;
+    p = p * freq;
+    int octaves = (u_lod > 0.5) ? 6 : 2;
+    for (int i = 0; i < 6; i++) {
+      if (i >= octaves) break;
+      float n = noise3d(p);
+      v += a * (sin(n * 5.0) * 0.5 + 0.5);
+      p = p * 2.02 + vec3(31.7, 17.3, 53.1);
+      a *= 0.5;
+    }
+    return v;
+  }
 `;
 
 // Gas giant fragment shader (banded, swirly)
@@ -203,34 +247,39 @@ const rockyFragment = `
 
   ${noiseLib}
 
-  // Compute terrain height using ridged noise + craters
+  // Compute terrain height using ridged noise + craters (LOD-aware)
   float computeHeight(vec3 p) {
     // Base terrain: smooth continental-scale features
     float base = noise3d(p * 0.8) * 0.5;
 
     // Ridged mountain ranges layered on top
-    float ridges = ridgedNoise(p, 1.5) * 0.35;
+    float ridges = ridgedNoise_lod(p, 1.5) * 0.35;
 
-    // Cloud noise for softer highland areas
-    float soft = cloudNoise(p + vec3(ridges * 0.3), 2.0) * 0.15;
+    // Cloud noise for softer highland areas (skip at low LOD)
+    float soft = (u_lod > 0.5) ? cloudNoise(p + vec3(ridges * 0.3), 2.0) * 0.15 : 0.0;
 
-    // Domain warp for organic shapes
-    vec3 wp = p + warp_intensity * 0.05 * vec3(
-      noise3d(p * 3.0 + vec3(5.0)),
-      noise3d(p * 3.0 + vec3(9.0)),
-      noise3d(p * 3.0 + vec3(13.0))
-    );
-    float detail = noise3d(wp * 6.0) * 0.08;
+    // Domain warp for organic shapes (skip at low LOD)
+    float detail = 0.0;
+    if (u_lod > 0.5) {
+      vec3 wp = p + warp_intensity * 0.05 * vec3(
+        noise3d(p * 3.0 + vec3(5.0)),
+        noise3d(p * 3.0 + vec3(9.0)),
+        noise3d(p * 3.0 + vec3(13.0))
+      );
+      detail = noise3d(wp * 6.0) * 0.08;
+    }
 
     float terrain = base + ridges + soft + detail;
 
-    // Craters using Voronoi at multiple scales (fewer, varied sizes)
+    // Craters: large scale always, medium/small only at high LOD
     vec2 v1 = voronoi(p * 0.7);
     terrain += craterProfile(v1.x, 2.0) * 0.7;
-    vec2 v2 = voronoi(p * 1.8);
-    terrain += craterProfile(v2.x, 0.8) * 0.4;
-    vec2 v3 = voronoi(p * 5.0);
-    terrain += craterProfile(v3.x, 0.5) * 0.15;
+    if (u_lod > 0.5) {
+      vec2 v2 = voronoi(p * 1.8);
+      terrain += craterProfile(v2.x, 0.8) * 0.4;
+      vec2 v3 = voronoi(p * 5.0);
+      terrain += craterProfile(v3.x, 0.5) * 0.15;
+    }
 
     return terrain;
   }
@@ -240,13 +289,16 @@ const rockyFragment = `
 
     float height = computeHeight(p);
 
-    // Bump normal from height field
-    float eps = 0.002;
-    float hx = computeHeight(p + vec3(eps, 0.0, 0.0));
-    float hy = computeHeight(p + vec3(0.0, eps, 0.0));
-    float hz = computeHeight(p + vec3(0.0, 0.0, eps));
-    vec3 bumpGrad = vec3(height - hx, height - hy, height - hz) / eps;
-    vec3 bumpNormal = normalize(vNormal + bumpGrad * 0.15);
+    // Bump normal: only compute at high LOD
+    vec3 bumpNormal = vNormal;
+    if (u_lod > 0.5) {
+      float eps = 0.002;
+      float hx = computeHeight(p + vec3(eps, 0.0, 0.0));
+      float hy = computeHeight(p + vec3(0.0, eps, 0.0));
+      float hz = computeHeight(p + vec3(0.0, 0.0, eps));
+      vec3 bumpGrad = vec3(height - hx, height - hy, height - hz) / eps;
+      bumpNormal = normalize(vNormal + bumpGrad * 0.15);
+    }
 
     // Colour based on height
     float h = height + 0.3;
@@ -285,35 +337,44 @@ const terrestrialFragment = `
 
   ${noiseLib}
 
-  // Compute continental height using cloud noise + ridged terrain + domain warp
+  // Compute continental height using cloud noise + ridged terrain (LOD-aware)
   float computeContinent(vec3 p) {
-    // Strong domain warp at very low frequency for organic continent shapes
-    vec3 wp = p + 0.6 * vec3(
-      fbm3d(p * 0.4),
-      fbm3d(p * 0.4 + vec3(5.2)),
-      fbm3d(p * 0.4 + vec3(9.7))
-    );
+    // Domain warp (simplified at low LOD)
+    vec3 wp;
+    if (u_lod > 0.5) {
+      wp = p + 0.6 * vec3(
+        fbm3d(p * 0.4),
+        fbm3d(p * 0.4 + vec3(5.2)),
+        fbm3d(p * 0.4 + vec3(9.7))
+      );
+    } else {
+      wp = p + 0.4 * vec3(
+        noise3d(p * 0.4),
+        noise3d(p * 0.4 + vec3(5.2)),
+        noise3d(p * 0.4 + vec3(9.7))
+      );
+    }
 
     // Very low frequency base for massive continents and ocean basins
     float h1 = noise3d(wp * 0.25);
 
-    // Cloud noise for organic wispy coastline shapes (sin-modulated)
-    float h2 = cloudNoise(wp, 0.6) * 0.35;
+    // Cloud noise for organic coastlines (LOD-aware)
+    float h2 = cloudNoise_lod(wp, 0.6) * 0.35;
 
-    // Ridged noise for mountain ranges on land
-    float h3 = ridgedNoise(wp + vec3(h1 * 0.5), 1.2) * 0.15;
-
-    // Coastline detail warp
-    vec3 wp2 = wp + 0.12 * vec3(
-      noise3d(wp * 2.5 + vec3(17.0)),
-      noise3d(wp * 2.5 + vec3(31.0)),
-      noise3d(wp * 2.5 + vec3(47.0))
-    );
-    float h4 = noise3d(wp2 * 2.0) * 0.08;
+    // Ridged noise + coastline detail only at high LOD
+    float h3 = 0.0;
+    float h4 = 0.0;
+    if (u_lod > 0.5) {
+      h3 = ridgedNoise(wp + vec3(h1 * 0.5), 1.2) * 0.15;
+      vec3 wp2 = wp + 0.12 * vec3(
+        noise3d(wp * 2.5 + vec3(17.0)),
+        noise3d(wp * 2.5 + vec3(31.0)),
+        noise3d(wp * 2.5 + vec3(47.0))
+      );
+      h4 = noise3d(wp2 * 2.0) * 0.08;
+    }
 
     float raw = h1 * 0.5 + h2 + h3 + h4;
-
-    // Contrast enhancement for sharper land/ocean boundaries
     return enhanceContrast(raw, 0.45, 1.4);
   }
 
@@ -322,13 +383,16 @@ const terrestrialFragment = `
 
     float continent = computeContinent(p);
 
-    // Bump normal from continental height
-    float eps = 0.002;
-    float cx = computeContinent(p + vec3(eps, 0.0, 0.0));
-    float cy = computeContinent(p + vec3(0.0, eps, 0.0));
-    float cz = computeContinent(p + vec3(0.0, 0.0, eps));
-    vec3 bumpGrad = vec3(continent - cx, continent - cy, continent - cz) / eps;
-    vec3 bumpNormal = normalize(vNormal + bumpGrad * 0.08);
+    // Bump normal: only compute at high LOD
+    vec3 bumpNormal = vNormal;
+    if (u_lod > 0.5) {
+      float eps = 0.002;
+      float cx = computeContinent(p + vec3(eps, 0.0, 0.0));
+      float cy = computeContinent(p + vec3(0.0, eps, 0.0));
+      float cz = computeContinent(p + vec3(0.0, 0.0, eps));
+      vec3 bumpGrad = vec3(continent - cx, continent - cy, continent - cz) / eps;
+      bumpNormal = normalize(vNormal + bumpGrad * 0.08);
+    }
 
     // Sea level threshold (tuned for additive continent noise range)
     float seaLevel = 0.45;
@@ -342,8 +406,8 @@ const terrestrialFragment = `
 
     // Land colour varies with height, moisture, and ridged features
     float landHeight = (continent - seaLevel) / (1.0 - seaLevel);
-    float moisture = cloudNoise(p * 0.5 + vec3(33.0), 1.0);
-    float mountainRidge = ridgedNoise(p, 2.0);
+    float moisture = (u_lod > 0.5) ? cloudNoise(p * 0.5 + vec3(33.0), 1.0) : noise3d(p * 0.5 + vec3(33.0));
+    float mountainRidge = (u_lod > 0.5) ? ridgedNoise(p, 2.0) : 0.0;
 
     vec3 lowland = color2;
     vec3 highland = color3;
@@ -363,11 +427,14 @@ const terrestrialFragment = `
     float iceCap = smoothstep(0.7, 0.85, latitude + fbm3d(p * 5.0) * 0.15);
     surfaceColor = mix(surfaceColor, vec3(0.92, 0.94, 0.96), iceCap);
 
-    // Cloud layer (seeded but also time-animated)
-    vec3 cloudP = seededPos(vPosition, 50.0) * 8.0 + vec3(u_time * 0.003, 0.0, u_time * 0.002);
-    float clouds = fbm3d(cloudP);
-    clouds = smoothstep(0.4, 0.7, clouds);
-    surfaceColor = mix(surfaceColor, vec3(0.95, 0.95, 0.97), clouds * 0.6);
+    // Cloud layer (seeded but also time-animated, skip at low LOD)
+    float clouds = 0.0;
+    if (u_lod > 0.5) {
+      vec3 cloudP = seededPos(vPosition, 50.0) * 8.0 + vec3(u_time * 0.003, 0.0, u_time * 0.002);
+      clouds = fbm3d(cloudP);
+      clouds = smoothstep(0.4, 0.7, clouds);
+      surfaceColor = mix(surfaceColor, vec3(0.95, 0.95, 0.97), clouds * 0.6);
+    }
 
     // Lighting with bump normal (land only; ocean is smooth)
     vec3 lightDir = normalize(vec3(1.0, 0.5, 0.8));
@@ -501,6 +568,7 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       color4: { value: params.color4 },
       emissiveColor: { value: params.emissive },
       emissiveIntensity: { value: params.emissiveIntensity },
+      u_lod: { value: 0.0 },
     },
     vertexShader,
     fragmentShader: selectFragmentShader(params.type),
