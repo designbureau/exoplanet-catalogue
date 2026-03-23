@@ -116,7 +116,7 @@ const fragmentShader = `
     // Compose final colour (nebula only)
     vec3 color = nebulaColor * nebula * u_brightness;
 
-    gl_FragColor = vec4(color, 1.0);
+    gl_FragColor = vec4(color, nebula);
   }
 `;
 
@@ -223,7 +223,9 @@ export default function Nebula({ seed = "default", density = 0.6, brightness = 0
       vertexShader,
       fragmentShader,
       side: THREE.BackSide,
+      transparent: true,
       depthWrite: false,
+      blending: THREE.AdditiveBlending,
     });
   }, [seed, density, brightness, starTemp, starDensity]);
 
