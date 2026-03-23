@@ -173,13 +173,13 @@ const rockyFragment = `
     );
     terrain += noise3d(wp * 6.0) * 0.1;
 
-    // Craters using Voronoi at multiple scales
-    vec2 v1 = voronoi(p * 3.0);
-    terrain += craterProfile(v1.x, 0.5);
-    vec2 v2 = voronoi(p * 8.0);
-    terrain += craterProfile(v2.x, 0.35) * 0.4;
-    vec2 v3 = voronoi(p * 20.0);
-    terrain += craterProfile(v3.x, 0.3) * 0.15;
+    // Craters using Voronoi at multiple scales (fewer, varied sizes)
+    vec2 v1 = voronoi(p * 0.7);
+    terrain += craterProfile(v1.x, 2.0) * 0.7;
+    vec2 v2 = voronoi(p * 1.8);
+    terrain += craterProfile(v2.x, 0.8) * 0.4;
+    vec2 v3 = voronoi(p * 5.0);
+    terrain += craterProfile(v3.x, 0.5) * 0.15;
 
     return terrain;
   }
@@ -210,7 +210,7 @@ const rockyFragment = `
     float lavaGlow = smoothstep(0.2, 0.0, h) * emissiveIntensity;
     color += emissiveColor * lavaGlow;
     // Glow in cracks between craters
-    vec2 v1 = voronoi(p * 3.0);
+    vec2 v1 = voronoi(p * 0.7);
     float cracks = smoothstep(0.02, 0.0, abs(v1.y - v1.x - 0.1)) * emissiveIntensity * 0.5;
     color += emissiveColor * cracks;
 
