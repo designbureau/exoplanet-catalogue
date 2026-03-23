@@ -8,7 +8,8 @@ import { EnvContext, EnvProvider } from "~/components/EnvContext";
 import Binary from "~/components/Binary";
 import Menu from "~/components/Menu";
 import Nebula from "~/components/Nebula";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
+import * as THREE from "three";
 import Controls from "~/components/Controls";
 import { getTemperature } from "~/utils/helperFunctions";
 
@@ -23,6 +24,88 @@ function getPrimaryStarTemp(data: any): number {
     return getPrimaryStarTemp(binary);
   }
   return 5500;
+}
+
+// Milky Way starfield skybox with brightness/contrast — uses equirectangular on a sphere
+// so we can apply a custom shader with uniform controls
+const skyboxVertShader = `
+  varying vec3 vWorldDirection;
+  void main() {
+    vec4 worldPos = modelMatrix * vec4(position, 1.0);
+    vWorldDirection = normalize(worldPos.xyz);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+const skyboxFragShader = `
+  uniform samplerCube u_envMap;
+  uniform float u_brightness;
+  uniform float u_contrast;
+  varying vec3 vWorldDirection;
+  void main() {
+    vec3 color = textureCube(u_envMap, vWorldDirection).rgb;
+    // Brightness
+    color *= u_brightness;
+    // Contrast (pivot around 0.5 grey)
+    color = (color - 0.5) * u_contrast + 0.5;
+    color = clamp(color, 0.0, 1.0);
+    gl_FragColor = vec4(color, 1.0);
+  }
+`;
+
+function MilkyWaySkybox({ brightness, contrast }: { brightness: number; contrast: number }) {
+  const matRef = useThree((s) => s.scene); // just to trigger re-renders
+  const materialRef = { current: null as THREE.ShaderMaterial | null };
+
+  const material = useState(() => {
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        u_envMap: { value: null },
+        u_brightness: { value: brightness },
+        u_contrast: { value: contrast },
+      },
+      vertexShader: skyboxVertShader,
+      fragmentShader: skyboxFragShader,
+      side: THREE.BackSide,
+      depthWrite: false,
+    });
+    materialRef.current = mat;
+    return mat;
+  })[0];
+
+  // Update uniforms reactively
+  useEffect(() => {
+    material.uniforms.u_brightness.value = brightness;
+    material.uniforms.u_contrast.value = contrast;
+  }, [brightness, contrast, material]);
+
+  // Load textures: compressed first, then hi-res swap
+  useEffect(() => {
+    const faces = ["px", "nx", "py", "ny", "pz", "nz"];
+    const loader = new THREE.CubeTextureLoader();
+
+    loader.setPath("/textures/cubemaps/nasa/8k/compressed/");
+    loader.load(faces.map(f => f + ".jpg"), (lowRes) => {
+      lowRes.colorSpace = THREE.SRGBColorSpace;
+      material.uniforms.u_envMap.value = lowRes;
+      material.needsUpdate = true;
+
+      const hiLoader = new THREE.CubeTextureLoader();
+      hiLoader.setPath("/textures/cubemaps/nasa/8k/");
+      hiLoader.load(faces.map(f => f + ".png"), (hiRes) => {
+        hiRes.colorSpace = THREE.SRGBColorSpace;
+        material.uniforms.u_envMap.value = hiRes;
+        material.needsUpdate = true;
+        lowRes.dispose();
+      });
+    });
+  }, [material]);
+
+  return (
+    <mesh renderOrder={-2}>
+      <sphereGeometry args={[90000, 32, 16]} />
+      <primitive object={material} attach="material" />
+    </mesh>
+  );
 }
 
 export const loader = async ({ params }: any) => {
@@ -71,8 +154,12 @@ const App = ({ data }: any) => {
     glowInner, setGlowInner,
   } = useContext(EnvContext);
   const [follow, setFollow] = useState(true);
-  const [nebulaDensity, setNebulaDensity] = useState(0.8);
-  const [nebulaBrightness, setNebulaBrightness] = useState(0.45);
+  const [nebulaDensity, setNebulaDensity] = useState(1.4);
+  const [nebulaBrightness, setNebulaBrightness] = useState(0.6);
+  const [showNebula, setShowNebula] = useState(true);
+  const [showSkybox, setShowSkybox] = useState(true);
+  const [skyBrightness, setSkyBrightness] = useState(1.0);
+  const [skyContrast, setSkyContrast] = useState(1.0);
 
   useEffect(() => {
     resetRefs();
@@ -168,6 +255,52 @@ const App = ({ data }: any) => {
           />
           Habitable Zone
         </label>
+        <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showSkybox}
+            onChange={(e) => setShowSkybox(e.target.checked)}
+            className="accent-cyan-400"
+          />
+          Starfield
+        </label>
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <label htmlFor="sky-bright" className="w-14 shrink-0">Sky Brt</label>
+          <input
+            id="sky-bright"
+            type="range"
+            min="0.1"
+            max="3"
+            step="0.05"
+            value={skyBrightness}
+            onChange={(e) => setSkyBrightness(parseFloat(e.target.value))}
+            className="w-16 accent-cyan-400"
+          />
+          <span className="w-7 tabular-nums text-right">{skyBrightness.toFixed(2)}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <label htmlFor="sky-contrast" className="w-14 shrink-0">Sky Con</label>
+          <input
+            id="sky-contrast"
+            type="range"
+            min="0.1"
+            max="3"
+            step="0.05"
+            value={skyContrast}
+            onChange={(e) => setSkyContrast(parseFloat(e.target.value))}
+            className="w-16 accent-cyan-400"
+          />
+          <span className="w-7 tabular-nums text-right">{skyContrast.toFixed(2)}</span>
+        </div>
+        <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showNebula}
+            onChange={(e) => setShowNebula(e.target.checked)}
+            className="accent-cyan-400"
+          />
+          Nebula
+        </label>
         <div className="my-0.5 border-t border-white/10" />
         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
           <label htmlFor="atmos-intensity" className="w-14 shrink-0">Atmos</label>
@@ -256,8 +389,9 @@ const App = ({ data }: any) => {
       </div>
       <div id="canvas-container">
         <Canvas dpr={[1, 2]} camera={{ far: 100000000, near: 0.001, fov: 50 }}>
+          {showSkybox && <MilkyWaySkybox brightness={skyBrightness} contrast={skyContrast} />}
           <ambientLight intensity={0.05} />
-          <Nebula seed={data?.name?.[0] ?? "system"} density={nebulaDensity} brightness={nebulaBrightness} starTemp={getPrimaryStarTemp(data)} />
+          {showNebula && <Nebula seed={data?.name?.[0] ?? "system"} density={nebulaDensity} brightness={nebulaBrightness} starTemp={getPrimaryStarTemp(data)} />}
           <Binary data={data} />
           <Controls follow={follow} />
         </Canvas>
