@@ -39,6 +39,27 @@ export interface ShaderParams {
   emissive: THREE.Color;
   emissiveIntensity: number;
   equilibriumTemp: number;
+  seed: THREE.Vector3;
+}
+
+// Deterministic string hash for seeding planet noise
+function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return h;
+}
+
+function planetSeed(name: string): THREE.Vector3 {
+  const hx = hashString(name + "x");
+  const hy = hashString(name + "y");
+  const hz = hashString(name + "z");
+  return new THREE.Vector3(
+    (((hx % 1000) + 1000) % 1000) / 1000,
+    (((hy % 1000) + 1000) % 1000) / 1000,
+    (((hz % 1000) + 1000) % 1000) / 1000
+  );
 }
 
 // Estimate equilibrium temperature from host star and orbital data
@@ -80,6 +101,7 @@ export interface ClassificationInput {
   starTemp: number;          // host star temperature K
   starMass: number;          // host star mass in solar masses
   starRadius: number;        // host star radius in solar radii
+  name?: string;             // planet name for unique seed generation
 }
 
 export function classifyPlanet(input: ClassificationInput): ShaderParams {
@@ -137,10 +159,10 @@ export function classifyPlanet(input: ClassificationInput): ShaderParams {
     else type = PlanetType.COLD_GIANT;
   }
 
-  return getShaderParams(type, tEq);
+  return getShaderParams(type, tEq, input.name || "planet");
 }
 
-function getShaderParams(type: PlanetType, tEq: number): ShaderParams {
+function getShaderParams(type: PlanetType, tEq: number, name: string): ShaderParams {
   const base: ShaderParams = {
     type,
     color1: new THREE.Color(0.5, 0.5, 0.5),
@@ -154,6 +176,7 @@ function getShaderParams(type: PlanetType, tEq: number): ShaderParams {
     emissive: new THREE.Color(0, 0, 0),
     emissiveIntensity: 0,
     equilibriumTemp: tEq,
+    seed: planetSeed(name),
   };
 
   switch (type) {
