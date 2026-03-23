@@ -18,7 +18,8 @@ export enum PlanetType {
 
   // Rocky
   LAVA_WORLD = "LAVA_WORLD",         // Ultra-hot, magma surface
-  VENUS_LIKE = "VENUS_LIKE",         // Hot, thick haze
+  HOT_ROCKY = "HOT_ROCKY",           // Hot airless rocky (Mercury-like)
+  VENUS_LIKE = "VENUS_LIKE",         // Hot, thick haze (larger rocky worlds)
   TEMPERATE = "TEMPERATE",           // Habitable zone, Earth-like potential
   FROZEN = "FROZEN",                 // Cold, icy surface
 
@@ -125,7 +126,8 @@ export function classifyPlanet(input: ClassificationInput): ShaderParams {
     else type = PlanetType.SUB_NEPTUNE;
   } else if (radiusEarth > 0) {
     if (tEq > 1500) type = PlanetType.LAVA_WORLD;
-    else if (tEq > 400) type = PlanetType.VENUS_LIKE;
+    else if (tEq > 400 && radiusEarth > 1.2) type = PlanetType.VENUS_LIKE;
+    else if (tEq > 400) type = PlanetType.HOT_ROCKY;
     else if (tEq > 180) type = PlanetType.TEMPERATE;
     else type = PlanetType.FROZEN;
   } else {
@@ -250,6 +252,17 @@ function getShaderParams(type: PlanetType, tEq: number): ShaderParams {
       base.noiseScale = 15;
       base.emissive = new THREE.Color(1.0, 0.4, 0.05);
       base.emissiveIntensity = 0.6;
+      break;
+
+    case PlanetType.HOT_ROCKY:
+      // Mercury-like: dark grey cratered surface
+      base.color1 = new THREE.Color(0.25, 0.22, 0.2);
+      base.color2 = new THREE.Color(0.35, 0.32, 0.28);
+      base.color3 = new THREE.Color(0.18, 0.16, 0.15);
+      base.color4 = new THREE.Color(0.4, 0.38, 0.35);
+      base.swirlStrength = 0.0;
+      base.warpIntensity = 2.5;
+      base.noiseScale = 12;
       break;
 
     case PlanetType.VENUS_LIKE:
