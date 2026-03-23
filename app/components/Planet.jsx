@@ -50,6 +50,7 @@ const Planet = ({ data, starData }) => {
       starTemp: starData?.temperature || 5500,
       starMass: starData?.mass || 1,
       starRadius: starData?.radius || 1,
+      name,
     });
     return createPlanetMaterial(params);
   }, [mass, radius, rawSMA, starData?.temperature, starData?.mass, starData?.radius]);
