@@ -30,6 +30,8 @@ export const EnvProvider = ({ children }) => {
   const [glowScale, setGlowScale] = useState(1.15);
   const [glowFalloff, setGlowFalloff] = useState(1.25);
   const [glowInner, setGlowInner] = useState(0.0);
+  const [cloudCoverage, setCloudCoverage] = useState(0.35);
+  const [cloudOpacity, setCloudOpacity] = useState(0.6);
 
   const Constants = useMemo(() => ({
     mass: {
@@ -73,6 +75,10 @@ export const EnvProvider = ({ children }) => {
       setGlowFalloff,
       glowInner,
       setGlowInner,
+      cloudCoverage,
+      setCloudCoverage,
+      cloudOpacity,
+      setCloudOpacity,
     }}>
       {children}
     </EnvContext.Provider>

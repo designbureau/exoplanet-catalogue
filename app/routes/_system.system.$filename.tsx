@@ -152,6 +152,8 @@ const App = ({ data }: any) => {
     glowScale, setGlowScale,
     glowFalloff, setGlowFalloff,
     glowInner, setGlowInner,
+    cloudCoverage: ctxCloudCoverage, setCloudCoverage: ctxSetCloudCoverage,
+    cloudOpacity: ctxCloudOpacity, setCloudOpacity: ctxSetCloudOpacity,
   } = useContext(EnvContext);
   const [follow, setFollow] = useState(true);
   const [nebulaDensity, setNebulaDensity] = useState(1.4);
@@ -160,6 +162,10 @@ const App = ({ data }: any) => {
   const [showSkybox, setShowSkybox] = useState(true);
   const [skyBrightness, setSkyBrightness] = useState(1.0);
   const [skyContrast, setSkyContrast] = useState(1.0);
+  const cloudCoverage = ctxCloudCoverage;
+  const setCloudCoverage = ctxSetCloudCoverage;
+  const cloudOpacity = ctxCloudOpacity;
+  const setCloudOpacity = ctxSetCloudOpacity;
 
   useEffect(() => {
     resetRefs();
@@ -385,6 +391,35 @@ const App = ({ data }: any) => {
             className="w-16 accent-cyan-400"
           />
           <span className="w-7 tabular-nums text-right">{glowInner.toFixed(2)}</span>
+        </div>
+        <div className="my-0.5 border-t border-white/10" />
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <label htmlFor="cloud-coverage" className="w-14 shrink-0">Clouds</label>
+          <input
+            id="cloud-coverage"
+            type="range"
+            min="0.1"
+            max="0.7"
+            step="0.01"
+            value={cloudCoverage}
+            onChange={(e) => setCloudCoverage(parseFloat(e.target.value))}
+            className="w-16 accent-cyan-400"
+          />
+          <span className="w-7 tabular-nums text-right">{cloudCoverage.toFixed(2)}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <label htmlFor="cloud-opacity" className="w-14 shrink-0">Cl.Opac</label>
+          <input
+            id="cloud-opacity"
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={cloudOpacity}
+            onChange={(e) => setCloudOpacity(parseFloat(e.target.value))}
+            className="w-16 accent-cyan-400"
+          />
+          <span className="w-7 tabular-nums text-right">{cloudOpacity.toFixed(2)}</span>
         </div>
       </div>
       <div id="canvas-container">
