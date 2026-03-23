@@ -19,7 +19,7 @@ const Star = ({ data, position, distance }) => {
   const ref = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants } = useContext(EnvContext);
+  const { Constants, showHabitableZone } = useContext(EnvContext);
 
   const name = data.name ? data.name[0] : "Unnamed star";
 
@@ -76,7 +76,7 @@ const Star = ({ data, position, distance }) => {
   return (
     <group position={[position.x, position.y, position.z]}>
       <pointLight color={color} intensity={intensity} distance={30000} />
-      {habitableZone && (
+      {habitableZone && showHabitableZone && (
         <mesh>
           <ringGeometry
             args={[

@@ -17,11 +17,12 @@ import {
 } from "../utils/helperFunctions";
 import { classifyPlanet } from "../utils/planetClassification";
 import { createPlanetMaterial } from "../shaders/planetShader";
+import { getAtmosphereParams, createAtmosphereMaterial } from "../shaders/atmosphereShader";
 
 const Planet = ({ data, starData }) => {
   const ref = useRef();
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff } = useContext(EnvContext);
 
   const name = data.name ? data.name[0] : "Unnamed planet";
 
@@ -42,7 +43,7 @@ const Planet = ({ data, starData }) => {
   })();
 
   // Classify planet and create shader material
-  const shaderMaterial = useMemo(() => {
+  const { shaderMaterial, atmosphereMaterial, atmosphereScale } = useMemo(() => {
     const params = classifyPlanet({
       massJupiter: mass,
       radiusJupiter: radius,
@@ -52,7 +53,14 @@ const Planet = ({ data, starData }) => {
       starRadius: starData?.radius || 1,
       name,
     });
-    return createPlanetMaterial(params);
+    const shader = createPlanetMaterial(params);
+    const atmosParams = getAtmosphereParams(params.type, starData?.temperature || 5500);
+    const atmos = atmosParams ? createAtmosphereMaterial(atmosParams) : null;
+    return {
+      shaderMaterial: shader,
+      atmosphereMaterial: atmos,
+      atmosphereScale: atmosParams?.thickness || 1.0,
+    };
   }, [mass, radius, rawSMA, starData?.temperature, starData?.mass, starData?.radius]);
 
   useEffect(() => {
@@ -103,6 +111,14 @@ const Planet = ({ data, starData }) => {
     const isActive = activeRef?.current === ref.current;
     if (shaderMaterial.uniforms.u_lod) {
       shaderMaterial.uniforms.u_lod.value = isActive ? 1.0 : 0.0;
+    }
+
+    // Atmosphere controls
+    if (shaderMaterial.uniforms.u_atmosIntensity) {
+      shaderMaterial.uniforms.u_atmosIntensity.value = atmosIntensity;
+    }
+    if (shaderMaterial.uniforms.u_atmosFalloff) {
+      shaderMaterial.uniforms.u_atmosFalloff.value = atmosFalloff;
     }
   });
 
