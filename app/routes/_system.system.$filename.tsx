@@ -7,8 +7,23 @@ import { RefContext, RefProvider } from "~/components/RefContext";
 import { EnvContext, EnvProvider } from "~/components/EnvContext";
 import Binary from "~/components/Binary";
 import Menu from "~/components/Menu";
+import Nebula from "~/components/Nebula";
 import { Canvas } from "@react-three/fiber";
 import Controls from "~/components/Controls";
+import { getTemperature } from "~/utils/helperFunctions";
+
+// Extract primary star temperature from system data (traverses binaries)
+function getPrimaryStarTemp(data: any): number {
+  if (data?.star) {
+    const star = Array.isArray(data.star) ? data.star[0] : data.star;
+    return getTemperature({ data: star });
+  }
+  if (data?.binary) {
+    const binary = Array.isArray(data.binary) ? data.binary[0] : data.binary;
+    return getPrimaryStarTemp(binary);
+  }
+  return 5500;
+}
 
 export const loader = async ({ params }: any) => {
   const __filename = fileURLToPath(import.meta.url);
@@ -49,6 +64,8 @@ const App = ({ data }: any) => {
     bodyScale, setBodyScale,
   } = useContext(EnvContext);
   const [follow, setFollow] = useState(true);
+  const [nebulaDensity, setNebulaDensity] = useState(1.2);
+  const [nebulaBrightness, setNebulaBrightness] = useState(0.5);
 
   useEffect(() => {
     resetRefs();
@@ -105,10 +122,40 @@ const App = ({ data }: any) => {
           />
           <span className="w-7 tabular-nums text-right">{bodyScale}x</span>
         </div>
+        <div className="my-0.5 border-t border-white/10" />
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <label htmlFor="nebula-density" className="w-14 shrink-0">Nebula</label>
+          <input
+            id="nebula-density"
+            type="range"
+            min="0"
+            max="3"
+            step="0.05"
+            value={nebulaDensity}
+            onChange={(e) => setNebulaDensity(parseFloat(e.target.value))}
+            className="w-16 accent-cyan-400"
+          />
+          <span className="w-7 tabular-nums text-right">{nebulaDensity.toFixed(1)}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <label htmlFor="nebula-bright" className="w-14 shrink-0">Bright</label>
+          <input
+            id="nebula-bright"
+            type="range"
+            min="0.05"
+            max="2"
+            step="0.05"
+            value={nebulaBrightness}
+            onChange={(e) => setNebulaBrightness(parseFloat(e.target.value))}
+            className="w-16 accent-cyan-400"
+          />
+          <span className="w-7 tabular-nums text-right">{nebulaBrightness.toFixed(2)}</span>
+        </div>
       </div>
       <div id="canvas-container">
         <Canvas dpr={[1, 2]} camera={{ far: 100000000, near: 0.001, fov: 50 }}>
           <ambientLight intensity={0.05} />
+          <Nebula seed={data?.name?.[0] ?? "system"} density={nebulaDensity} brightness={nebulaBrightness} starTemp={getPrimaryStarTemp(data)} />
           <Binary data={data} />
           <Controls follow={follow} />
         </Canvas>
