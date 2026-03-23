@@ -1,10 +1,9 @@
 import * as THREE from "three";
 
 import { useFrame } from "@react-three/fiber";
-import { useRef, useContext, useEffect } from "react";
+import { useRef, useContext, useEffect, useMemo } from "react";
 import { RefContext } from "./RefContext";
 import { EnvContext } from "./EnvContext";
-import PlanetTexture from "../utils/PlanetTextures";
 import {
   getSemimajoraxis,
   getPeriod,
@@ -16,15 +15,17 @@ import {
   getMass,
   getRadius,
 } from "../utils/helperFunctions";
+import { classifyPlanet } from "../utils/planetClassification";
+import { createPlanetMaterial } from "../shaders/planetShader";
 
-const Planet = ({ data }) => {
+const Planet = ({ data, starData }) => {
   const ref = useRef();
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor } = useContext(EnvContext);
 
   const name = data.name ? data.name[0] : "Unnamed planet";
 
-  const semimajoraxis = getSemimajoraxis({ data, Constants });
+  const semimajoraxis = getSemimajoraxis({ data, Constants }) * planetDistanceFactor;
   const period = getPeriod({ data });
   const eccentricity = getEccentricity({ data });
   const inclination = getInclination({ data });
@@ -32,7 +33,27 @@ const Planet = ({ data }) => {
   const radius = getRadius({ data });
   const ellipse = getEllipse(semimajoraxis, eccentricity);
   const periapsis = getPeriapsis(semimajoraxis, eccentricity) - semimajoraxis;
-  const planetTexture = PlanetTexture(mass, radius, name);
+
+  // Raw semi-major axis in AU (before scene scaling) for classification
+  const rawSMA = (() => {
+    const val = data.semimajoraxis?.[0]?.["_"] ?? data.semimajoraxis?.[0] ?? data.semimajoraxis;
+    const parsed = parseFloat(val);
+    return isNaN(parsed) ? 1 : parsed;
+  })();
+
+  // Classify planet and create shader material
+  const shaderMaterial = useMemo(() => {
+    const params = classifyPlanet({
+      massJupiter: mass,
+      radiusJupiter: radius,
+      semimajorAxisAU: rawSMA,
+      starTemp: starData?.temperature || 5500,
+      starMass: starData?.mass || 1,
+      starRadius: starData?.radius || 1,
+      name,
+    });
+    return createPlanetMaterial(params);
+  }, [mass, radius, rawSMA, starData?.temperature, starData?.mass, starData?.radius]);
 
   useEffect(() => {
     addRef(name, "planet", ref);
@@ -72,6 +93,11 @@ const Planet = ({ data }) => {
       ellipse.xRadius * Math.cos((elapsedTime / period) * speed);
     ref.current.position.y =
       ellipse.yRadius * Math.sin((elapsedTime / period) * speed);
+
+    // Animate shader
+    if (shaderMaterial.uniforms.u_time) {
+      shaderMaterial.uniforms.u_time.value = elapsedTime;
+    }
   });
 
   const position = [periapsis, 0, 0];
@@ -96,9 +122,8 @@ const Planet = ({ data }) => {
           transparent={true}
         />
       </line>
-      <mesh ref={ref} name={name} onClick={handleClick}>
-        <sphereGeometry args={[scale, 256, 256]} />
-        <meshStandardMaterial map={planetTexture} />
+      <mesh ref={ref} name={name} onClick={handleClick} material={shaderMaterial}>
+        <sphereGeometry args={[scale, 64, 64]} />
       </mesh>
     </group>
   );

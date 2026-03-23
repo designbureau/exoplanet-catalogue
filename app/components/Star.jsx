@@ -100,7 +100,11 @@ const Star = ({ data, position, distance }) => {
       </mesh>
       {data.planet &&
         data.planet.map((planet, index) => (
-          <Planet key={index} data={planet} />
+          <Planet
+            key={index}
+            data={planet}
+            starData={{ temperature, mass, radius }}
+          />
         ))}
     </group>
   );
