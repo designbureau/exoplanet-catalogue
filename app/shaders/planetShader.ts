@@ -331,6 +331,9 @@ const terrestrialFragment = `
   uniform float u_time;
   uniform float scale;
   uniform vec3 color1, color2, color3, color4;
+  uniform vec3 u_atmosColor;
+  uniform float u_atmosIntensity;
+  uniform float u_atmosFalloff;
   varying vec3 vPosition;
   varying vec3 vNormal;
   varying vec3 vWorldNormal;
@@ -525,6 +528,11 @@ const terrestrialFragment = `
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
     surfaceColor += vec3(0.3) * spec * (1.0 - isLand) * (1.0 - clouds);
 
+    // Atmospheric rim glow (fresnel)
+    float rimDot = 1.0 - max(dot(vNormal, viewDir), 0.0);
+    float atmosGlow = pow(rimDot, u_atmosFalloff) * u_atmosIntensity;
+    surfaceColor += u_atmosColor * atmosGlow;
+
     gl_FragColor = vec4(surfaceColor, 1.0);
   }
 `;
@@ -645,6 +653,9 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       color4: { value: params.color4 },
       emissiveColor: { value: params.emissive },
       emissiveIntensity: { value: params.emissiveIntensity },
+      u_atmosColor: { value: params.atmosColor },
+      u_atmosIntensity: { value: params.atmosIntensity },
+      u_atmosFalloff: { value: 1.0 },
       u_lod: { value: 0.0 },
     },
     vertexShader,

@@ -20,6 +20,13 @@ export const EnvProvider = ({ children }) => {
   const [planetDistanceFactor, setPlanetDistanceFactor] = useState(1);
   const [binaryDistanceFactor, setBinaryDistanceFactor] = useState(0.1);
 
+  // Toggles
+  const [showHabitableZone, setShowHabitableZone] = useState(false);
+
+  // Atmosphere controls
+  const [atmosIntensity, setAtmosIntensity] = useState(0.3);
+  const [atmosFalloff, setAtmosFalloff] = useState(1.0);
+
   const Constants = useMemo(() => ({
     mass: {
       sol: 1,
@@ -48,6 +55,12 @@ export const EnvProvider = ({ children }) => {
       setBinaryDistanceFactor,
       bodyScale,
       setBodyScale,
+      showHabitableZone,
+      setShowHabitableZone,
+      atmosIntensity,
+      setAtmosIntensity,
+      atmosFalloff,
+      setAtmosFalloff,
     }}>
       {children}
     </EnvContext.Provider>

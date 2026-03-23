@@ -40,6 +40,8 @@ export interface ShaderParams {
   emissiveIntensity: number;
   equilibriumTemp: number;
   seed: THREE.Vector3;
+  atmosColor: THREE.Color;
+  atmosIntensity: number;
 }
 
 // Deterministic string hash for seeding planet noise
@@ -177,6 +179,8 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
     emissiveIntensity: 0,
     equilibriumTemp: tEq,
     seed: planetSeed(name),
+    atmosColor: new THREE.Color(0, 0, 0),
+    atmosIntensity: 0,
   };
 
   switch (type) {
@@ -399,6 +403,8 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.swirlStrength = 0.15;
       base.warpIntensity = 3.0;
       base.noiseScale = 12;
+      base.atmosColor = new THREE.Color(0.3, 0.5, 1.0);
+      base.atmosIntensity = 0.3;
       break;
     }
 

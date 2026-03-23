@@ -62,6 +62,9 @@ const App = ({ data }: any) => {
     planetDistanceFactor, setPlanetDistanceFactor,
     binaryDistanceFactor, setBinaryDistanceFactor,
     bodyScale, setBodyScale,
+    showHabitableZone, setShowHabitableZone,
+    atmosIntensity, setAtmosIntensity,
+    atmosFalloff, setAtmosFalloff,
   } = useContext(EnvContext);
   const [follow, setFollow] = useState(true);
   const [nebulaDensity, setNebulaDensity] = useState(1.2);
@@ -150,6 +153,45 @@ const App = ({ data }: any) => {
             className="w-16 accent-cyan-400"
           />
           <span className="w-7 tabular-nums text-right">{nebulaBrightness.toFixed(2)}</span>
+        </div>
+        <div className="my-0.5 border-t border-white/10" />
+        <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showHabitableZone}
+            onChange={(e) => setShowHabitableZone(e.target.checked)}
+            className="accent-cyan-400"
+          />
+          Habitable Zone
+        </label>
+        <div className="my-0.5 border-t border-white/10" />
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <label htmlFor="atmos-intensity" className="w-14 shrink-0">Atmos</label>
+          <input
+            id="atmos-intensity"
+            type="range"
+            min="0"
+            max="3"
+            step="0.05"
+            value={atmosIntensity}
+            onChange={(e) => setAtmosIntensity(parseFloat(e.target.value))}
+            className="w-16 accent-cyan-400"
+          />
+          <span className="w-7 tabular-nums text-right">{atmosIntensity.toFixed(1)}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <label htmlFor="atmos-falloff" className="w-14 shrink-0">Falloff</label>
+          <input
+            id="atmos-falloff"
+            type="range"
+            min="0.5"
+            max="8"
+            step="0.1"
+            value={atmosFalloff}
+            onChange={(e) => setAtmosFalloff(parseFloat(e.target.value))}
+            className="w-16 accent-cyan-400"
+          />
+          <span className="w-7 tabular-nums text-right">{atmosFalloff.toFixed(1)}</span>
         </div>
       </div>
       <div id="canvas-container">
