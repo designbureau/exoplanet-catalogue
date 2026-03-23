@@ -98,6 +98,12 @@ const Planet = ({ data, starData }) => {
     if (shaderMaterial.uniforms.u_time) {
       shaderMaterial.uniforms.u_time.value = elapsedTime;
     }
+
+    // LOD: full detail when this planet is active, reduced otherwise
+    const isActive = activeRef?.current === ref.current;
+    if (shaderMaterial.uniforms.u_lod) {
+      shaderMaterial.uniforms.u_lod.value = isActive ? 1.0 : 0.0;
+    }
   });
 
   const position = [periapsis, 0, 0];
@@ -123,7 +129,7 @@ const Planet = ({ data, starData }) => {
         />
       </line>
       <mesh ref={ref} name={name} onClick={handleClick} material={shaderMaterial}>
-        <sphereGeometry args={[scale, 64, 64]} />
+        <sphereGeometry args={[scale, 32, 32]} />
       </mesh>
     </group>
   );
