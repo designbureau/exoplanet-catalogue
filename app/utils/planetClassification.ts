@@ -159,10 +159,10 @@ export function classifyPlanet(input: ClassificationInput): ShaderParams {
     else type = PlanetType.COLD_GIANT;
   }
 
-  return getShaderParams(type, tEq, input.name || "planet");
+  return getShaderParams(type, tEq, input.name || "planet", starTemp || 5500);
 }
 
-function getShaderParams(type: PlanetType, tEq: number, name: string): ShaderParams {
+function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: number): ShaderParams {
   const base: ShaderParams = {
     type,
     color1: new THREE.Color(0.5, 0.5, 0.5),
@@ -299,16 +299,108 @@ function getShaderParams(type: PlanetType, tEq: number, name: string): ShaderPar
       base.noiseScale = 6;
       break;
 
-    case PlanetType.TEMPERATE:
-      // Earth-like: ocean blue, green/brown landmass, white clouds
-      base.color1 = new THREE.Color(0.1, 0.25, 0.5);
-      base.color2 = new THREE.Color(0.2, 0.4, 0.15);
-      base.color3 = new THREE.Color(0.45, 0.35, 0.2);
-      base.color4 = new THREE.Color(0.9, 0.92, 0.95);
+    case PlanetType.TEMPERATE: {
+      // Dynamic terrestrial colours based on star type, temperature, and seed
+      const seed = base.seed;
+      const seedVar = (seed.x + seed.y + seed.z) / 3; // 0-1
+
+      // Habitable zone position: 0 = warm edge, 1 = cool edge
+      const hzPos = 1.0 - Math.max(0, Math.min(1, (tEq - 180) / (380 - 180)));
+
+      // Star colour influence on ocean & vegetation
+      // Cool red dwarfs (<3500K): dark oceans, dark/reddish vegetation (absorb more light)
+      // K-type (3500-5000K): deeper blue-green oceans, olive/dark green vegetation
+      // G-type (5000-6000K): Earth-like blue oceans, green vegetation
+      // F-type (6000-7500K): lighter blue/azure oceans, lighter vegetation
+      // Hot (>7500K): pale/turquoise oceans, sparse yellow-green vegetation
+
+      // Multiple rich palettes per star type, selected by seed
+      // Inspired by NASA concept art and real planetary photography
+      // Each palette: [ocean, lowland, highland, peak]
+      type CPalette = [THREE.Color, THREE.Color, THREE.Color, THREE.Color];
+
+      const redDwarfPalettes: CPalette[] = [
+        // Tidally locked twilight world: ink oceans, burgundy/charcoal life
+        [new THREE.Color(0.04, 0.05, 0.12), new THREE.Color(0.18, 0.08, 0.07), new THREE.Color(0.12, 0.1, 0.1), new THREE.Color(0.22, 0.2, 0.19)],
+        // Warm red dwarf: dark teal seas, rust-brown vegetation
+        [new THREE.Color(0.05, 0.1, 0.14), new THREE.Color(0.2, 0.1, 0.06), new THREE.Color(0.15, 0.1, 0.08), new THREE.Color(0.28, 0.22, 0.18)],
+        // Exotic biosphere: near-black oceans, deep purple/maroon
+        [new THREE.Color(0.03, 0.04, 0.08), new THREE.Color(0.15, 0.05, 0.1), new THREE.Color(0.1, 0.08, 0.12), new THREE.Color(0.2, 0.18, 0.2)],
+      ];
+
+      const kDwarfPalettes: CPalette[] = [
+        // Rich forested world: deep slate-blue seas, dark olive vegetation
+        [new THREE.Color(0.06, 0.12, 0.22), new THREE.Color(0.12, 0.18, 0.08), new THREE.Color(0.22, 0.18, 0.12), new THREE.Color(0.4, 0.37, 0.32)],
+        // Continental: grey-blue oceans, sage/khaki landmass
+        [new THREE.Color(0.08, 0.14, 0.25), new THREE.Color(0.18, 0.2, 0.12), new THREE.Color(0.28, 0.24, 0.16), new THREE.Color(0.45, 0.42, 0.38)],
+        // Wet world: dark cyan seas, moss green/brown terrain
+        [new THREE.Color(0.04, 0.14, 0.18), new THREE.Color(0.14, 0.2, 0.1), new THREE.Color(0.25, 0.2, 0.14), new THREE.Color(0.38, 0.35, 0.3)],
+      ];
+
+      const gTypePalettes: CPalette[] = [
+        // Earth analogue: deep navy, muted olive/sienna, warm grey peaks
+        [new THREE.Color(0.06, 0.12, 0.28), new THREE.Color(0.16, 0.22, 0.1), new THREE.Color(0.32, 0.26, 0.17), new THREE.Color(0.62, 0.6, 0.56)],
+        // Archipelago world: teal-grey seas, dark forest/sandstone
+        [new THREE.Color(0.08, 0.16, 0.24), new THREE.Color(0.12, 0.2, 0.12), new THREE.Color(0.35, 0.28, 0.18), new THREE.Color(0.55, 0.52, 0.48)],
+        // Arid continent: slate blue ocean, tan/ochre/terracotta land
+        [new THREE.Color(0.07, 0.13, 0.26), new THREE.Color(0.28, 0.24, 0.14), new THREE.Color(0.38, 0.3, 0.2), new THREE.Color(0.58, 0.55, 0.5)],
+        // Young world: deep blue, vibrant but muted greens, grey rock
+        [new THREE.Color(0.05, 0.1, 0.3), new THREE.Color(0.14, 0.25, 0.12), new THREE.Color(0.3, 0.25, 0.2), new THREE.Color(0.5, 0.48, 0.46)],
+      ];
+
+      const fTypePalettes: CPalette[] = [
+        // Bright world: azure-steel oceans, golden-olive vegetation, pale rock
+        [new THREE.Color(0.1, 0.18, 0.35), new THREE.Color(0.22, 0.26, 0.14), new THREE.Color(0.38, 0.33, 0.22), new THREE.Color(0.65, 0.63, 0.58)],
+        // Dry bright world: light blue-grey seas, warm sand/straw
+        [new THREE.Color(0.12, 0.2, 0.32), new THREE.Color(0.3, 0.28, 0.18), new THREE.Color(0.42, 0.36, 0.24), new THREE.Color(0.7, 0.67, 0.6)],
+      ];
+
+      const hotStarPalettes: CPalette[] = [
+        // Scorched world: pale grey-blue seas, bleached sand/cream rock
+        [new THREE.Color(0.14, 0.22, 0.3), new THREE.Color(0.35, 0.32, 0.22), new THREE.Color(0.48, 0.42, 0.3), new THREE.Color(0.72, 0.7, 0.65)],
+        // UV-blasted: steel oceans, grey-yellow sparse terrain
+        [new THREE.Color(0.12, 0.18, 0.28), new THREE.Color(0.32, 0.3, 0.2), new THREE.Color(0.45, 0.4, 0.28), new THREE.Color(0.68, 0.65, 0.58)],
+      ];
+
+      let palettes: CPalette[];
+      if (starTemp < 3500) palettes = redDwarfPalettes;
+      else if (starTemp < 5000) palettes = kDwarfPalettes;
+      else if (starTemp < 6000) palettes = gTypePalettes;
+      else if (starTemp < 7500) palettes = fTypePalettes;
+      else palettes = hotStarPalettes;
+
+      // Select palette using seed, with slight colour jitter for uniqueness
+      const palIdx = Math.floor(((seed.x * 1000) % palettes.length + palettes.length) % palettes.length);
+      const [ocean, lowVeg, highland, peak] = palettes[palIdx].map(c => c.clone()) as CPalette;
+
+      // Subtle per-planet jitter: shift hue/brightness slightly
+      const jitter = (seedVar - 0.5) * 0.06;
+      ocean.offsetHSL(jitter * 0.3, jitter * 0.1, jitter * 0.05);
+      lowVeg.offsetHSL(jitter * 0.5, jitter * 0.15, jitter * 0.08);
+      highland.offsetHSL(jitter * 0.3, jitter * 0.1, jitter * 0.06);
+
+      // Temperature within habitable zone shifts towards arid or icy
+      if (tEq > 320) {
+        const warmShift = Math.min(1, (tEq - 320) / 60);
+        lowVeg.lerp(new THREE.Color(0.35, 0.3, 0.18), warmShift * 0.5);
+        highland.lerp(new THREE.Color(0.42, 0.35, 0.22), warmShift * 0.4);
+      }
+      if (tEq < 230) {
+        const coolShift = Math.min(1, (230 - tEq) / 50);
+        lowVeg.lerp(new THREE.Color(0.2, 0.22, 0.18), coolShift * 0.5);
+        highland.lerp(new THREE.Color(0.32, 0.32, 0.3), coolShift * 0.4);
+        ocean.lerp(new THREE.Color(0.06, 0.1, 0.2), coolShift * 0.3);
+      }
+
+      base.color1 = ocean;
+      base.color2 = lowVeg;
+      base.color3 = highland;
+      base.color4 = peak;
       base.swirlStrength = 0.15;
       base.warpIntensity = 3.0;
       base.noiseScale = 12;
       break;
+    }
 
     case PlanetType.FROZEN:
       // White/grey ice with subtle features

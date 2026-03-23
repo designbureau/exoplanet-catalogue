@@ -427,13 +427,39 @@ const terrestrialFragment = `
     float iceCap = smoothstep(0.7, 0.85, latitude + fbm3d(p * 5.0) * 0.15);
     surfaceColor = mix(surfaceColor, vec3(0.92, 0.94, 0.96), iceCap);
 
-    // Cloud layer (seeded but also time-animated, skip at low LOD)
+    // Cloud layer: swirling cyclonic patterns (skip at low LOD)
     float clouds = 0.0;
     if (u_lod > 0.5) {
-      vec3 cloudP = seededPos(vPosition, 50.0) * 8.0 + vec3(u_time * 0.003, 0.0, u_time * 0.002);
-      clouds = fbm3d(cloudP);
-      clouds = smoothstep(0.4, 0.7, clouds);
-      surfaceColor = mix(surfaceColor, vec3(0.95, 0.95, 0.97), clouds * 0.6);
+      vec3 cloudBase = seededPos(vPosition, 50.0) * 4.0;
+      float t = u_time * 0.002;
+
+      // Latitude-dependent wind speed (faster at equator, slower at poles)
+      float lat = abs(vPosition.y);
+      float windSpeed = (1.0 - lat * 0.6);
+
+      // Very subtle Coriolis drift
+      float swirlAngle = lat * 1.0 + t * windSpeed * 0.3;
+      float cs = cos(swirlAngle * 0.06);
+      float sn = sin(swirlAngle * 0.06);
+      cloudBase.xz = mat2(cs, -sn, sn, cs) * cloudBase.xz;
+
+      // Domain-warped cloud noise for organic filaments
+      float warp1 = cloudNoise(cloudBase * 0.5, 1.5);
+      vec3 warpedP = cloudBase + vec3(warp1 * 0.4, t * 0.5, warp1 * 0.3);
+
+      // Layered cloud density
+      float c1 = cloudNoise(warpedP, 2.0);
+      float c2 = noise3d(warpedP * 4.0 + vec3(t * 0.3)) * 0.3;
+      clouds = c1 + c2;
+
+      // Subtle band structure: more clouds at certain latitudes
+      float bands = sin(vPosition.y * 6.0 + warp1 * 2.0) * 0.08 + 0.5;
+      clouds *= bands;
+
+      clouds = smoothstep(0.42, 0.72, clouds);
+      // Slight blue-white tint, not pure white
+      vec3 cloudColor = mix(vec3(0.88, 0.9, 0.94), vec3(0.96, 0.97, 0.98), clouds);
+      surfaceColor = mix(surfaceColor, cloudColor, clouds * 0.55);
     }
 
     // Lighting with bump normal (land only; ocean is smooth)
