@@ -334,6 +334,8 @@ const terrestrialFragment = `
   uniform vec3 u_atmosColor;
   uniform float u_atmosIntensity;
   uniform float u_atmosFalloff;
+  uniform float u_cloudCoverage;
+  uniform float u_cloudOpacity;
   varying vec3 vPosition;
   varying vec3 vNormal;
   varying vec3 vWorldNormal;
@@ -454,7 +456,7 @@ const terrestrialFragment = `
     float brownBlend = smoothstep(0.1, 0.55, landHeight) * (0.6 + 0.4 * (1.0 - moisture));
     landColor = mix(landColor, highland, brownBlend);
     landColor = mix(landColor, exposedRock, mountainRidge * smoothstep(0.2, 0.5, landHeight) * 0.5);
-    landColor = mix(landColor, peaks, smoothstep(0.6, 0.88, landHeight));
+    landColor = mix(landColor, peaks, smoothstep(0.88, 0.96, landHeight));
 
     // Surface texture variation
     landColor *= 0.92 + 0.16 * microNoise;
@@ -490,33 +492,43 @@ const terrestrialFragment = `
       vec3 cloudBase = seededPos(vPosition, 50.0) * 4.0;
       float t = u_time * 0.002;
 
-      // Latitude-dependent wind speed (faster at equator, slower at poles)
-      float lat = abs(vPosition.y);
-      float windSpeed = (1.0 - lat * 0.6);
+      // Signed latitude for hemisphere-aware Coriolis
+      float signedLat = vPosition.y;
+      float absLat = abs(signedLat);
+      float windSpeed = (1.0 - absLat * 0.6);
 
-      // Very subtle Coriolis drift
-      float swirlAngle = lat * 1.0 + t * windSpeed * 0.3;
-      float cs = cos(swirlAngle * 0.06);
-      float sn = sin(swirlAngle * 0.06);
+      // Coriolis: opposing rotation per hemisphere, smooth blend at equator
+      // Use noise to break up the equatorial seam
+      float equatorNoise = noise3d(cloudBase * 0.8 + vec3(17.0)) * 0.15;
+      float hemisphereBlend = smoothstep(-0.12 + equatorNoise, 0.12 + equatorNoise, signedLat);
+      float coriolisSign = mix(-1.0, 1.0, hemisphereBlend);
+
+      // Strength increases with latitude (zero at equator, max at poles)
+      float coriolisStrength = smoothstep(0.0, 0.5, absLat + equatorNoise * 0.5);
+      float swirlAngle = coriolisSign * coriolisStrength * 0.8 + t * windSpeed * 0.15;
+      float cs = cos(swirlAngle * 0.08);
+      float sn = sin(swirlAngle * 0.08);
       cloudBase.xz = mat2(cs, -sn, sn, cs) * cloudBase.xz;
 
-      // Domain-warped cloud noise for organic filaments
-      float warp1 = cloudNoise(cloudBase * 0.5, 1.5);
-      vec3 warpedP = cloudBase + vec3(warp1 * 0.4, t * 0.5, warp1 * 0.3);
+      // Domain warp for organic shapes (cloud noise for warp, fbm for mass)
+      float warp1 = cloudNoise(cloudBase * 0.4, 1.2);
+      float warp2 = noise3d(cloudBase * 0.6 + vec3(43.0));
+      vec3 warpedP = cloudBase + vec3(warp1 * 0.35 + warp2 * 0.15, t * 0.4, warp1 * 0.25);
 
-      // Layered cloud density
-      float c1 = cloudNoise(warpedP, 2.0);
-      float c2 = noise3d(warpedP * 4.0 + vec3(t * 0.3)) * 0.3;
-      clouds = c1 + c2;
+      // Streaky wispy clouds (sin-modulated cloud noise only)
+      float c1 = cloudNoise_lod(warpedP + vec3(t * 0.15), 1.2);
+      float c2 = cloudNoise_lod(warpedP * 0.6 + vec3(t * 0.08, 20.0, 0.0), 0.8);
+      clouds = c1 * 0.6 + c2 * 0.4;
 
-      // Subtle band structure: more clouds at certain latitudes
-      float bands = sin(vPosition.y * 6.0 + warp1 * 2.0) * 0.08 + 0.5;
+      // Soft band structure
+      float bands = sin(vPosition.y * 5.0 + warp1 * 1.5) * 0.06 + 0.5;
       clouds *= bands;
 
-      clouds = smoothstep(0.42, 0.72, clouds);
+      // Coverage threshold: lower = more clouds
+      clouds = smoothstep(u_cloudCoverage, u_cloudCoverage + 0.3, clouds);
       // Slight blue-white tint, not pure white
       vec3 cloudColor = mix(vec3(0.88, 0.9, 0.94), vec3(0.96, 0.97, 0.98), clouds);
-      surfaceColor = mix(surfaceColor, cloudColor, clouds * 0.55);
+      surfaceColor = mix(surfaceColor, cloudColor, clouds * u_cloudOpacity);
     }
 
     // Lighting with bump normal (land only; ocean is smooth)
@@ -659,6 +671,8 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_atmosColor: { value: params.atmosColor },
       u_atmosIntensity: { value: params.atmosIntensity },
       u_atmosFalloff: { value: 1.4 },
+      u_cloudCoverage: { value: 0.35 },
+      u_cloudOpacity: { value: 0.6 },
       u_lod: { value: 0.0 },
     },
     vertexShader,

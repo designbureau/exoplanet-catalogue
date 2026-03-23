@@ -23,7 +23,7 @@ const Planet = ({ data, starData }) => {
   const ref = useRef();
   const glowRef = useRef();
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowInner } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowInner, cloudCoverage, cloudOpacity } = useContext(EnvContext);
 
   const name = data.name ? data.name[0] : "Unnamed planet";
 
@@ -120,6 +120,12 @@ const Planet = ({ data, starData }) => {
     }
     if (shaderMaterial.uniforms.u_atmosFalloff) {
       shaderMaterial.uniforms.u_atmosFalloff.value = atmosFalloff;
+    }
+    if (shaderMaterial.uniforms.u_cloudCoverage) {
+      shaderMaterial.uniforms.u_cloudCoverage.value = cloudCoverage;
+    }
+    if (shaderMaterial.uniforms.u_cloudOpacity) {
+      shaderMaterial.uniforms.u_cloudOpacity.value = cloudOpacity;
     }
     if (atmosphereMaterial) {
       atmosphereMaterial.opacity = glowIntensity;
