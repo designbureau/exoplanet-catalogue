@@ -66,6 +66,38 @@ const noiseLib = `
     return v;
   }
 
+  // Ridged noise: sharp mountain ridges and valleys (from ProceduralPlanet)
+  float ridgedNoise(vec3 p, float freq) {
+    float v = 0.0, a = 0.5;
+    p = p * freq;
+    for (int i = 0; i < 6; i++) {
+      float n = noise3d(p);
+      n = 2.0 * (0.5 - abs(0.5 - n)); // ridge fold
+      v += a * n;
+      p = p * 2.03 + vec3(13.7, 29.3, 41.1);
+      a *= 0.5;
+    }
+    return pow(clamp(v, 0.0, 1.0), 3.0); // sharpen ridges
+  }
+
+  // Cloud noise: sin-modulated for wispy organic shapes
+  float cloudNoise(vec3 p, float freq) {
+    float v = 0.0, a = 0.5;
+    p = p * freq;
+    for (int i = 0; i < 6; i++) {
+      float n = noise3d(p);
+      v += a * (sin(n * 5.0) * 0.5 + 0.5);
+      p = p * 2.02 + vec3(31.7, 17.3, 53.1);
+      a *= 0.5;
+    }
+    return v;
+  }
+
+  // Contrast enhancement for sharper terrain boundaries
+  float enhanceContrast(float n, float center, float strength) {
+    return clamp((n - center) * strength + center, 0.0, 1.0);
+  }
+
   // Voronoi / cellular noise for craters
   vec2 voronoi(vec3 p) {
     vec3 i = floor(p);
@@ -93,6 +125,21 @@ const noiseLib = `
     if (r > 1.2) return 0.0;
     if (r > 0.8) return 0.3 * (1.0 - smoothstep(0.8, 1.2, r)); // rim
     return -0.5 * (1.0 - smoothstep(0.0, 0.8, r)); // bowl
+  }
+
+  // Sobel-style bump normal from height field (6-sample for better quality)
+  vec3 sobelNormal(vec3 p, float eps, float strength) {
+    float h00 = noise3d(p + vec3(-eps, -eps, 0.0));
+    float h10 = noise3d(p + vec3( 0.0, -eps, 0.0));
+    float h20 = noise3d(p + vec3( eps, -eps, 0.0));
+    float h01 = noise3d(p + vec3(-eps,  0.0, 0.0));
+    float h21 = noise3d(p + vec3( eps,  0.0, 0.0));
+    float h02 = noise3d(p + vec3(-eps,  eps, 0.0));
+    float h12 = noise3d(p + vec3( 0.0,  eps, 0.0));
+    float h22 = noise3d(p + vec3( eps,  eps, 0.0));
+    float dX = (h20 + 2.0*h21 + h22) - (h00 + 2.0*h01 + h02);
+    float dY = (h02 + 2.0*h12 + h22) - (h00 + 2.0*h10 + h20);
+    return normalize(vec3(-dX * strength, -dY * strength, 1.0));
   }
 
   // Seed-offset helper: each planet samples different noise regions
@@ -156,22 +203,26 @@ const rockyFragment = `
 
   ${noiseLib}
 
-  // Compute terrain height at a given point using multiplicative layering
+  // Compute terrain height using ridged noise + craters
   float computeHeight(vec3 p) {
-    // Multiplicative layering: coarse shapes modulated by finer detail
-    float h1 = noise3d(p * 1.0);
-    float h2 = noise3d(p * 4.0);
-    float h3 = noise3d(p * 16.0);
-    float h4 = noise3d(p * 64.0);
-    float terrain = h1 * 0.75 * (1.0 + h2 * 0.5) * (1.0 + h3 * 0.15) * (1.0 + h4 * 0.08);
+    // Base terrain: smooth continental-scale features
+    float base = noise3d(p * 0.8) * 0.5;
 
-    // Domain warp for more organic shapes
+    // Ridged mountain ranges layered on top
+    float ridges = ridgedNoise(p, 1.5) * 0.35;
+
+    // Cloud noise for softer highland areas
+    float soft = cloudNoise(p + vec3(ridges * 0.3), 2.0) * 0.15;
+
+    // Domain warp for organic shapes
     vec3 wp = p + warp_intensity * 0.05 * vec3(
       noise3d(p * 3.0 + vec3(5.0)),
       noise3d(p * 3.0 + vec3(9.0)),
       noise3d(p * 3.0 + vec3(13.0))
     );
-    terrain += noise3d(wp * 6.0) * 0.1;
+    float detail = noise3d(wp * 6.0) * 0.08;
+
+    float terrain = base + ridges + soft + detail;
 
     // Craters using Voronoi at multiple scales (fewer, varied sizes)
     vec2 v1 = voronoi(p * 0.7);
@@ -234,7 +285,7 @@ const terrestrialFragment = `
 
   ${noiseLib}
 
-  // Compute continental height using low-frequency noise + domain warp
+  // Compute continental height using cloud noise + ridged terrain + domain warp
   float computeContinent(vec3 p) {
     // Strong domain warp at very low frequency for organic continent shapes
     vec3 wp = p + 0.6 * vec3(
@@ -245,16 +296,25 @@ const terrestrialFragment = `
 
     // Very low frequency base for massive continents and ocean basins
     float h1 = noise3d(wp * 0.25);
-    // Secondary layer for sub-continental features
-    float h2 = noise3d(wp * 0.7);
+
+    // Cloud noise for organic wispy coastline shapes (sin-modulated)
+    float h2 = cloudNoise(wp, 0.6) * 0.35;
+
+    // Ridged noise for mountain ranges on land
+    float h3 = ridgedNoise(wp + vec3(h1 * 0.5), 1.2) * 0.15;
+
     // Coastline detail warp
     vec3 wp2 = wp + 0.12 * vec3(
       noise3d(wp * 2.5 + vec3(17.0)),
       noise3d(wp * 2.5 + vec3(31.0)),
       noise3d(wp * 2.5 + vec3(47.0))
     );
-    float h3 = noise3d(wp2 * 2.0);
-    return h1 * 0.6 + h2 * 0.3 + h3 * 0.1;
+    float h4 = noise3d(wp2 * 2.0) * 0.08;
+
+    float raw = h1 * 0.5 + h2 + h3 + h4;
+
+    // Contrast enhancement for sharper land/ocean boundaries
+    return enhanceContrast(raw, 0.45, 1.4);
   }
 
   void main() {
@@ -280,17 +340,21 @@ const terrestrialFragment = `
     float oceanDepth = smoothstep(0.2, seaLevel, continent);
     vec3 oceanColor = mix(deepOcean, shallowOcean, oceanDepth);
 
-    // Land colour varies with height and moisture
+    // Land colour varies with height, moisture, and ridged features
     float landHeight = (continent - seaLevel) / (1.0 - seaLevel);
-    float moisture = fbm3d(p * 4.0 + vec3(33.0));
+    float moisture = cloudNoise(p * 0.5 + vec3(33.0), 1.0);
+    float mountainRidge = ridgedNoise(p, 2.0);
 
     vec3 lowland = color2;
     vec3 highland = color3;
     vec3 peaks = color4;
 
     vec3 landColor = mix(lowland, highland, smoothstep(0.1, 0.5, landHeight));
-    landColor = mix(landColor, peaks, smoothstep(0.6, 0.85, landHeight));
-    landColor = mix(landColor, highland * 0.8, smoothstep(0.5, 0.3, moisture) * 0.4);
+    landColor = mix(landColor, peaks, smoothstep(0.5, 0.8, landHeight));
+    // Ridged areas get more rocky highland colour
+    landColor = mix(landColor, highland * 0.9, mountainRidge * 0.3);
+    // Dry areas are more brown
+    landColor = mix(landColor, highland * 0.8, smoothstep(0.5, 0.3, moisture) * 0.3);
 
     vec3 surfaceColor = mix(oceanColor, landColor, isLand);
 
