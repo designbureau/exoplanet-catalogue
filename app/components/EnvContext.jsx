@@ -85,8 +85,7 @@ export const EnvProvider = ({ children }) => {
     },
   }), [bodyScale]);
 
-  return (
-    <EnvContext.Provider value={{
+  const contextValue = useMemo(() => ({
       Constants,
       planetDistanceFactor,
       setPlanetDistanceFactor,
@@ -136,7 +135,10 @@ export const EnvProvider = ({ children }) => {
       rockyCraterDepth, setRockyCraterDepth,
       typeColorOverrides, setTypeColorOverrides,
       activePlanetInfo, setActivePlanetInfo,
-    }}>
+  }), [Constants, planetDistanceFactor, binaryDistanceFactor, bodyScale, showHabitableZone, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, activePlanetInfo]);
+
+  return (
+    <EnvContext.Provider value={contextValue}>
       {children}
     </EnvContext.Provider>
   );

@@ -128,8 +128,10 @@ const Star = ({ data, position, distance }) => {
         <primitive object={glowMaterial} attach="material" />
       </sprite>
 
-      {/* Sun rays + flares */}
-      <StarEffects starRadius={scale} temperature={temperature} />
+      {/* Sun rays + flares — only rendered when star is focused */}
+      {activeRef?.current === ref.current && (
+        <StarEffects starRadius={scale} temperature={temperature} />
+      )}
 
       {data.planet &&
         data.planet.map((planet, index) => (

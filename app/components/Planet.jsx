@@ -290,20 +290,17 @@ const Planet = ({ data, starData }) => {
   });
 
   const position = [periapsis, 0, 0];
-
-  const curve = new THREE.EllipseCurve(
-    0, 0,
-    ellipse.xRadius, ellipse.yRadius,
-    0, 2 * Math.PI,
-    false, 0
-  );
   const orbitRef = useRef();
-  const points = curve.getPoints(1000);
-  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+  const orbitGeometry = useMemo(() => {
+    const curve = new THREE.EllipseCurve(0, 0, ellipse.xRadius, ellipse.yRadius, 0, 2 * Math.PI, false, 0);
+    const points = curve.getPoints(500); // 500 is plenty for smooth orbit
+    return new THREE.BufferGeometry().setFromPoints(points);
+  }, [ellipse.xRadius, ellipse.yRadius]);
 
   return (
     <group position={position} rotation={[(inclination * Math.PI) / 90, 0, 0]}>
-      <line ref={orbitRef} geometry={geometry}>
+      <line ref={orbitRef} geometry={orbitGeometry}>
         <lineBasicMaterial
           attach="material"
           color={"#ffffff"}

@@ -211,7 +211,7 @@ const sunFlaresFS = `
 // ---- Geometry builders ----
 
 function buildRaysGeometry(starRadius: number): THREE.BufferGeometry {
-  const lineCount = 12000;
+  const lineCount = 4000;
   const lineLength = 8;
 
   const totalVerts = lineCount * lineLength * 2;
