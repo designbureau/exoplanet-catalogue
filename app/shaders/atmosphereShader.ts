@@ -5,34 +5,36 @@ export interface AtmosphereParams {
   color: THREE.Color;
   intensity: number;
   thickness: number;
+  dayColor: THREE.Color;
+  twilightColor: THREE.Color;
 }
 
 export function getAtmosphereParams(type: PlanetType, starTemp: number): AtmosphereParams | null {
   switch (type) {
     case PlanetType.TEMPERATE:
-      return { color: new THREE.Color(0.3, 0.5, 1.0), intensity: 1.0, thickness: 1.15 };
+      return { color: new THREE.Color(0.3, 0.5, 1.0), intensity: 1.0, thickness: 1.15, dayColor: new THREE.Color(0x00aaff), twilightColor: new THREE.Color(0xff6600) };
     case PlanetType.VENUS_LIKE:
-      return { color: new THREE.Color(0.8, 0.6, 0.25), intensity: 1.2, thickness: 1.2 };
+      return { color: new THREE.Color(0.8, 0.6, 0.25), intensity: 1.2, thickness: 1.2, dayColor: new THREE.Color(0xccaa44), twilightColor: new THREE.Color(0xaa6622) };
     case PlanetType.SUB_NEPTUNE:
-      return { color: new THREE.Color(0.35, 0.45, 0.65), intensity: 1.0, thickness: 1.18 };
+      return { color: new THREE.Color(0.35, 0.45, 0.65), intensity: 1.0, thickness: 1.18, dayColor: new THREE.Color(0x6688bb), twilightColor: new THREE.Color(0x445566) };
     case PlanetType.WATER_WORLD:
-      return { color: new THREE.Color(0.2, 0.4, 0.75), intensity: 1.0, thickness: 1.15 };
+      return { color: new THREE.Color(0.2, 0.4, 0.75), intensity: 1.0, thickness: 1.15, dayColor: new THREE.Color(0x2266cc), twilightColor: new THREE.Color(0x554422) };
     case PlanetType.COLD_GIANT:
-      return { color: new THREE.Color(0.6, 0.45, 0.25), intensity: 0.6, thickness: 1.08 };
+      return { color: new THREE.Color(0.6, 0.45, 0.25), intensity: 0.6, thickness: 1.08, dayColor: new THREE.Color(0x998866), twilightColor: new THREE.Color(0x554433) };
     case PlanetType.COOL_GIANT:
-      return { color: new THREE.Color(0.65, 0.65, 0.6), intensity: 0.5, thickness: 1.08 };
+      return { color: new THREE.Color(0.65, 0.65, 0.6), intensity: 0.5, thickness: 1.08, dayColor: new THREE.Color(0x8899bb), twilightColor: new THREE.Color(0x665544) };
     case PlanetType.WARM_GIANT:
-      return { color: new THREE.Color(0.3, 0.4, 0.7), intensity: 0.6, thickness: 1.08 };
+      return { color: new THREE.Color(0.3, 0.4, 0.7), intensity: 0.6, thickness: 1.08, dayColor: new THREE.Color(0x4466aa), twilightColor: new THREE.Color(0x443322) };
     case PlanetType.HOT_JUPITER_IV:
-      return { color: new THREE.Color(0.15, 0.1, 0.25), intensity: 0.5, thickness: 1.1 };
+      return { color: new THREE.Color(0.15, 0.1, 0.25), intensity: 0.5, thickness: 1.1, dayColor: new THREE.Color(0x221133), twilightColor: new THREE.Color(0x110011) };
     case PlanetType.HOT_JUPITER_V:
-      return { color: new THREE.Color(0.8, 0.4, 0.1), intensity: 0.8, thickness: 1.12 };
+      return { color: new THREE.Color(0.8, 0.4, 0.1), intensity: 0.8, thickness: 1.12, dayColor: new THREE.Color(0xcc6611), twilightColor: new THREE.Color(0x882200) };
     case PlanetType.ICE_GIANT:
-      return { color: new THREE.Color(0.2, 0.45, 0.7), intensity: 0.7, thickness: 1.1 };
+      return { color: new THREE.Color(0.2, 0.45, 0.7), intensity: 0.7, thickness: 1.1, dayColor: new THREE.Color(0x4488cc), twilightColor: new THREE.Color(0x336688) };
     case PlanetType.LAVA_WORLD:
-      return { color: new THREE.Color(0.9, 0.3, 0.05), intensity: 0.6, thickness: 1.08 };
+      return { color: new THREE.Color(0.9, 0.3, 0.05), intensity: 0.6, thickness: 1.08, dayColor: new THREE.Color(0xff4400), twilightColor: new THREE.Color(0x881100) };
     case PlanetType.FROZEN:
-      return { color: new THREE.Color(0.4, 0.5, 0.7), intensity: 0.3, thickness: 1.05 };
+      return { color: new THREE.Color(0.4, 0.5, 0.7), intensity: 0.3, thickness: 1.05, dayColor: new THREE.Color(0x6688aa), twilightColor: new THREE.Color(0x334455) };
     case PlanetType.HOT_ROCKY:
       return null;
     default:

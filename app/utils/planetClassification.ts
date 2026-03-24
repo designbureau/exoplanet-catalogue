@@ -42,6 +42,8 @@ export interface ShaderParams {
   seed: THREE.Vector3;
   atmosColor: THREE.Color;
   atmosIntensity: number;
+  atmosDayColor: THREE.Color;
+  atmosTwilightColor: THREE.Color;
 }
 
 // Deterministic string hash for seeding planet noise
@@ -181,6 +183,8 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
     seed: planetSeed(name),
     atmosColor: new THREE.Color(0, 0, 0),
     atmosIntensity: 0,
+    atmosDayColor: new THREE.Color(0x00aaff),
+    atmosTwilightColor: new THREE.Color(0xff6600),
   };
 
   switch (type) {
@@ -202,6 +206,9 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.color4 = new THREE.Color(1.0, 1.0, 0.95);
       base.swirlStrength = 0.15;
       base.warpIntensity = 2.0;
+      base.atmosIntensity = 0.15;
+      base.atmosDayColor = new THREE.Color(0x8899bb);
+      base.atmosTwilightColor = new THREE.Color(0x665544);
       break;
 
     case PlanetType.WARM_GIANT:
@@ -245,6 +252,9 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.swirlStrength = 0.08;
       base.warpIntensity = 1.5;
       base.noiseScale = 12;
+      base.atmosIntensity = 0.25;
+      base.atmosDayColor = new THREE.Color(0x4488cc);
+      base.atmosTwilightColor = new THREE.Color(0x336688);
       break;
 
     case PlanetType.WATER_WORLD:
@@ -301,6 +311,9 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.swirlStrength = 0.03;
       base.warpIntensity = 0.5;
       base.noiseScale = 6;
+      base.atmosIntensity = 0.35;
+      base.atmosDayColor = new THREE.Color(0xccaa44);
+      base.atmosTwilightColor = new THREE.Color(0xaa6622);
       break;
 
     case PlanetType.TEMPERATE: {
@@ -405,6 +418,8 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.noiseScale = 12;
       base.atmosColor = new THREE.Color(0.3, 0.5, 1.0);
       base.atmosIntensity = 0.3;
+      base.atmosDayColor = new THREE.Color(0x00aaff);
+      base.atmosTwilightColor = new THREE.Color(0xff6600);
       break;
     }
 

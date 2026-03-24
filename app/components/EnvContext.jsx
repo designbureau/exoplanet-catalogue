@@ -32,6 +32,11 @@ export const EnvProvider = ({ children }) => {
   const [glowInner, setGlowInner] = useState(0.0);
   const [glowHueShift, setGlowHueShift] = useState(0.0);
   const [glowSaturation, setGlowSaturation] = useState(1.0);
+  // Soft sprite glow controls
+  const [spriteGlowIntensity, setSpriteGlowIntensity] = useState(0.4);
+  const [spriteGlowScale, setSpriteGlowScale] = useState(3.0);
+  const [spriteGlowFalloff, setSpriteGlowFalloff] = useState(1.5);
+  const [spriteGlowInner, setSpriteGlowInner] = useState(0.3);
   const [cloudCoverage, setCloudCoverage] = useState(0.35);
   const [cloudOpacity, setCloudOpacity] = useState(0.6);
 
@@ -40,7 +45,7 @@ export const EnvProvider = ({ children }) => {
   const [gasWarp, setGasWarp] = useState(4.0);
   const [gasStorm, setGasStorm] = useState(18.0);
   const [gasTurb, setGasTurb] = useState(0.4);
-  const [gasBands, setGasBands] = useState(6.0);
+  const [gasBands, setGasBands] = useState(2.5);
   const [gasEdgeNoise, setGasEdgeNoise] = useState(0.4);
 
   // Planet colour overrides keyed by PlanetType (null entry = use classification default)
@@ -59,7 +64,7 @@ export const EnvProvider = ({ children }) => {
   const [terrSeaLevel, setTerrSeaLevel] = useState(0.50);
   const [terrContinentFreq, setTerrContinentFreq] = useState(0.15);
   const [terrWarpStrength, setTerrWarpStrength] = useState(0.5);
-  const [terrIceCapSize, setTerrIceCapSize] = useState(0.85);
+  const [terrIceCapSize, setTerrIceCapSize] = useState(0.92);
 
   // Rocky controls
   const [rockyCraterScale, setRockyCraterScale] = useState(1.0);
@@ -111,6 +116,10 @@ export const EnvProvider = ({ children }) => {
       setGlowHueShift,
       glowSaturation,
       setGlowSaturation,
+      spriteGlowIntensity, setSpriteGlowIntensity,
+      spriteGlowScale, setSpriteGlowScale,
+      spriteGlowFalloff, setSpriteGlowFalloff,
+      spriteGlowInner, setSpriteGlowInner,
       cloudCoverage,
       setCloudCoverage,
       cloudOpacity,

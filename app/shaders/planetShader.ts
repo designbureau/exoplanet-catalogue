@@ -5,11 +5,13 @@ const vertexShader = `
   varying vec3 vPosition;
   varying vec3 vNormal;
   varying vec3 vWorldNormal;
+  varying vec3 vWorldPosition;
 
   void main() {
     vPosition = normalize(position);
     vNormal = normalize(normalMatrix * normal);
     vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+    vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `;
@@ -147,6 +149,25 @@ const noiseLib = `
     return p + u_seed * s;
   }
 
+  // Atmosphere fresnel helper
+  uniform vec3 u_sunDirection;
+  uniform vec3 u_atmosDayColor;
+  uniform vec3 u_atmosTwilightColor;
+  uniform float u_atmosIntensity;
+  uniform float u_atmosFalloff;
+
+  vec3 applyAtmosphere(vec3 color, vec3 normal, vec3 worldPos) {
+    vec3 viewDir = normalize(cameraPosition - worldPos);
+    float fresnel = dot(viewDir, normal) + 1.0;
+    fresnel = pow(clamp(fresnel, 0.0, 2.0), u_atmosFalloff);
+
+    float sunOrientation = dot(normal, u_sunDirection);
+    float atmosphereDayMix = smoothstep(-0.5, 1.0, sunOrientation);
+    vec3 atmosColor = mix(u_atmosTwilightColor, u_atmosDayColor, atmosphereDayMix);
+
+    return mix(color, atmosColor, fresnel * atmosphereDayMix * u_atmosIntensity);
+  }
+
   // LOD-aware noise: fewer octaves when u_lod is 0
   uniform float u_lod;
 
@@ -209,6 +230,7 @@ const gasGiantFragment = `
   uniform float emissiveIntensity;
   varying vec3 vPosition;
   varying vec3 vNormal;
+  varying vec3 vWorldPosition;
 
   ${noiseLib}
 
@@ -320,6 +342,7 @@ const rockyFragment = `
   uniform float u_craterDepth;
   varying vec3 vPosition;
   varying vec3 vNormal;
+  varying vec3 vWorldPosition;
 
   ${noiseLib}
 
@@ -408,8 +431,6 @@ const terrestrialFragment = `
   uniform float scale;
   uniform vec3 color1, color2, color3, color4;
   uniform vec3 u_atmosColor;
-  uniform float u_atmosIntensity;
-  uniform float u_atmosFalloff;
   uniform float u_cloudCoverage;
   uniform float u_cloudOpacity;
   uniform float u_seaLevel;
@@ -418,6 +439,7 @@ const terrestrialFragment = `
   uniform float u_iceCapSize;
   varying vec3 vPosition;
   varying vec3 vNormal;
+  varying vec3 vWorldPosition;
   varying vec3 vWorldNormal;
 
   ${noiseLib}
@@ -643,6 +665,7 @@ const hazyFragment = `
   uniform vec3 color1, color2, color3, color4;
   varying vec3 vPosition;
   varying vec3 vNormal;
+  varying vec3 vWorldPosition;
 
   ${noiseLib}
 
@@ -702,6 +725,7 @@ const iceGiantFragment = `
   uniform vec3 color1, color2, color3, color4;
   varying vec3 vPosition;
   varying vec3 vNormal;
+  varying vec3 vWorldPosition;
 
   ${noiseLib}
 
@@ -847,11 +871,11 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_craterScale: { value: 1.0 },
       u_ridgeStrength: { value: 0.35 },
       u_craterDepth: { value: 0.7 },
+      u_sunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
+      u_atmosDayColor: { value: params.atmosDayColor || new THREE.Color(0x00aaff) },
+      u_atmosTwilightColor: { value: params.atmosTwilightColor || new THREE.Color(0xff6600) },
     },
     vertexShader,
     fragmentShader: selectFragmentShader(params.type),
-    polygonOffset: true,
-    polygonOffsetFactor: 1,
-    polygonOffsetUnits: 1,
   });
 }
