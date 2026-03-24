@@ -265,8 +265,13 @@ const App = ({ data }: any) => {
   return (
     <>
       <Menu data={data} />
-      <div className="fixed bottom-0 left-0 z-10 p-3">
-        <button className="outline-0 text-xs" onClick={() => setFollow(!follow)}>
+      <div className="fixed bottom-2 left-2 z-10">
+        <button
+          className={`px-3 py-1.5 text-xs rounded-md backdrop-blur-sm transition-colors ${
+            follow ? "bg-cyan-400/20 text-cyan-400" : "bg-black/60 text-muted-foreground hover:text-white"
+          }`}
+          onClick={() => setFollow(!follow)}
+        >
           {follow ? "Following" : "Not following"}
         </button>
       </div>
