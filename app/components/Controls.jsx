@@ -43,6 +43,13 @@ const Controls = ({ follow }) => {
         true
       );
 
+      // Set min distance to the object's bounding sphere radius
+      // so the camera can't clip through the surface
+      const bbox = new THREE.Box3().setFromObject(activeRef.current);
+      const sphere = new THREE.Sphere();
+      bbox.getBoundingSphere(sphere);
+      cameraControlsRef.current.minDistance = sphere.radius * 1.02;
+
       cameraControlsRef.current.fitToBox(activeRef.current, true);
     }
   }, [activeRef]);
