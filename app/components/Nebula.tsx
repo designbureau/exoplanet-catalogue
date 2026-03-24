@@ -261,7 +261,7 @@ export default function Nebula({ seed = "default", density = 0.6, brightness = 0
   });
 
   return (
-    <mesh ref={meshRef} material={material}>
+    <mesh ref={meshRef} material={material} renderOrder={-3}>
       <sphereGeometry args={[50000000, 32, 32]} />
     </mesh>
   );
