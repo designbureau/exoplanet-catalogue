@@ -23,7 +23,7 @@ const Planet = ({ data, starData }) => {
   const ref = useRef();
   const glowRef = useRef();
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowInner, cloudCoverage, cloudOpacity } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity } = useContext(EnvContext);
 
   const name = data.name ? data.name[0] : "Unnamed planet";
 
@@ -44,7 +44,7 @@ const Planet = ({ data, starData }) => {
   })();
 
   // Classify planet and create shader material
-  const { shaderMaterial, atmosphereMaterial, atmosphereScale } = useMemo(() => {
+  const { shaderMaterial, atmosphereMaterial, atmosphereScale, atmosParams } = useMemo(() => {
     const params = classifyPlanet({
       massJupiter: mass,
       radiusJupiter: radius,
@@ -61,12 +61,28 @@ const Planet = ({ data, starData }) => {
       shaderMaterial: shader,
       atmosphereMaterial: glowMat,
       atmosphereScale: atmosParams?.thickness || 1.0,
+      atmosParams,
     };
   }, [mass, radius, rawSMA, starData?.temperature, starData?.mass, starData?.radius]);
 
   useEffect(() => {
     addRef(name, "planet", ref);
   }, [name, addRef, ref]);
+
+  // Update glow texture and colour only when params change (not every frame)
+  useEffect(() => {
+    if (!atmosphereMaterial) return;
+    updateGlowTexture(atmosphereMaterial, glowFalloff, glowInner);
+    const baseColor = atmosParams?.color ?? new THREE.Color(0.3, 0.5, 1.0);
+    const hsl = {};
+    baseColor.getHSL(hsl);
+    const shifted = new THREE.Color().setHSL(
+      (hsl.h + glowHueShift) % 1.0,
+      Math.min(1.0, hsl.s * glowSaturation),
+      hsl.l
+    );
+    atmosphereMaterial.color.copy(shifted);
+  }, [atmosphereMaterial, atmosParams, glowFalloff, glowInner, glowHueShift, glowSaturation]);
 
   const handleClick = (e) => {
     e.stopPropagation();
@@ -129,7 +145,6 @@ const Planet = ({ data, starData }) => {
     }
     if (atmosphereMaterial) {
       atmosphereMaterial.opacity = glowIntensity;
-      updateGlowTexture(atmosphereMaterial, glowFalloff, glowInner);
     }
     // Sync glow sprite position with orbiting planet
     if (glowRef.current && ref.current) {

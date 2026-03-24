@@ -19,6 +19,7 @@ const fragmentShader = `
   uniform vec3 u_color1;
   uniform vec3 u_color2;
   uniform vec3 u_color3;
+  uniform vec3 u_color4;
   uniform float u_nebulaDensity;
   uniform float u_brightness;
   uniform float u_starDensity;
@@ -48,7 +49,7 @@ const fragmentShader = `
   float cloudNoise(vec3 p, float freq, float seed) {
     float v = 0.0, a = 0.5;
     p = p * freq + vec3(seed);
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 5; i++) {
       float n = noise3d(p);
       v += a * (sin(n * 6.2831) * 0.5 + 0.5);
       p = p * 2.02 + vec3(31.7, 17.3, 53.1);
@@ -61,7 +62,7 @@ const fragmentShader = `
   float ridgedNoise(vec3 p, float freq) {
     float v = 0.0, a = 0.5;
     p = p * freq;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 4; i++) {
       float n = noise3d(p);
       n = 1.0 - abs(n * 2.0 - 1.0); // ridge
       v += a * n * n;
@@ -109,9 +110,13 @@ const fragmentShader = `
     nebula = pow(nebula, 1.5) * u_nebulaDensity;
     nebula = clamp(nebula, 0.0, 1.0);
 
-    // Colour: blend between nebula colours based on density layers
-    vec3 nebulaColor = mix(u_color1, u_color2, c1);
-    nebulaColor = mix(nebulaColor, u_color3, r1 * 0.5);
+    // Colour: spatially varied blending using different noise layers
+    // Each colour gets its own region of dominance
+    float zone1 = cloudNoise(sp * 0.5 + vec3(u_seed.z * 50.0), 0.8, u_seed.x * 30.0);
+    float zone2 = noise3d(sp * 1.2 + vec3(u_seed.y * 40.0, 0.0, u_seed.z * 60.0));
+    vec3 nebulaColor = mix(u_color1, u_color2, smoothstep(0.3, 0.7, c1));
+    nebulaColor = mix(nebulaColor, u_color3, smoothstep(0.35, 0.65, zone1));
+    nebulaColor = mix(nebulaColor, u_color4, smoothstep(0.4, 0.7, zone2) * r1);
 
     // Compose final colour (nebula only)
     vec3 color = nebulaColor * nebula * u_brightness;
@@ -126,58 +131,77 @@ const fragmentShader = `
 // Solar-type (5000-8000K): reflection + Hα — blue, pink, gold
 // Cool stars (<5000K): molecular clouds + Hα — red, orange, brown, warm tones
 
-type Palette = [THREE.Color, THREE.Color, THREE.Color];
+type Palette = [THREE.Color, THREE.Color, THREE.Color, THREE.Color];
 
 const hotPalettes: Palette[] = [
-  // Eta Carinae homunculus — teal/orange/gold
-  [new THREE.Color(0.05, 0.4, 0.45), new THREE.Color(0.8, 0.5, 0.15), new THREE.Color(0.2, 0.7, 0.6)],
-  // OIII emission — deep teal/green/cyan
-  [new THREE.Color(0.02, 0.35, 0.3), new THREE.Color(0.1, 0.6, 0.5), new THREE.Color(0.15, 0.8, 0.7)],
-  // Blue supergiant — electric blue/white/cyan
-  [new THREE.Color(0.1, 0.15, 0.6), new THREE.Color(0.2, 0.4, 0.9), new THREE.Color(0.5, 0.7, 1.0)],
-  // Pillars of Creation — green/gold/brown
-  [new THREE.Color(0.15, 0.35, 0.1), new THREE.Color(0.5, 0.45, 0.15), new THREE.Color(0.2, 0.55, 0.25)],
+  // Eta Carinae — teal/orange/gold/violet
+  [new THREE.Color(0.05, 0.4, 0.45), new THREE.Color(0.8, 0.5, 0.15), new THREE.Color(0.2, 0.7, 0.6), new THREE.Color(0.4, 0.12, 0.5)],
+  // OIII emission — deep teal/green/cyan/pink
+  [new THREE.Color(0.02, 0.35, 0.3), new THREE.Color(0.1, 0.6, 0.5), new THREE.Color(0.15, 0.8, 0.7), new THREE.Color(0.7, 0.2, 0.35)],
+  // Blue supergiant — electric blue/white/cyan/amber
+  [new THREE.Color(0.1, 0.15, 0.6), new THREE.Color(0.2, 0.4, 0.9), new THREE.Color(0.5, 0.7, 1.0), new THREE.Color(0.8, 0.6, 0.15)],
+  // Pillars of Creation — green/gold/brown/teal
+  [new THREE.Color(0.15, 0.35, 0.1), new THREE.Color(0.5, 0.45, 0.15), new THREE.Color(0.2, 0.55, 0.25), new THREE.Color(0.05, 0.3, 0.4)],
+  // NGC 3603 — cyan/magenta/gold/emerald
+  [new THREE.Color(0.1, 0.5, 0.6), new THREE.Color(0.6, 0.1, 0.45), new THREE.Color(0.85, 0.65, 0.1), new THREE.Color(0.08, 0.5, 0.25)],
+  // Tarantula Nebula — red/teal/violet/yellow
+  [new THREE.Color(0.7, 0.12, 0.08), new THREE.Color(0.05, 0.45, 0.5), new THREE.Color(0.35, 0.08, 0.55), new THREE.Color(0.9, 0.7, 0.15)],
 ];
 
 const warmPalettes: Palette[] = [
-  // Orion Nebula — purple/pink/blue
-  [new THREE.Color(0.3, 0.08, 0.5), new THREE.Color(0.6, 0.2, 0.7), new THREE.Color(0.4, 0.3, 0.9)],
-  // Carina magic mountain — blue/teal/gold
-  [new THREE.Color(0.08, 0.2, 0.5), new THREE.Color(0.1, 0.45, 0.55), new THREE.Color(0.7, 0.55, 0.2)],
-  // Lagoon Nebula — magenta/pink/red
-  [new THREE.Color(0.5, 0.05, 0.3), new THREE.Color(0.7, 0.15, 0.4), new THREE.Color(0.9, 0.35, 0.5)],
-  // Veil Nebula — cyan/red/blue filaments
-  [new THREE.Color(0.1, 0.4, 0.6), new THREE.Color(0.6, 0.15, 0.1), new THREE.Color(0.15, 0.25, 0.7)],
+  // Orion Nebula — purple/pink/blue/green
+  [new THREE.Color(0.3, 0.08, 0.5), new THREE.Color(0.6, 0.2, 0.7), new THREE.Color(0.4, 0.3, 0.9), new THREE.Color(0.15, 0.5, 0.25)],
+  // Carina magic mountain — blue/teal/gold/crimson
+  [new THREE.Color(0.08, 0.2, 0.5), new THREE.Color(0.1, 0.45, 0.55), new THREE.Color(0.7, 0.55, 0.2), new THREE.Color(0.6, 0.08, 0.12)],
+  // Lagoon Nebula — magenta/pink/red/cobalt
+  [new THREE.Color(0.5, 0.05, 0.3), new THREE.Color(0.7, 0.15, 0.4), new THREE.Color(0.9, 0.35, 0.5), new THREE.Color(0.12, 0.15, 0.55)],
+  // Veil Nebula — cyan/red/blue/olive
+  [new THREE.Color(0.1, 0.4, 0.6), new THREE.Color(0.6, 0.15, 0.1), new THREE.Color(0.15, 0.25, 0.7), new THREE.Color(0.4, 0.45, 0.1)],
+  // Trifid Nebula — salmon/blue/violet/warm yellow
+  [new THREE.Color(0.75, 0.3, 0.2), new THREE.Color(0.15, 0.25, 0.6), new THREE.Color(0.45, 0.1, 0.5), new THREE.Color(0.8, 0.65, 0.2)],
+  // Thor's Helmet — teal/amber/rose/indigo
+  [new THREE.Color(0.06, 0.4, 0.4), new THREE.Color(0.75, 0.5, 0.1), new THREE.Color(0.65, 0.2, 0.3), new THREE.Color(0.18, 0.1, 0.5)],
 ];
 
 const solarPalettes: Palette[] = [
-  // Eagle Nebula — gold/green/brown pillars
-  [new THREE.Color(0.5, 0.4, 0.1), new THREE.Color(0.25, 0.4, 0.15), new THREE.Color(0.7, 0.5, 0.2)],
-  // Rosette Nebula — red/pink/purple
-  [new THREE.Color(0.6, 0.1, 0.12), new THREE.Color(0.8, 0.2, 0.3), new THREE.Color(0.5, 0.15, 0.4)],
-  // Reflection + Hα — blue/pink
-  [new THREE.Color(0.1, 0.15, 0.45), new THREE.Color(0.6, 0.2, 0.35), new THREE.Color(0.25, 0.3, 0.7)],
-  // Bubble Nebula — teal/yellow/orange
-  [new THREE.Color(0.05, 0.3, 0.35), new THREE.Color(0.7, 0.6, 0.15), new THREE.Color(0.9, 0.45, 0.1)],
+  // Eagle Nebula — gold/green/brown/rose
+  [new THREE.Color(0.5, 0.4, 0.1), new THREE.Color(0.25, 0.4, 0.15), new THREE.Color(0.7, 0.5, 0.2), new THREE.Color(0.6, 0.2, 0.3)],
+  // Rosette Nebula — red/pink/purple/teal
+  [new THREE.Color(0.6, 0.1, 0.12), new THREE.Color(0.8, 0.2, 0.3), new THREE.Color(0.5, 0.15, 0.4), new THREE.Color(0.1, 0.35, 0.35)],
+  // Reflection + Hα — blue/pink/amber/mint
+  [new THREE.Color(0.1, 0.15, 0.45), new THREE.Color(0.6, 0.2, 0.35), new THREE.Color(0.25, 0.3, 0.7), new THREE.Color(0.7, 0.55, 0.15)],
+  // Bubble Nebula — teal/yellow/orange/lavender
+  [new THREE.Color(0.05, 0.3, 0.35), new THREE.Color(0.7, 0.6, 0.15), new THREE.Color(0.9, 0.45, 0.1), new THREE.Color(0.4, 0.25, 0.55)],
+  // Ring Nebula — blue/green/red/peach
+  [new THREE.Color(0.08, 0.18, 0.55), new THREE.Color(0.15, 0.5, 0.3), new THREE.Color(0.65, 0.1, 0.1), new THREE.Color(0.85, 0.6, 0.4)],
+  // Helix Nebula — cyan/magenta/gold/lime
+  [new THREE.Color(0.1, 0.5, 0.55), new THREE.Color(0.55, 0.1, 0.4), new THREE.Color(0.75, 0.6, 0.1), new THREE.Color(0.3, 0.55, 0.1)],
 ];
 
 const coolPalettes: Palette[] = [
-  // Horsehead / dark molecular — deep red/brown/orange
-  [new THREE.Color(0.5, 0.08, 0.05), new THREE.Color(0.7, 0.25, 0.08), new THREE.Color(0.9, 0.45, 0.12)],
-  // Flame Nebula — orange/yellow/red
-  [new THREE.Color(0.7, 0.3, 0.05), new THREE.Color(0.9, 0.55, 0.1), new THREE.Color(1.0, 0.7, 0.2)],
-  // Barnard's Loop — faint red/crimson/maroon
-  [new THREE.Color(0.45, 0.05, 0.08), new THREE.Color(0.65, 0.12, 0.1), new THREE.Color(0.8, 0.25, 0.15)],
-  // Witch Head — blue-grey/warm brown
-  [new THREE.Color(0.15, 0.15, 0.3), new THREE.Color(0.4, 0.25, 0.15), new THREE.Color(0.55, 0.35, 0.2)],
+  // Horsehead — deep red/brown/orange/steel blue
+  [new THREE.Color(0.5, 0.08, 0.05), new THREE.Color(0.7, 0.25, 0.08), new THREE.Color(0.9, 0.45, 0.12), new THREE.Color(0.15, 0.2, 0.4)],
+  // Flame Nebula — orange/yellow/red/violet
+  [new THREE.Color(0.7, 0.3, 0.05), new THREE.Color(0.9, 0.55, 0.1), new THREE.Color(1.0, 0.7, 0.2), new THREE.Color(0.35, 0.08, 0.45)],
+  // Barnard's Loop — crimson/maroon/peach/teal
+  [new THREE.Color(0.45, 0.05, 0.08), new THREE.Color(0.65, 0.12, 0.1), new THREE.Color(0.8, 0.25, 0.15), new THREE.Color(0.08, 0.3, 0.35)],
+  // Witch Head — blue-grey/brown/amber/sage
+  [new THREE.Color(0.15, 0.15, 0.3), new THREE.Color(0.4, 0.25, 0.15), new THREE.Color(0.55, 0.35, 0.2), new THREE.Color(0.25, 0.35, 0.2)],
+  // IC 1396 Elephant Trunk — rust/gold/teal/magenta
+  [new THREE.Color(0.6, 0.18, 0.05), new THREE.Color(0.8, 0.6, 0.12), new THREE.Color(0.08, 0.35, 0.4), new THREE.Color(0.5, 0.1, 0.35)],
+  // Cocoon Nebula — warm red/cyan/gold/plum
+  [new THREE.Color(0.65, 0.15, 0.1), new THREE.Color(0.1, 0.45, 0.5), new THREE.Color(0.85, 0.65, 0.15), new THREE.Color(0.4, 0.1, 0.4)],
 ];
 
 function nebulaColors(seed: number, starTemp: number): Palette {
-  let palettes: Palette[];
-  if (starTemp > 15000) palettes = hotPalettes;
-  else if (starTemp > 8000) palettes = warmPalettes;
-  else if (starTemp > 5000) palettes = solarPalettes;
-  else palettes = coolPalettes;
+  // Allow cross-group bleed: sometimes pick from adjacent temperature group
+  const allGroups = [coolPalettes, solarPalettes, warmPalettes, hotPalettes];
+  let groupIdx = starTemp > 15000 ? 3 : starTemp > 8000 ? 2 : starTemp > 5000 ? 1 : 0;
+  // 20% chance to shift one group for variety
+  const seedShift = Math.abs(seed * 7) % 10;
+  if (seedShift < 2 && groupIdx > 0) groupIdx--;
+  else if (seedShift >= 8 && groupIdx < 3) groupIdx++;
+  const palettes = allGroups[groupIdx];
 
   const index = ((seed % palettes.length) + palettes.length) % palettes.length;
   return palettes[index];
@@ -207,7 +231,7 @@ export default function Nebula({ seed = "default", density = 0.6, brightness = 0
       ((((h * 13) % 1000) + 1000) % 1000) / 1000
     );
 
-    const [c1, c2, c3] = nebulaColors(h, starTemp);
+    const [c1, c2, c3, c4] = nebulaColors(h, starTemp);
 
     return new THREE.ShaderMaterial({
       uniforms: {
@@ -216,6 +240,7 @@ export default function Nebula({ seed = "default", density = 0.6, brightness = 0
         u_color1: { value: c1 },
         u_color2: { value: c2 },
         u_color3: { value: c3 },
+        u_color4: { value: c4 },
         u_nebulaDensity: { value: density },
         u_brightness: { value: brightness },
         u_starDensity: { value: starDensity },

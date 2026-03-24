@@ -152,6 +152,8 @@ const App = ({ data }: any) => {
     glowScale, setGlowScale,
     glowFalloff, setGlowFalloff,
     glowInner, setGlowInner,
+    glowHueShift, setGlowHueShift,
+    glowSaturation, setGlowSaturation,
     cloudCoverage: ctxCloudCoverage, setCloudCoverage: ctxSetCloudCoverage,
     cloudOpacity: ctxCloudOpacity, setCloudOpacity: ctxSetCloudOpacity,
   } = useContext(EnvContext);
@@ -160,8 +162,8 @@ const App = ({ data }: any) => {
   const [nebulaBrightness, setNebulaBrightness] = useState(0.6);
   const [showNebula, setShowNebula] = useState(true);
   const [showSkybox, setShowSkybox] = useState(true);
-  const [skyBrightness, setSkyBrightness] = useState(1.0);
-  const [skyContrast, setSkyContrast] = useState(1.0);
+  const [skyBrightness, setSkyBrightness] = useState(2.2);
+  const [skyContrast, setSkyContrast] = useState(1.2);
   const cloudCoverage = ctxCloudCoverage;
   const setCloudCoverage = ctxSetCloudCoverage;
   const cloudOpacity = ctxCloudOpacity;
@@ -343,7 +345,7 @@ const App = ({ data }: any) => {
             type="range"
             min="0"
             max="5"
-            step="0.1"
+            step="0.01"
             value={glowIntensity}
             onChange={(e) => setGlowIntensity(parseFloat(e.target.value))}
             className="w-16 accent-cyan-400"
@@ -355,7 +357,7 @@ const App = ({ data }: any) => {
           <input
             id="glow-scale"
             type="range"
-            min="1.0"
+            min="0.5"
             max="10.0"
             step="0.05"
             value={glowScale}
@@ -369,7 +371,7 @@ const App = ({ data }: any) => {
           <input
             id="glow-falloff"
             type="range"
-            min="0.1"
+            min="0.05"
             max="5"
             step="0.05"
             value={glowFalloff}
@@ -391,6 +393,34 @@ const App = ({ data }: any) => {
             className="w-16 accent-cyan-400"
           />
           <span className="w-7 tabular-nums text-right">{glowInner.toFixed(2)}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <label htmlFor="glow-hue" className="w-14 shrink-0">G.Hue</label>
+          <input
+            id="glow-hue"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={glowHueShift}
+            onChange={(e) => setGlowHueShift(parseFloat(e.target.value))}
+            className="w-16 accent-cyan-400"
+          />
+          <span className="w-7 tabular-nums text-right">{glowHueShift.toFixed(2)}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <label htmlFor="glow-sat" className="w-14 shrink-0">G.Sat</label>
+          <input
+            id="glow-sat"
+            type="range"
+            min="0"
+            max="3"
+            step="0.05"
+            value={glowSaturation}
+            onChange={(e) => setGlowSaturation(parseFloat(e.target.value))}
+            className="w-16 accent-cyan-400"
+          />
+          <span className="w-7 tabular-nums text-right">{glowSaturation.toFixed(2)}</span>
         </div>
         <div className="my-0.5 border-t border-white/10" />
         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">

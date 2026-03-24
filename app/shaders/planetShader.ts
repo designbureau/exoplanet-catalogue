@@ -48,7 +48,7 @@ const noiseLib = `
   float fbm(vec2 p) {
     float v = 0.0, a = 0.5;
     mat2 rot = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.5));
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 4; i++) {
       v += a * noise(p);
       p = rot * p * 2.0 + vec2(100.0);
       a *= 0.5;
@@ -58,7 +58,7 @@ const noiseLib = `
 
   float fbm3d(vec3 p) {
     float v = 0.0, a = 0.5;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 3; i++) {
       v += a * noise3d(p);
       p = p * 2.01 + vec3(100.0);
       a *= 0.5;
@@ -70,7 +70,7 @@ const noiseLib = `
   float ridgedNoise(vec3 p, float freq) {
     float v = 0.0, a = 0.5;
     p = p * freq;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 4; i++) {
       float n = noise3d(p);
       n = 2.0 * (0.5 - abs(0.5 - n)); // ridge fold
       v += a * n;
@@ -84,7 +84,7 @@ const noiseLib = `
   float cloudNoise(vec3 p, float freq) {
     float v = 0.0, a = 0.5;
     p = p * freq;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 4; i++) {
       float n = noise3d(p);
       v += a * (sin(n * 5.0) * 0.5 + 0.5);
       p = p * 2.02 + vec3(31.7, 17.3, 53.1);
@@ -152,8 +152,8 @@ const noiseLib = `
 
   float fbm3d_lod(vec3 p) {
     float v = 0.0, a = 0.5;
-    int octaves = (u_lod > 0.5) ? 5 : 2;
-    for (int i = 0; i < 5; i++) {
+    int octaves = (u_lod > 0.5) ? 4 : 2;
+    for (int i = 0; i < 4; i++) {
       if (i >= octaves) break;
       v += a * noise3d(p);
       p = p * 2.01 + vec3(100.0);
@@ -165,8 +165,8 @@ const noiseLib = `
   float ridgedNoise_lod(vec3 p, float freq) {
     float v = 0.0, a = 0.5;
     p = p * freq;
-    int octaves = (u_lod > 0.5) ? 6 : 2;
-    for (int i = 0; i < 6; i++) {
+    int octaves = (u_lod > 0.5) ? 4 : 2;
+    for (int i = 0; i < 4; i++) {
       if (i >= octaves) break;
       float n = noise3d(p);
       n = 2.0 * (0.5 - abs(0.5 - n));
@@ -180,8 +180,8 @@ const noiseLib = `
   float cloudNoise_lod(vec3 p, float freq) {
     float v = 0.0, a = 0.5;
     p = p * freq;
-    int octaves = (u_lod > 0.5) ? 6 : 2;
-    for (int i = 0; i < 6; i++) {
+    int octaves = (u_lod > 0.5) ? 4 : 2;
+    for (int i = 0; i < 4; i++) {
       if (i >= octaves) break;
       float n = noise3d(p);
       v += a * (sin(n * 5.0) * 0.5 + 0.5);
