@@ -162,10 +162,14 @@ const noiseLib = `
     fresnel = pow(clamp(fresnel, 0.0, 2.0), u_atmosFalloff);
 
     float sunOrientation = dot(normal, u_sunDirection);
+    // Day colour blend: transitions across full lit hemisphere
     float atmosphereDayMix = smoothstep(-0.5, 1.0, sunOrientation);
     vec3 atmosColor = mix(u_atmosTwilightColor, u_atmosDayColor, atmosphereDayMix);
 
-    return mix(color, atmosColor, fresnel * atmosphereDayMix * u_atmosIntensity);
+    // Visibility: atmosphere glow fades on dark side — tighter than BackSide sphere
+    float dayVisibility = smoothstep(-0.2, 0.3, sunOrientation);
+
+    return mix(color, atmosColor, fresnel * dayVisibility * u_atmosIntensity);
   }
 
   // LOD-aware noise: fewer octaves when u_lod is 0
@@ -321,9 +325,9 @@ const gasGiantFragment = `
     // Polar darkening
     color *= 1.0 - latitude * 0.2;
 
-    // Lighting
-    float diff = max(dot(vNormal, normalize(vec3(1.0, 0.5, 0.8))), 0.15);
-    color *= (0.3 + 0.7 * diff);
+    // Lighting — use actual sun direction
+    float diff = max(dot(vNormal, u_sunDirection), 0.0);
+    color *= (0.08 + 0.92 * diff);
 
     gl_FragColor = vec4(color, 1.0);
   }
@@ -416,10 +420,9 @@ const rockyFragment = `
     float cracks = smoothstep(0.02, 0.0, abs(v1.y - v1.x - 0.1)) * emissiveIntensity * 0.5;
     color += emissiveColor * cracks;
 
-    // Lighting with bump normal
-    vec3 lightDir = normalize(vec3(1.0, 0.5, 0.8));
-    float diff = max(dot(bumpNormal, lightDir), 0.08);
-    color *= (0.2 + 0.8 * diff);
+    // Lighting with bump normal — use sun direction
+    float diff = max(dot(bumpNormal, u_sunDirection), 0.0);
+    color *= (0.06 + 0.94 * diff);
 
     gl_FragColor = vec4(color, 1.0);
   }
@@ -634,14 +637,13 @@ const terrestrialFragment = `
     }
 
     // Lighting with bump normal (land only; ocean is smooth)
-    vec3 lightDir = normalize(vec3(1.0, 0.5, 0.8));
     vec3 effectiveNormal = mix(vNormal, bumpNormal, isLand);
-    float diff = max(dot(effectiveNormal, lightDir), 0.1);
-    surfaceColor *= (0.25 + 0.75 * diff);
+    float diff = max(dot(effectiveNormal, u_sunDirection), 0.0);
+    surfaceColor *= (0.08 + 0.92 * diff);
 
     // Specular on ocean
     vec3 viewDir = normalize(-vPosition);
-    vec3 reflectDir = reflect(-lightDir, vNormal);
+    vec3 reflectDir = reflect(-u_sunDirection, vNormal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
     surfaceColor += vec3(0.3) * spec * (1.0 - isLand) * (1.0 - clouds);
 
@@ -705,8 +707,8 @@ const hazyFragment = `
     fresnel = pow(fresnel, 1.8);
     color = mix(color, color4, fresnel * 0.4);
 
-    float diff = max(dot(vNormal, normalize(vec3(1.0, 0.5, 0.8))), 0.2);
-    color *= (0.4 + 0.6 * diff);
+    float diff = max(dot(vNormal, u_sunDirection), 0.0);
+    color *= (0.15 + 0.85 * diff);
     gl_FragColor = vec4(color, 1.0);
   }
 `;
@@ -800,8 +802,8 @@ const iceGiantFragment = `
     float fresnel = 1.0 - abs(dot(vNormal, normalize(vec3(0.0, 0.0, 1.0))));
     color = mix(color, color2 * 1.3, pow(fresnel, 2.5) * 0.25);
 
-    float diff = max(dot(vNormal, normalize(vec3(1.0, 0.5, 0.8))), 0.15);
-    color *= (0.3 + 0.7 * diff);
+    float diff = max(dot(vNormal, u_sunDirection), 0.0);
+    color *= (0.08 + 0.92 * diff);
     gl_FragColor = vec4(color, 1.0);
   }
 `;
