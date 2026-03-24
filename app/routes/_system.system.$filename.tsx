@@ -227,6 +227,13 @@ const App = ({ data }: any) => {
     iceTurb, setIceTurb,
     iceBands, setIceBands,
     iceEdgeNoise, setIceEdgeNoise,
+    terrSeaLevel, setTerrSeaLevel,
+    terrContinentFreq, setTerrContinentFreq,
+    terrWarpStrength, setTerrWarpStrength,
+    terrIceCapSize, setTerrIceCapSize,
+    rockyCraterScale, setRockyCraterScale,
+    rockyRidgeStrength, setRockyRidgeStrength,
+    rockyCraterDepth, setRockyCraterDepth,
     typeColorOverrides, setTypeColorOverrides,
     activePlanetInfo,
   } = useContext(EnvContext);
@@ -293,6 +300,19 @@ const App = ({ data }: any) => {
         <Accordion title="Clouds" defaultOpen={false}>
           <Slider label="Cover" min={0.1} max={0.7} step={0.01} value={cloudCoverage} onChange={setCloudCoverage} />
           <Slider label="Opacity" min={0} max={1} step={0.05} value={cloudOpacity} onChange={setCloudOpacity} />
+        </Accordion>
+
+        <Accordion title="Terrestrial" defaultOpen={false}>
+          <Slider label="Sea Lvl" min={0.3} max={0.7} step={0.01} value={terrSeaLevel} onChange={setTerrSeaLevel} />
+          <Slider label="Cont Freq" min={0.05} max={0.5} step={0.01} value={terrContinentFreq} onChange={setTerrContinentFreq} />
+          <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={terrWarpStrength} onChange={setTerrWarpStrength} />
+          <Slider label="Ice Cap" min={0.6} max={0.98} step={0.01} value={terrIceCapSize} onChange={setTerrIceCapSize} />
+        </Accordion>
+
+        <Accordion title="Rocky" defaultOpen={false}>
+          <Slider label="Crater Sz" min={0.3} max={3.0} step={0.1} value={rockyCraterScale} onChange={setRockyCraterScale} />
+          <Slider label="Ridges" min={0} max={1} step={0.01} value={rockyRidgeStrength} onChange={setRockyRidgeStrength} />
+          <Slider label="Depth" min={0} max={1.5} step={0.05} value={rockyCraterDepth} onChange={setRockyCraterDepth} />
         </Accordion>
 
         <Accordion title={`Colours${activeType ? ` (${activeType.replace(/_/g, ' ').toLowerCase()})` : ''}`} defaultOpen={false}>

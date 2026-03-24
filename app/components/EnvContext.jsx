@@ -55,6 +55,17 @@ export const EnvProvider = ({ children }) => {
   const [iceBands, setIceBands] = useState(4.0);
   const [iceEdgeNoise, setIceEdgeNoise] = useState(0.3);
 
+  // Terrestrial controls
+  const [terrSeaLevel, setTerrSeaLevel] = useState(0.50);
+  const [terrContinentFreq, setTerrContinentFreq] = useState(0.15);
+  const [terrWarpStrength, setTerrWarpStrength] = useState(0.5);
+  const [terrIceCapSize, setTerrIceCapSize] = useState(0.85);
+
+  // Rocky controls
+  const [rockyCraterScale, setRockyCraterScale] = useState(1.0);
+  const [rockyRidgeStrength, setRockyRidgeStrength] = useState(0.35);
+  const [rockyCraterDepth, setRockyCraterDepth] = useState(0.7);
+
   const Constants = useMemo(() => ({
     mass: {
       sol: 1,
@@ -116,6 +127,13 @@ export const EnvProvider = ({ children }) => {
       iceTurb, setIceTurb,
       iceBands, setIceBands,
       iceEdgeNoise, setIceEdgeNoise,
+      terrSeaLevel, setTerrSeaLevel,
+      terrContinentFreq, setTerrContinentFreq,
+      terrWarpStrength, setTerrWarpStrength,
+      terrIceCapSize, setTerrIceCapSize,
+      rockyCraterScale, setRockyCraterScale,
+      rockyRidgeStrength, setRockyRidgeStrength,
+      rockyCraterDepth, setRockyCraterDepth,
       typeColorOverrides, setTypeColorOverrides,
       activePlanetInfo, setActivePlanetInfo,
     }}>

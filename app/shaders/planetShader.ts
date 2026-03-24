@@ -343,6 +343,9 @@ const rockyFragment = `
   uniform vec3 emissiveColor;
   uniform float emissiveIntensity;
   uniform float warp_intensity;
+  uniform float u_craterScale;
+  uniform float u_ridgeStrength;
+  uniform float u_craterDepth;
   varying vec3 vPosition;
   varying vec3 vNormal;
 
@@ -354,7 +357,7 @@ const rockyFragment = `
     float base = noise3d(p * 0.8) * 0.5;
 
     // Ridged mountain ranges layered on top
-    float ridges = ridgedNoise_lod(p, 1.5) * 0.35;
+    float ridges = ridgedNoise_lod(p, 1.5) * u_ridgeStrength;
 
     // Cloud noise for softer highland areas (skip at low LOD)
     float soft = (u_lod > 0.5) ? cloudNoise(p + vec3(ridges * 0.3), 2.0) * 0.15 : 0.0;
@@ -373,12 +376,12 @@ const rockyFragment = `
     float terrain = base + ridges + soft + detail;
 
     // Craters: large scale always, medium/small only at high LOD
-    vec2 v1 = voronoi(p * 0.7);
-    terrain += craterProfile(v1.x, 2.0) * 0.7;
+    vec2 v1 = voronoi(p * 0.7 * u_craterScale);
+    terrain += craterProfile(v1.x, 2.0) * u_craterDepth;
     if (u_lod > 0.5) {
-      vec2 v2 = voronoi(p * 1.8);
+      vec2 v2 = voronoi(p * 1.8 * u_craterScale);
       terrain += craterProfile(v2.x, 0.8) * 0.4;
-      vec2 v3 = voronoi(p * 5.0);
+      vec2 v3 = voronoi(p * 5.0 * u_craterScale);
       terrain += craterProfile(v3.x, 0.5) * 0.15;
     }
 
@@ -437,6 +440,10 @@ const terrestrialFragment = `
   uniform float u_atmosFalloff;
   uniform float u_cloudCoverage;
   uniform float u_cloudOpacity;
+  uniform float u_seaLevel;
+  uniform float u_continentFreq;
+  uniform float u_terrWarp;
+  uniform float u_iceCapSize;
   varying vec3 vPosition;
   varying vec3 vNormal;
   varying vec3 vWorldNormal;
@@ -448,7 +455,7 @@ const terrestrialFragment = `
     // Domain warp at very low frequency for continent-scale distortion
     vec3 wp;
     if (u_lod > 0.5) {
-      wp = p + 0.5 * vec3(
+      wp = p + u_terrWarp * vec3(
         fbm3d(p * 0.2),
         fbm3d(p * 0.2 + vec3(5.2)),
         fbm3d(p * 0.2 + vec3(9.7))
@@ -462,9 +469,9 @@ const terrestrialFragment = `
     }
 
     // Very low frequency base: big clumped continents and wide ocean basins
-    float h1 = noise3d(wp * 0.15);
+    float h1 = noise3d(wp * u_continentFreq);
     // Secondary low-freq layer for continent grouping
-    float h1b = noise3d(wp * 0.1 + vec3(42.0)) * 0.3;
+    float h1b = noise3d(wp * u_continentFreq * 0.67 + vec3(42.0)) * 0.3;
 
     // Cloud noise for organic coastline detail (LOD-aware, lower freq)
     float h2 = cloudNoise_lod(wp, 0.35) * 0.2;
@@ -504,7 +511,7 @@ const terrestrialFragment = `
     }
 
     // Sea level threshold (higher = more ocean, fewer but bigger continents)
-    float seaLevel = 0.50;
+    float seaLevel = u_seaLevel;
     float isLand = smoothstep(seaLevel - 0.02, seaLevel + 0.02, continent);
 
     // Noise layers for colour variation
@@ -574,8 +581,8 @@ const terrestrialFragment = `
     float southNoise = noise3d(p * 1.5 + vec3(53.0)) * 0.12
                      + noise3d(p * 3.5 + vec3(67.0)) * 0.06;
     // Asymmetric cap sizes via seed
-    float northStart = 0.85 + u_seed.x * 0.06;
-    float southStart = 0.83 + u_seed.y * 0.08;
+    float northStart = u_iceCapSize + u_seed.x * 0.06;
+    float southStart = (u_iceCapSize - 0.02) + u_seed.y * 0.08;
     float northCap = smoothstep(northStart, northStart + 0.04, northLat + northNoise);
     float southCap = smoothstep(southStart, southStart + 0.04, southLat + southNoise);
     float iceCap = max(northCap, southCap);
@@ -861,8 +868,18 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_gasTurb: { value: 0.4 },
       u_gasBands: { value: 6.0 },
       u_gasEdgeNoise: { value: 0.4 },
+      u_seaLevel: { value: 0.50 },
+      u_continentFreq: { value: 0.15 },
+      u_terrWarp: { value: 0.5 },
+      u_iceCapSize: { value: 0.85 },
+      u_craterScale: { value: 1.0 },
+      u_ridgeStrength: { value: 0.35 },
+      u_craterDepth: { value: 0.7 },
     },
     vertexShader,
     fragmentShader: selectFragmentShader(params.type),
+    polygonOffset: true,
+    polygonOffsetFactor: 1,
+    polygonOffsetUnits: 1,
   });
 }

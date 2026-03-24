@@ -15,7 +15,7 @@ import {
   getMass,
   getRadius,
 } from "../utils/helperFunctions";
-import { classifyPlanet } from "../utils/planetClassification";
+import { classifyPlanet, PlanetType } from "../utils/planetClassification";
 import { createPlanetMaterial } from "../shaders/planetShader";
 import { getAtmosphereParams } from "../shaders/atmosphereShader";
 
@@ -23,7 +23,7 @@ const Planet = ({ data, starData }) => {
   const ref = useRef();
   const glowRef = useRef();
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, typeColorOverrides, setActivePlanetInfo } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo } = useContext(EnvContext);
 
   // Pre-allocated vectors for per-frame camera updates
   const _camRight = useMemo(() => new THREE.Vector3(), []);
@@ -62,20 +62,19 @@ const Planet = ({ data, starData }) => {
     const shader = createPlanetMaterial(params);
     const ap = getAtmosphereParams(params.type, starData?.temperature || 5500);
 
-    // Build annular ring geometry for atmosphere glow
-    let ringGeo = null;
-    let ringMat = null;
+    // Atmosphere glow — annular billboard ring for all types
+    let atmosRingGeo = null;
+    let atmosRingMat = null;
     if (ap) {
-      const segments = 64;
-      const planetRadius = 1.0; // unit sphere, scaled by parent mesh
+      const segments = 128;
       const positions = new Float32Array(3 * 2 * segments);
-      let pi = 0;
+      let pi2 = 0;
       for (let a = 0; a < segments; a++) {
         const angle = (a / segments) * Math.PI * 2.0;
-        const sx = Math.sin(angle) * planetRadius;
-        const sy = Math.cos(angle) * planetRadius;
-        positions[pi++] = sx; positions[pi++] = sy; positions[pi++] = 0.0;
-        positions[pi++] = sx; positions[pi++] = sy; positions[pi++] = 1.0;
+        const sx = Math.sin(angle);
+        const sy = Math.cos(angle);
+        positions[pi2++] = sx; positions[pi2++] = sy; positions[pi2++] = 0.0;
+        positions[pi2++] = sx; positions[pi2++] = sy; positions[pi2++] = 1.0;
       }
       const indices = new Uint16Array(2 * segments * 3);
       let oi = 0;
@@ -85,11 +84,10 @@ const Planet = ({ data, starData }) => {
         indices[oi++] = i0; indices[oi++] = i1; indices[oi++] = i2;
         indices[oi++] = i2; indices[oi++] = i1; indices[oi++] = i3;
       }
-      ringGeo = new THREE.BufferGeometry();
-      ringGeo.setAttribute("aPos", new THREE.Float32BufferAttribute(positions, 3));
-      ringGeo.setIndex(new THREE.BufferAttribute(indices, 1));
-
-      ringMat = new THREE.ShaderMaterial({
+      atmosRingGeo = new THREE.BufferGeometry();
+      atmosRingGeo.setAttribute("aPos", new THREE.Float32BufferAttribute(positions, 3));
+      atmosRingGeo.setIndex(new THREE.BufferAttribute(indices, 1));
+      atmosRingMat = new THREE.ShaderMaterial({
         vertexShader: `
           attribute vec3 aPos;
           varying float vRadial;
@@ -111,8 +109,7 @@ const Planet = ({ data, starData }) => {
           uniform float uIntensity;
           uniform float uFalloff;
           void main() {
-            float alpha = (1.0 - vRadial);
-            alpha = pow(alpha, uFalloff);
+            float alpha = pow(1.0 - vRadial, uFalloff);
             alpha *= uIntensity;
             vec3 col = uColor * alpha;
             gl_FragColor = vec4(col, alpha);
@@ -137,8 +134,8 @@ const Planet = ({ data, starData }) => {
     return {
       shaderMaterial: shader,
       atmosParams: ap,
-      atmosRingGeo: ringGeo,
-      atmosRingMat: ringMat,
+      atmosRingGeo,
+      atmosRingMat,
       planetType: params.type,
     };
   }, [mass, radius, rawSMA, starData?.temperature, starData?.mass, starData?.radius]);
@@ -147,13 +144,9 @@ const Planet = ({ data, starData }) => {
     addRef(name, "planet", ref);
   }, [name, addRef, ref]);
 
-  // Update atmosphere ring uniforms when controls change
+  // Update atmosphere ring colour when controls change
   useEffect(() => {
     if (!atmosRingMat) return;
-    atmosRingMat.uniforms.uIntensity.value = glowIntensity;
-    atmosRingMat.uniforms.uRadius.value = (atmosParams?.thickness || 0.3) * glowScale;
-    atmosRingMat.uniforms.uFalloff.value = glowFalloff;
-    // Apply hue shift and saturation
     if (atmosParams?.color) {
       const hsl = {};
       atmosParams.color.getHSL(hsl);
@@ -164,7 +157,7 @@ const Planet = ({ data, starData }) => {
       );
       atmosRingMat.uniforms.uColor.value.copy(shifted);
     }
-  }, [atmosRingMat, atmosParams, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation]);
+  }, [atmosRingMat, atmosParams, glowHueShift, glowSaturation]);
 
   const handleClick = (e) => {
     e.stopPropagation();
@@ -248,6 +241,19 @@ const Planet = ({ data, starData }) => {
       shaderMaterial.uniforms.u_gasBands.value = isIce ? iceBands : gasBands;
       shaderMaterial.uniforms.u_gasEdgeNoise.value = isIce ? iceEdgeNoise : gasEdgeNoise;
     }
+    // Terrestrial controls
+    if (shaderMaterial.uniforms.u_seaLevel) {
+      shaderMaterial.uniforms.u_seaLevel.value = terrSeaLevel;
+      shaderMaterial.uniforms.u_continentFreq.value = terrContinentFreq;
+      shaderMaterial.uniforms.u_terrWarp.value = terrWarpStrength;
+      shaderMaterial.uniforms.u_iceCapSize.value = terrIceCapSize;
+    }
+    // Rocky controls
+    if (shaderMaterial.uniforms.u_craterScale) {
+      shaderMaterial.uniforms.u_craterScale.value = rockyCraterScale;
+      shaderMaterial.uniforms.u_ridgeStrength.value = rockyRidgeStrength;
+      shaderMaterial.uniforms.u_craterDepth.value = rockyCraterDepth;
+    }
     // Apply colour overrides for this planet's type (affects all planets of this type)
     const typeColors = typeColorOverrides[planetType];
     if (typeColors) {
@@ -262,6 +268,9 @@ const Planet = ({ data, starData }) => {
       cam.matrixWorld.extractBasis(_camRight, _camUp, _camFwd);
       atmosRingMat.uniforms.uCamRight.value.copy(_camRight);
       atmosRingMat.uniforms.uCamUp.value.copy(_camUp);
+      atmosRingMat.uniforms.uIntensity.value = glowIntensity;
+      atmosRingMat.uniforms.uRadius.value = (atmosParams?.thickness || 0.3) * glowScale;
+      atmosRingMat.uniforms.uFalloff.value = glowFalloff;
     }
     // Sync ring position with orbiting planet
     if (glowRef.current && ref.current) {
