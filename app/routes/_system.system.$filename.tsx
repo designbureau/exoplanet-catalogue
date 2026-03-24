@@ -352,7 +352,7 @@ const App = ({ data }: any) => {
         </Accordion>
       </div>
       <div id="canvas-container">
-        <Canvas dpr={[1, 2]} camera={{ far: 10000000, near: 0.1, fov: 50 }}>
+        <Canvas dpr={[1, 2]} camera={{ far: 10000000, near: 0.01, fov: 50 }}>
           {showSkybox && <MilkyWaySkybox brightness={skyBrightness} contrast={skyContrast} />}
           <ambientLight intensity={0.05} />
           {showNebula && <Nebula seed={data?.name?.[0] ?? "system"} density={nebulaDensity} brightness={nebulaBrightness} starTemp={getPrimaryStarTemp(data)} />}
