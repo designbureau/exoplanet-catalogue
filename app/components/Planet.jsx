@@ -245,6 +245,59 @@ const Planet = ({ data, starData }) => {
 
   const speed = 0.0005;
 
+  // Slider-driven uniforms — only update when values change, not every frame
+  useEffect(() => {
+    const u = shaderMaterial.uniforms;
+    if (u.u_atmosIntensity) u.u_atmosIntensity.value = atmosIntensity;
+    if (u.u_atmosFalloff) u.u_atmosFalloff.value = atmosFalloff;
+    if (u.u_cloudCoverage) u.u_cloudCoverage.value = cloudCoverage;
+    if (u.u_cloudOpacity) u.u_cloudOpacity.value = cloudOpacity;
+    if (u.u_gasWarp) {
+      const isIce = planetType === "ICE_GIANT" || planetType === "VENUS_LIKE" || planetType === "WATER_WORLD" || planetType === "SUB_NEPTUNE";
+      u.swirl_strength.value = gasSwirl;
+      u.u_gasWarp.value = isIce ? iceWarp : gasWarp;
+      u.u_gasStorm.value = isIce ? iceStorm : gasStorm;
+      u.u_gasTurb.value = isIce ? iceTurb : gasTurb;
+      u.u_gasBands.value = isIce ? iceBands : gasBands;
+      u.u_gasEdgeNoise.value = isIce ? iceEdgeNoise : gasEdgeNoise;
+    }
+    if (u.u_seaLevel) {
+      u.u_seaLevel.value = terrSeaLevel;
+      u.u_continentFreq.value = terrContinentFreq;
+      u.u_terrWarp.value = terrWarpStrength;
+      u.u_iceCapSize.value = terrIceCapSize;
+    }
+    if (u.u_craterScale) {
+      u.u_craterScale.value = rockyCraterScale;
+      u.u_ridgeStrength.value = rockyRidgeStrength;
+      u.u_craterDepth.value = rockyCraterDepth;
+    }
+    const typeColors = typeColorOverrides[planetType];
+    if (typeColors) {
+      if (u.color1) u.color1.value.set(typeColors[0]);
+      if (u.color2) u.color2.value.set(typeColors[1]);
+      if (u.color3) u.color3.value.set(typeColors[2]);
+      if (u.color4) u.color4.value.set(typeColors[3]);
+    }
+    if (atmosMat) atmosMat.uniforms.uIntensity.value = glowIntensity;
+  }, [atmosIntensity, atmosFalloff, cloudCoverage, cloudOpacity,
+      gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise,
+      iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise,
+      terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize,
+      rockyCraterScale, rockyRidgeStrength, rockyCraterDepth,
+      typeColorOverrides, glowIntensity, shaderMaterial, atmosMat, planetType]);
+
+  // Soft glow uniforms — only when those sliders change
+  useEffect(() => {
+    if (softGlowRef.current?.material?.uniforms) {
+      const sgU = softGlowRef.current.material.uniforms;
+      sgU.uRadius.value = spriteGlowScale * 0.3;
+      sgU.uIntensity.value = spriteGlowIntensity;
+      sgU.uFalloff.value = spriteGlowFalloff;
+    }
+  }, [spriteGlowScale, spriteGlowIntensity, spriteGlowFalloff]);
+
+  // Per-frame: only orbital motion, time, LOD, sun direction, position sync
   useFrame((state) => {
     const elapsedTime = state.clock.getElapsedTime();
     ref.current.rotation.x = Math.PI * 0.5;
@@ -254,88 +307,28 @@ const Planet = ({ data, starData }) => {
     ref.current.position.y =
       ellipse.yRadius * Math.sin((elapsedTime / period) * speed);
 
-    // Animate shader
-    if (shaderMaterial.uniforms.u_time) {
+    // Time + LOD — only animate active planet's clouds
+    const isActive = activeRef?.current === ref.current;
+    if (shaderMaterial.uniforms.u_time && isActive) {
       shaderMaterial.uniforms.u_time.value = elapsedTime;
     }
-
-    // LOD: full detail when this planet is active, reduced otherwise
-    const isActive = activeRef?.current === ref.current;
     if (shaderMaterial.uniforms.u_lod) {
       shaderMaterial.uniforms.u_lod.value = isActive ? 1.0 : 0.0;
     }
 
-    // Atmosphere controls — update both surface rim and outer glow
-    if (shaderMaterial.uniforms.u_atmosIntensity) {
-      shaderMaterial.uniforms.u_atmosIntensity.value = atmosIntensity;
-    }
-    if (shaderMaterial.uniforms.u_atmosFalloff) {
-      shaderMaterial.uniforms.u_atmosFalloff.value = atmosFalloff;
-    }
-    if (shaderMaterial.uniforms.u_cloudCoverage) {
-      shaderMaterial.uniforms.u_cloudCoverage.value = cloudCoverage;
-    }
-    if (shaderMaterial.uniforms.u_cloudOpacity) {
-      shaderMaterial.uniforms.u_cloudOpacity.value = cloudOpacity;
-    }
-    // Gas/ice giant controls — use ice controls for ICE_GIANT and hazy types
-    if (shaderMaterial.uniforms.u_gasWarp) {
-      const isIce = planetType === "ICE_GIANT" || planetType === "VENUS_LIKE" || planetType === "WATER_WORLD" || planetType === "SUB_NEPTUNE";
-      shaderMaterial.uniforms.swirl_strength.value = isIce ? gasSwirl : gasSwirl;
-      shaderMaterial.uniforms.u_gasWarp.value = isIce ? iceWarp : gasWarp;
-      shaderMaterial.uniforms.u_gasStorm.value = isIce ? iceStorm : gasStorm;
-      shaderMaterial.uniforms.u_gasTurb.value = isIce ? iceTurb : gasTurb;
-      shaderMaterial.uniforms.u_gasBands.value = isIce ? iceBands : gasBands;
-      shaderMaterial.uniforms.u_gasEdgeNoise.value = isIce ? iceEdgeNoise : gasEdgeNoise;
-    }
-    // Terrestrial controls
-    if (shaderMaterial.uniforms.u_seaLevel) {
-      shaderMaterial.uniforms.u_seaLevel.value = terrSeaLevel;
-      shaderMaterial.uniforms.u_continentFreq.value = terrContinentFreq;
-      shaderMaterial.uniforms.u_terrWarp.value = terrWarpStrength;
-      shaderMaterial.uniforms.u_iceCapSize.value = terrIceCapSize;
-    }
-    // Rocky controls
-    if (shaderMaterial.uniforms.u_craterScale) {
-      shaderMaterial.uniforms.u_craterScale.value = rockyCraterScale;
-      shaderMaterial.uniforms.u_ridgeStrength.value = rockyRidgeStrength;
-      shaderMaterial.uniforms.u_craterDepth.value = rockyCraterDepth;
-    }
-    // Apply colour overrides for this planet's type (affects all planets of this type)
-    const typeColors = typeColorOverrides[planetType];
-    if (typeColors) {
-      if (shaderMaterial.uniforms.color1) shaderMaterial.uniforms.color1.value.set(typeColors[0]);
-      if (shaderMaterial.uniforms.color2) shaderMaterial.uniforms.color2.value.set(typeColors[1]);
-      if (shaderMaterial.uniforms.color3) shaderMaterial.uniforms.color3.value.set(typeColors[2]);
-      if (shaderMaterial.uniforms.color4) shaderMaterial.uniforms.color4.value.set(typeColors[3]);
-    }
-    // Update BackSide atmosphere sphere
-    if (atmosMat) {
-      atmosMat.uniforms.uIntensity.value = glowIntensity;
-      // Compute sun direction from star (at origin of the group) to planet
-      if (ref.current) {
-        ref.current.getWorldPosition(_camUp); // reuse for planet world pos
-        const sunDir = _camRight.set(0, 0, 0).sub(_camUp).normalize(); // star is at group origin
-        atmosMat.uniforms.uSunDirection.value.copy(sunDir.negate());
-        // Also update the planet surface shader sun direction
-        if (shaderMaterial.uniforms.u_sunDirection) {
-          shaderMaterial.uniforms.u_sunDirection.value.copy(atmosMat.uniforms.uSunDirection.value);
-        }
+    // Sun direction (depends on planet position which changes per-frame)
+    if (atmosMat && ref.current) {
+      ref.current.getWorldPosition(_camUp);
+      const sunDir = _camRight.set(0, 0, 0).sub(_camUp).normalize();
+      atmosMat.uniforms.uSunDirection.value.copy(sunDir.negate());
+      if (shaderMaterial.uniforms.u_sunDirection) {
+        shaderMaterial.uniforms.u_sunDirection.value.copy(atmosMat.uniforms.uSunDirection.value);
       }
     }
-    // Sync atmosphere sphere + soft glow position with orbiting planet
-    if (glowRef.current && ref.current) {
-      glowRef.current.position.copy(ref.current.position);
-    }
-    if (softGlowRef.current && ref.current) {
-      softGlowRef.current.position.copy(ref.current.position);
-      const sgMat = softGlowRef.current.material;
-      if (sgMat && sgMat.uniforms) {
-        sgMat.uniforms.uRadius.value = spriteGlowScale * 0.3;
-        sgMat.uniforms.uIntensity.value = spriteGlowIntensity;
-        sgMat.uniforms.uFalloff.value = spriteGlowFalloff;
-      }
-    }
+
+    // Sync glow positions with orbiting planet
+    if (glowRef.current) glowRef.current.position.copy(ref.current.position);
+    if (softGlowRef.current) softGlowRef.current.position.copy(ref.current.position);
   });
 
   const position = [periapsis, 0, 0];
@@ -343,7 +336,7 @@ const Planet = ({ data, starData }) => {
 
   const orbitGeometry = useMemo(() => {
     const curve = new THREE.EllipseCurve(0, 0, ellipse.xRadius, ellipse.yRadius, 0, 2 * Math.PI, false, 0);
-    const points = curve.getPoints(500); // 500 is plenty for smooth orbit
+    const points = curve.getPoints(128); // enough for smooth orbit
     return new THREE.BufferGeometry().setFromPoints(points);
   }, [ellipse.xRadius, ellipse.yRadius]);
 
@@ -368,7 +361,7 @@ const Planet = ({ data, starData }) => {
             material={atmosMat}
             frustumCulled={false}
           >
-            <sphereGeometry args={[scale * (1.0 + glowScale * 0.04), 32, 32]} />
+            <sphereGeometry args={[scale * (1.0 + glowScale * 0.04), 16, 16]} />
           </mesh>
           {/* Soft outer glow — annular ring billboard */}
           <mesh

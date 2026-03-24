@@ -83,15 +83,8 @@ const Star = ({ data, position, distance }) => {
   useFrame((state) => {
     const elapsed = state.clock.getElapsedTime();
     ref.current.rotation.y += 0.002;
-
-    // Animate the star shader
     if (starMaterial.uniforms.u_time) {
       starMaterial.uniforms.u_time.value = elapsed * 0.075;
-    }
-
-    // Keep glow sprite facing camera
-    if (glowRef.current) {
-      glowRef.current.position.set(0, 0, 0);
     }
   });
 

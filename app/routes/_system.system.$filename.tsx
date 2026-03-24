@@ -100,11 +100,8 @@ const skyboxFragShader = `
 `;
 
 function MilkyWaySkybox({ brightness, contrast }: { brightness: number; contrast: number }) {
-  const matRef = useThree((s) => s.scene); // just to trigger re-renders
-  const materialRef = { current: null as THREE.ShaderMaterial | null };
-
   const material = useState(() => {
-    const mat = new THREE.ShaderMaterial({
+    return new THREE.ShaderMaterial({
       uniforms: {
         u_envMap: { value: null },
         u_brightness: { value: brightness },
@@ -115,35 +112,21 @@ function MilkyWaySkybox({ brightness, contrast }: { brightness: number; contrast
       side: THREE.BackSide,
       depthWrite: false,
     });
-    materialRef.current = mat;
-    return mat;
   })[0];
 
-  // Update uniforms reactively
   useEffect(() => {
     material.uniforms.u_brightness.value = brightness;
     material.uniforms.u_contrast.value = contrast;
   }, [brightness, contrast, material]);
 
-  // Load textures: compressed first, then hi-res swap
   useEffect(() => {
     const faces = ["px", "nx", "py", "ny", "pz", "nz"];
     const loader = new THREE.CubeTextureLoader();
-
     loader.setPath("/textures/cubemaps/nasa/8k/compressed/");
-    loader.load(faces.map(f => f + ".jpg"), (lowRes) => {
-      lowRes.colorSpace = THREE.SRGBColorSpace;
-      material.uniforms.u_envMap.value = lowRes;
+    loader.load(faces.map(f => f + ".jpg"), (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      material.uniforms.u_envMap.value = tex;
       material.needsUpdate = true;
-
-      const hiLoader = new THREE.CubeTextureLoader();
-      hiLoader.setPath("/textures/cubemaps/nasa/8k/");
-      hiLoader.load(faces.map(f => f + ".png"), (hiRes) => {
-        hiRes.colorSpace = THREE.SRGBColorSpace;
-        material.uniforms.u_envMap.value = hiRes;
-        material.needsUpdate = true;
-        lowRes.dispose();
-      });
     });
   }, [material]);
 

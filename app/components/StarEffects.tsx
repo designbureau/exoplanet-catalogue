@@ -512,20 +512,26 @@ export default function StarEffects({ starRadius, temperature = 5500 }: StarEffe
   const _camRight = useMemo(() => new THREE.Vector3(), []);
   const _camUp = useMemo(() => new THREE.Vector3(), []);
   const _camFwd = useMemo(() => new THREE.Vector3(), []);
+  const frameSkip = useRef(0);
 
   useFrame((state) => {
     const t = state.clock.getElapsedTime() * 0.5;
-    camera.getWorldPosition(_camPos);
 
+    // Time always updates (cheap)
     raysMat.uniforms.uTime.value = t;
-    raysMat.uniforms.uCamPos.value.copy(_camPos);
-
     flaresMat.uniforms.uTime.value = t;
-    flaresMat.uniforms.uCamPos.value.copy(_camPos);
 
-    camera.matrixWorld.extractBasis(_camRight, _camUp, _camFwd);
-    glowMat.uniforms.uCamRight.value.copy(_camRight);
-    glowMat.uniforms.uCamUp.value.copy(_camUp);
+    // Camera-dependent uniforms every 3rd frame
+    frameSkip.current++;
+    if (frameSkip.current >= 3) {
+      frameSkip.current = 0;
+      camera.getWorldPosition(_camPos);
+      raysMat.uniforms.uCamPos.value.copy(_camPos);
+      flaresMat.uniforms.uCamPos.value.copy(_camPos);
+      camera.matrixWorld.extractBasis(_camRight, _camUp, _camFwd);
+      glowMat.uniforms.uCamRight.value.copy(_camRight);
+      glowMat.uniforms.uCamUp.value.copy(_camUp);
+    }
   });
 
   return (
