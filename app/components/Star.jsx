@@ -1,5 +1,5 @@
 import { useFrame } from "@react-three/fiber";
-import { useRef, useContext, useEffect } from "react";
+import { useRef, useContext, useEffect, useMemo } from "react";
 import { RefContext } from "./RefContext";
 import { EnvContext } from "./EnvContext";
 import {
@@ -7,6 +7,8 @@ import {
 } from "../utils/getHabitableZone";
 import Planet from "./Planet";
 import * as THREE from "three";
+import { createStarMaterial, createStarGlowMaterial } from "../shaders/starShader";
+import StarEffects from "./StarEffects";
 
 import {
   getMass,
@@ -17,6 +19,7 @@ import {
 
 const Star = ({ data, position, distance }) => {
   const ref = useRef();
+  const glowRef = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
   const { Constants, showHabitableZone } = useContext(EnvContext);
@@ -68,7 +71,28 @@ const Star = ({ data, position, distance }) => {
 
   scale = scale * Constants.radius.sol * Constants.radius.scale;
 
-  useFrame((state, delta) => (ref.current.rotation.x += delta));
+  // Create procedural star shader material
+  const { starMaterial, glowMaterial } = useMemo(() => {
+    const temp = temperature || 5500;
+    const starMat = createStarMaterial({ temperature: temp });
+    const glowMat = createStarGlowMaterial({ temperature: temp });
+    return { starMaterial: starMat, glowMaterial: glowMat };
+  }, [temperature]);
+
+  useFrame((state) => {
+    const elapsed = state.clock.getElapsedTime();
+    ref.current.rotation.y += 0.002;
+
+    // Animate the star shader
+    if (starMaterial.uniforms.u_time) {
+      starMaterial.uniforms.u_time.value = elapsed * 0.075;
+    }
+
+    // Keep glow sprite facing camera
+    if (glowRef.current) {
+      glowRef.current.position.set(0, 0, 0);
+    }
+  });
 
   const spectraltype = data.spectraltype?.[0]?.[0] || "M";
   const habitableZone = calculateHZFromMassAndType({ mass, spectraltype, Constants });
@@ -95,9 +119,18 @@ const Star = ({ data, position, distance }) => {
       )}
 
       <mesh ref={ref} name={name} onClick={handleClick}>
-        <sphereGeometry args={[scale, 256, 256]} />
-        <meshMatcapMaterial color={color} />
+        <sphereGeometry args={[scale, 64, 64]} />
+        <primitive object={starMaterial} attach="material" />
       </mesh>
+
+      {/* Star glow sprite */}
+      <sprite ref={glowRef} scale={[scale * 4, scale * 4, 1]}>
+        <primitive object={glowMaterial} attach="material" />
+      </sprite>
+
+      {/* Sun rays + flares */}
+      <StarEffects starRadius={scale} temperature={temperature} />
+
       {data.planet &&
         data.planet.map((planet, index) => (
           <Planet

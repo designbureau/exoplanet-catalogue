@@ -30,6 +30,8 @@ export const EnvProvider = ({ children }) => {
   const [glowScale, setGlowScale] = useState(1.15);
   const [glowFalloff, setGlowFalloff] = useState(1.25);
   const [glowInner, setGlowInner] = useState(0.0);
+  const [glowHueShift, setGlowHueShift] = useState(0.0);
+  const [glowSaturation, setGlowSaturation] = useState(1.0);
   const [cloudCoverage, setCloudCoverage] = useState(0.35);
   const [cloudOpacity, setCloudOpacity] = useState(0.6);
 
@@ -75,6 +77,10 @@ export const EnvProvider = ({ children }) => {
       setGlowFalloff,
       glowInner,
       setGlowInner,
+      glowHueShift,
+      setGlowHueShift,
+      glowSaturation,
+      setGlowSaturation,
       cloudCoverage,
       setCloudCoverage,
       cloudOpacity,
