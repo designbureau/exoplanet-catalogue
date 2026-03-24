@@ -5,6 +5,8 @@ import { useEffect, useContext, useRef, useState } from "react";
 import * as THREE from "three";
 import { useKeyState } from "use-key-state";
 
+const _objectPosition = new THREE.Vector3();
+
 const Controls = ({ follow }) => {
   const { activeRef } = useContext(RefContext);
   const cameraControlsRef = useRef();
@@ -28,18 +30,15 @@ const Controls = ({ follow }) => {
   });
 
   useEffect(() => {
-    // https://codesandbox.io/p/sandbox/cameracontrols-basic-sew669?file=%2Fsrc%2FApp.js
     if (
       cameraControlsRef.current &&
       activeRef?.current?.getWorldPosition instanceof Function
     ) {
-      const objectPosition = new THREE.Vector3();
-
-      activeRef.current.getWorldPosition(objectPosition);
+      activeRef.current.getWorldPosition(_objectPosition);
       cameraControlsRef.current.setTarget(
-        objectPosition.x,
-        objectPosition.y,
-        objectPosition.z,
+        _objectPosition.x,
+        _objectPosition.y,
+        _objectPosition.z,
         true
       );
 
@@ -60,21 +59,20 @@ const Controls = ({ follow }) => {
       cameraControlsRef.current &&
       activeRef?.current?.getWorldPosition instanceof Function
     ) {
-      const objectPosition = new THREE.Vector3();
-      activeRef.current.getWorldPosition(objectPosition);
+      activeRef.current.getWorldPosition(_objectPosition);
 
       if (follow) {
         cameraControlsRef.current.moveTo(
-          objectPosition.x,
-          objectPosition.y,
-          objectPosition.z,
+          _objectPosition.x,
+          _objectPosition.y,
+          _objectPosition.z,
           true
         );
       } else {
         cameraControlsRef.current.setTarget(
-          objectPosition.x,
-          objectPosition.y,
-          objectPosition.z,
+          _objectPosition.x,
+          _objectPosition.y,
+          _objectPosition.z,
           true
         );
       }
@@ -155,7 +153,7 @@ const Controls = ({ follow }) => {
     }
   });
 
-  return <CameraControls makeDefault ref={cameraControlsRef} />;
+  return <CameraControls makeDefault ref={cameraControlsRef} maxDistance={49000} />;
 };
 
 export default Controls;
