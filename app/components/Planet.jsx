@@ -1,5 +1,62 @@
 import * as THREE from "three";
 
+// Shared annular ring geometry for soft glow — 128 segments, inner=0 outer=1
+let _softGlowRingGeo = null;
+function getSoftGlowRingGeo() {
+  if (_softGlowRingGeo) return _softGlowRingGeo;
+  const segments = 128;
+  const positions = new Float32Array(3 * 2 * segments);
+  let pi = 0;
+  for (let a = 0; a < segments; a++) {
+    const angle = (a / segments) * Math.PI * 2.0;
+    const sx = Math.sin(angle), sy = Math.cos(angle);
+    positions[pi++] = sx; positions[pi++] = sy; positions[pi++] = 0.0;
+    positions[pi++] = sx; positions[pi++] = sy; positions[pi++] = 1.0;
+  }
+  const indices = new Uint16Array(2 * segments * 3);
+  let oi = 0;
+  for (let a = 0; a < segments; a++) {
+    const i0 = 2 * a, i1 = 2 * a + 1;
+    const i2 = 2 * ((a + 1) % segments), i3 = i2 + 1;
+    indices[oi++] = i0; indices[oi++] = i1; indices[oi++] = i2;
+    indices[oi++] = i2; indices[oi++] = i1; indices[oi++] = i3;
+  }
+  _softGlowRingGeo = new THREE.BufferGeometry();
+  _softGlowRingGeo.setAttribute("aPos", new THREE.Float32BufferAttribute(positions, 3));
+  _softGlowRingGeo.setIndex(new THREE.BufferAttribute(indices, 1));
+  return _softGlowRingGeo;
+}
+
+// Cached soft glow texture — shared across all planets, regenerated only when params change
+let _softGlowTex = null;
+let _softGlowParams = { falloff: -1, inner: -1 };
+function getSoftGlowTexture(falloff, inner) {
+  if (_softGlowTex && _softGlowParams.falloff === falloff && _softGlowParams.inner === inner) return _softGlowTex;
+  const size = 64;
+  const data = new Uint8Array(size * size * 4);
+  const c = size / 2;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = (x - c) / c, dy = (y - c) / c;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      let a = 0;
+      if (d < 1.0) {
+        const outer = Math.pow(1.0 - d, Math.max(0.1, falloff));
+        const innerFade = inner > 0 && d < inner ? d / inner : 1.0;
+        a = outer * innerFade * 255;
+      }
+      const i = (y * size + x) * 4;
+      data[i] = 255; data[i+1] = 255; data[i+2] = 255;
+      data[i+3] = Math.min(255, Math.max(0, a));
+    }
+  }
+  if (_softGlowTex) _softGlowTex.dispose();
+  _softGlowTex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  _softGlowTex.needsUpdate = true;
+  _softGlowParams = { falloff, inner };
+  return _softGlowTex;
+}
+
 import { useFrame } from "@react-three/fiber";
 import { useRef, useContext, useEffect, useMemo } from "react";
 import { RefContext } from "./RefContext";
@@ -22,8 +79,12 @@ import { getAtmosphereParams } from "../shaders/atmosphereShader";
 const Planet = ({ data, starData }) => {
   const ref = useRef();
   const glowRef = useRef();
+  const softGlowRef = useRef();
+
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, spriteGlowIntensity, spriteGlowScale, spriteGlowFalloff, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo } = useContext(EnvContext);
+
+  const softGlowTexture = getSoftGlowTexture(spriteGlowFalloff, spriteGlowInner);
 
   // Pre-allocated vectors for per-frame camera updates
   const _camRight = useMemo(() => new THREE.Vector3(), []);
@@ -49,7 +110,7 @@ const Planet = ({ data, starData }) => {
   })();
 
   // Classify planet and create shader material + atmosphere ring
-  const { shaderMaterial, atmosParams, atmosRingGeo, atmosRingMat, planetType } = useMemo(() => {
+  const { shaderMaterial, atmosParams, atmosMat, planetType } = useMemo(() => {
     const params = classifyPlanet({
       massJupiter: mass,
       radiusJupiter: radius,
@@ -62,79 +123,58 @@ const Planet = ({ data, starData }) => {
     const shader = createPlanetMaterial(params);
     const ap = getAtmosphereParams(params.type, starData?.temperature || 5500);
 
-    // Atmosphere glow — annular billboard ring for all types
-    let atmosRingGeo = null;
-    let atmosRingMat = null;
-    if (ap) {
-      const segments = 128;
-      const positions = new Float32Array(3 * 2 * segments);
-      let pi2 = 0;
-      for (let a = 0; a < segments; a++) {
-        const angle = (a / segments) * Math.PI * 2.0;
-        const sx = Math.sin(angle);
-        const sy = Math.cos(angle);
-        positions[pi2++] = sx; positions[pi2++] = sy; positions[pi2++] = 0.0;
-        positions[pi2++] = sx; positions[pi2++] = sy; positions[pi2++] = 1.0;
-      }
-      const indices = new Uint16Array(2 * segments * 3);
-      let oi = 0;
-      for (let a = 0; a < segments; a++) {
-        const i0 = 2 * a, i1 = 2 * a + 1;
-        const i2 = 2 * ((a + 1) % segments), i3 = i2 + 1;
-        indices[oi++] = i0; indices[oi++] = i1; indices[oi++] = i2;
-        indices[oi++] = i2; indices[oi++] = i1; indices[oi++] = i3;
-      }
-      atmosRingGeo = new THREE.BufferGeometry();
-      atmosRingGeo.setAttribute("aPos", new THREE.Float32BufferAttribute(positions, 3));
-      atmosRingGeo.setIndex(new THREE.BufferAttribute(indices, 1));
-      atmosRingMat = new THREE.ShaderMaterial({
+    // Atmosphere glow — BackSide sphere (dual-layer technique from 38-earth-shaders-final)
+    let atmosMat = null;
+    if (ap && ap.intensity > 0) {
+      atmosMat = new THREE.ShaderMaterial({
         vertexShader: `
-          attribute vec3 aPos;
-          varying float vRadial;
-          uniform float uRadius;
-          uniform vec3 uCamPos;
-          uniform vec3 uPlanetWorldPos;
+          varying vec3 vNormal;
+          varying vec3 vWorldPosition;
           void main() {
-            vRadial = aPos.z;
-            // Billboard towards camera from planet's world position
-            vec3 lookDir = normalize(uCamPos - uPlanetWorldPos);
-            vec3 worldUp = vec3(0.0, 1.0, 0.0);
-            // Handle degenerate case when looking straight down
-            if (abs(dot(lookDir, worldUp)) > 0.99) worldUp = vec3(0.0, 0.0, 1.0);
-            vec3 right = normalize(cross(worldUp, lookDir));
-            vec3 up = cross(lookDir, right);
-            vec3 p = aPos.x * right + aPos.y * up;
-            p *= 1.0 + aPos.z * uRadius;
-            // Position in world space directly (bypass modelMatrix rotation)
-            vec3 worldP = uPlanetWorldPos + p * length((modelMatrix * vec4(1.0, 0.0, 0.0, 0.0)).xyz);
-            gl_Position = projectionMatrix * viewMatrix * vec4(worldP, 1.0);
+            vNormal = normalize(normalMatrix * normal);
+            vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
           }
         `,
         fragmentShader: `
           precision highp float;
-          varying float vRadial;
-          uniform vec3 uColor;
+          varying vec3 vNormal;
+          varying vec3 vWorldPosition;
+          uniform vec3 uSunDirection;
+          uniform vec3 uAtmosDayColor;
+          uniform vec3 uAtmosTwilightColor;
           uniform float uIntensity;
-          uniform float uFalloff;
           void main() {
-            float alpha = pow(1.0 - vRadial, uFalloff);
-            alpha *= uIntensity;
-            vec3 col = uColor * alpha;
-            gl_FragColor = vec4(col, alpha);
+            vec3 viewDirection = normalize(vWorldPosition - cameraPosition);
+            vec3 normal = normalize(vNormal);
+            vec3 color = vec3(0.0);
+
+            // Sun orientation
+            float sunOrientation = dot(uSunDirection, normal);
+
+            // Atmosphere colour
+            float atmosphereDayMix = smoothstep(-0.5, 1.0, sunOrientation);
+            vec3 atmosphereColor = mix(uAtmosTwilightColor, uAtmosDayColor, atmosphereDayMix);
+            color += atmosphereColor;
+
+            // Alpha
+            float edgeAlpha = dot(viewDirection, normal);
+            edgeAlpha = smoothstep(0.0, 0.5, edgeAlpha);
+
+            float dayAlpha = smoothstep(-0.5, 0.0, sunOrientation);
+            float alpha = edgeAlpha * dayAlpha * uIntensity;
+
+            gl_FragColor = vec4(color, alpha);
           }
         `,
         transparent: true,
         depthWrite: false,
-        depthTest: true,
-        blending: THREE.AdditiveBlending,
-        side: THREE.DoubleSide,
+        side: THREE.BackSide,
         uniforms: {
-          uRadius: { value: ap.thickness || 0.3 },
-          uColor: { value: ap.color },
+          uSunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
+          uAtmosDayColor: { value: ap.dayColor || new THREE.Color(0x00aaff) },
+          uAtmosTwilightColor: { value: ap.twilightColor || new THREE.Color(0xff6600) },
           uIntensity: { value: ap.intensity || 0.8 },
-          uFalloff: { value: 1.5 },
-          uCamPos: { value: new THREE.Vector3(0, 0, 5) },
-          uPlanetWorldPos: { value: new THREE.Vector3() },
         },
       });
     }
@@ -142,8 +182,7 @@ const Planet = ({ data, starData }) => {
     return {
       shaderMaterial: shader,
       atmosParams: ap,
-      atmosRingGeo,
-      atmosRingMat,
+      atmosMat,
       planetType: params.type,
     };
   }, [mass, radius, rawSMA, starData?.temperature, starData?.mass, starData?.radius]);
@@ -152,20 +191,20 @@ const Planet = ({ data, starData }) => {
     addRef(name, "planet", ref);
   }, [name, addRef, ref]);
 
-  // Update atmosphere ring colour when controls change
+  // Update atmosphere colour when controls change
   useEffect(() => {
-    if (!atmosRingMat) return;
-    if (atmosParams?.color) {
+    if (!atmosMat) return;
+    if (atmosParams?.dayColor) {
       const hsl = {};
-      atmosParams.color.getHSL(hsl);
+      atmosParams.dayColor.getHSL(hsl);
       const shifted = new THREE.Color().setHSL(
         (hsl.h + glowHueShift) % 1.0,
         Math.min(1.0, hsl.s * glowSaturation),
         hsl.l
       );
-      atmosRingMat.uniforms.uColor.value.copy(shifted);
+      atmosMat.uniforms.uAtmosDayColor.value.copy(shifted);
     }
-  }, [atmosRingMat, atmosParams, glowHueShift, glowSaturation]);
+  }, [atmosMat, atmosParams, glowHueShift, glowSaturation]);
 
   const handleClick = (e) => {
     e.stopPropagation();
@@ -270,22 +309,32 @@ const Planet = ({ data, starData }) => {
       if (shaderMaterial.uniforms.color3) shaderMaterial.uniforms.color3.value.set(typeColors[2]);
       if (shaderMaterial.uniforms.color4) shaderMaterial.uniforms.color4.value.set(typeColors[3]);
     }
-    // Update atmosphere ring billboarding
-    if (atmosRingMat) {
-      state.camera.getWorldPosition(_camRight); // reuse vector for cam pos
-      atmosRingMat.uniforms.uCamPos.value.copy(_camRight);
-      // Get planet's world position
+    // Update BackSide atmosphere sphere
+    if (atmosMat) {
+      atmosMat.uniforms.uIntensity.value = glowIntensity;
+      // Compute sun direction from star (at origin of the group) to planet
       if (ref.current) {
-        ref.current.getWorldPosition(_camUp); // reuse vector
-        atmosRingMat.uniforms.uPlanetWorldPos.value.copy(_camUp);
+        ref.current.getWorldPosition(_camUp); // reuse for planet world pos
+        const sunDir = _camRight.set(0, 0, 0).sub(_camUp).normalize(); // star is at group origin
+        atmosMat.uniforms.uSunDirection.value.copy(sunDir.negate());
+        // Also update the planet surface shader sun direction
+        if (shaderMaterial.uniforms.u_sunDirection) {
+          shaderMaterial.uniforms.u_sunDirection.value.copy(atmosMat.uniforms.uSunDirection.value);
+        }
       }
-      atmosRingMat.uniforms.uIntensity.value = glowIntensity;
-      atmosRingMat.uniforms.uRadius.value = (atmosParams?.thickness || 0.3) * glowScale;
-      atmosRingMat.uniforms.uFalloff.value = glowFalloff;
     }
-    // Sync ring position with orbiting planet
+    // Sync atmosphere sphere + soft glow position with orbiting planet
     if (glowRef.current && ref.current) {
       glowRef.current.position.copy(ref.current.position);
+    }
+    if (softGlowRef.current && ref.current) {
+      softGlowRef.current.position.copy(ref.current.position);
+      const sgMat = softGlowRef.current.material;
+      if (sgMat && sgMat.uniforms) {
+        sgMat.uniforms.uRadius.value = spriteGlowScale * 0.3;
+        sgMat.uniforms.uIntensity.value = spriteGlowIntensity;
+        sgMat.uniforms.uFalloff.value = spriteGlowFalloff;
+      }
     }
   });
 
@@ -311,15 +360,65 @@ const Planet = ({ data, starData }) => {
       <mesh ref={ref} name={name} onClick={handleClick} material={shaderMaterial}>
         <sphereGeometry args={[scale, 32, 32]} />
       </mesh>
-      {atmosRingGeo && atmosRingMat && glowIntensity > 0 && (
-        <mesh
-          ref={glowRef}
-          geometry={atmosRingGeo}
-          material={atmosRingMat}
-          scale={[scale, scale, scale]}
-          frustumCulled={false}
-          renderOrder={2}
-        />
+      {atmosMat && glowIntensity > 0 && (
+        <>
+          {/* BackSide atmosphere sphere — crisp day/twilight structure */}
+          <mesh
+            ref={glowRef}
+            material={atmosMat}
+            frustumCulled={false}
+          >
+            <sphereGeometry args={[scale * (1.0 + glowScale * 0.04), 32, 32]} />
+          </mesh>
+          {/* Soft outer glow — annular ring billboard */}
+          <mesh
+            ref={softGlowRef}
+            geometry={getSoftGlowRingGeo()}
+            frustumCulled={false}
+            renderOrder={2}
+            scale={[scale, scale, scale]}
+          >
+            <shaderMaterial
+              transparent
+              depthWrite={false}
+              depthTest={true}
+              blending={THREE.AdditiveBlending}
+              side={THREE.DoubleSide}
+              uniforms={{
+                uRadius: { value: spriteGlowScale * 0.3 },
+                uColor: { value: atmosMat.uniforms.uAtmosDayColor.value },
+                uIntensity: { value: spriteGlowIntensity },
+                uFalloff: { value: spriteGlowFalloff },
+              }}
+              vertexShader={`
+                attribute vec3 aPos;
+                varying float vRadial;
+                uniform float uRadius;
+                void main() {
+                  vRadial = aPos.z;
+                  // Billboard: extract camera right/up from view matrix
+                  vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+                  vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+                  // Ring in local space: inner circle at radius 1, outer at 1+uRadius
+                  vec3 localPos = (aPos.x * right + aPos.y * up) * (1.0 + aPos.z * uRadius);
+                  gl_Position = projectionMatrix * modelViewMatrix * vec4(localPos, 1.0);
+                }
+              `}
+              fragmentShader={`
+                precision highp float;
+                varying float vRadial;
+                uniform vec3 uColor;
+                uniform float uIntensity;
+                uniform float uFalloff;
+                void main() {
+                  float alpha = pow(1.0 - vRadial, uFalloff);
+                  alpha *= uIntensity;
+                  gl_FragColor = vec4(uColor * alpha, alpha);
+                }
+              `}
+            />
+          </mesh>
+        </>
       )}
     </group>
   );

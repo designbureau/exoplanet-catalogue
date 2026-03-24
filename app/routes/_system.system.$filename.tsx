@@ -201,6 +201,10 @@ const App = ({ data }: any) => {
     glowInner, setGlowInner,
     glowHueShift, setGlowHueShift,
     glowSaturation, setGlowSaturation,
+    spriteGlowIntensity, setSpriteGlowIntensity,
+    spriteGlowScale, setSpriteGlowScale,
+    spriteGlowFalloff, setSpriteGlowFalloff,
+    spriteGlowInner, setSpriteGlowInner,
     cloudCoverage: ctxCloudCoverage, setCloudCoverage: ctxSetCloudCoverage,
     cloudOpacity: ctxCloudOpacity, setCloudOpacity: ctxSetCloudOpacity,
   } = useContext(EnvContext);
@@ -300,6 +304,11 @@ const App = ({ data }: any) => {
           <Slider label="G.Inner" min={0} max={0.9} step={0.01} value={glowInner} onChange={setGlowInner} />
           <Slider label="G.Hue" min={0} max={1} step={0.01} value={glowHueShift} onChange={setGlowHueShift} />
           <Slider label="G.Sat" min={0} max={3} step={0.05} value={glowSaturation} onChange={setGlowSaturation} />
+          <div className="text-[9px] text-muted-foreground/60 mt-1 mb-0.5">Soft Glow</div>
+          <Slider label="S.Int" min={0} max={3} step={0.01} value={spriteGlowIntensity} onChange={setSpriteGlowIntensity} />
+          <Slider label="S.Scale" min={1} max={10} step={0.1} value={spriteGlowScale} onChange={setSpriteGlowScale} />
+          <Slider label="S.Fall" min={0.1} max={5} step={0.05} value={spriteGlowFalloff} onChange={setSpriteGlowFalloff} />
+          <Slider label="S.Inner" min={0} max={0.9} step={0.01} value={spriteGlowInner} onChange={setSpriteGlowInner} />
         </Accordion>
 
         <Accordion title="Clouds" defaultOpen={false}>
