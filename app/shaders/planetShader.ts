@@ -207,29 +207,47 @@ const gasGiantFragment = `
 
   ${noiseLib}
 
-  vec3 swirl(vec3 p, float time, float strength) {
-    for (int i = 0; i < 5; i++) {
-      float angle = time * swirl_speed + length(p.xy) * strength * (float(i) * 0.5);
-      float s = sin(angle);
-      float c = cos(angle);
-      p.xy = mat2(c, -s, s, c) * p.xy * 0.6;
-    }
-    return p;
-  }
-
   void main() {
-    vec3 st = seededPos(vPosition, 100.0) * scale;
-    st = swirl(st, u_time, swirl_strength);
-    st += warp_intensity * vec3(fbm(st.xy * 0.9), fbm(st.zy * 0.9), fbm(st.xz * 0.9));
-    st += vec3(0.0, 0.0, u_time * 0.005);
+    // Use 3D position directly to avoid atan seam
+    // Stretch Y for horizontal banding, keep X/Z for seamless longitude
+    vec3 p = vPosition;
+    float latitude = abs(p.y);
 
-    vec3 color = mix(color1, color2, fbm(st.xy));
-    color = mix(color, color3, fbm(st.zy));
-    color = mix(color, color4, fbm(st.xz));
-    color += emissiveColor * emissiveIntensity * fbm(st.xz * 2.0);
+    // Coriolis: rotate XZ plane — faster at equator, slower at poles
+    float rotAngle = u_time * (1.0 - latitude * 0.6) * swirl_speed * 0.02;
+    float cr = cos(rotAngle);
+    float sr = sin(rotAngle);
+    p.xz = mat2(cr, -sr, sr, cr) * p.xz;
 
+    // Stretched 3D coords for banding (compress X/Z, stretch Y)
+    vec3 bp = vec3(p.x, p.y * scale * 0.5, p.z) + u_seed * 5.0;
+
+    // Domain warp (IQ technique) — fully 3D, no seam
+    float n1 = fbm3d(bp);
+    float n2 = fbm3d(bp + vec3(5.2, 1.3, 7.4));
+    float r1 = fbm3d(bp + 3.0 * vec3(n1, n2, n1 * 0.5) + vec3(1.7, 9.2, 3.1) + vec3(0.0, 0.0, u_time * 0.008));
+    float r2 = fbm3d(bp + 3.0 * vec3(n1, n2, n2 * 0.5) + vec3(8.3, 2.8, 5.7) + vec3(0.0, 0.0, u_time * 0.006));
+    float f = fbm3d(bp + 3.0 * vec3(r1, r2, r1 * 0.7));
+
+    // Band structure from stretched Y
+    float bandY = p.y * scale * 0.5;
+    float band1 = sin(bandY * 6.0 + n1 * 2.0) * 0.5 + 0.5;
+    float band2 = sin(bandY * 15.0 + n2 * 3.0 + f * 2.0) * 0.5 + 0.5;
+
+    // Colour mapping
+    vec3 color = mix(color1, color2, smoothstep(0.3, 0.7, band1));
+    color = mix(color, color3, clamp(sqrt(n1*n1 + n2*n2), 0.0, 1.0) * 0.5);
+    color = mix(color, color4, smoothstep(0.3, 0.8, r2) * 0.3);
+    color *= 0.8 + 0.4 * f;
+    color *= 0.9 + 0.2 * band2;
+
+    // Polar darkening
+    color *= 1.0 - latitude * 0.2;
+
+    // Lighting
     float diff = max(dot(vNormal, normalize(vec3(1.0, 0.5, 0.8))), 0.15);
     color *= (0.3 + 0.7 * diff);
+
     gl_FragColor = vec4(color, 1.0);
   }
 `;
