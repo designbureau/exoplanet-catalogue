@@ -17,13 +17,18 @@ import {
 } from "../utils/helperFunctions";
 import { classifyPlanet } from "../utils/planetClassification";
 import { createPlanetMaterial } from "../shaders/planetShader";
-import { getAtmosphereParams, createGlowSpriteMaterial, updateGlowTexture } from "../shaders/atmosphereShader";
+import { getAtmosphereParams } from "../shaders/atmosphereShader";
 
 const Planet = ({ data, starData }) => {
   const ref = useRef();
   const glowRef = useRef();
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity } = useContext(EnvContext);
+
+  // Pre-allocated vectors for per-frame camera updates
+  const _camRight = useMemo(() => new THREE.Vector3(), []);
+  const _camUp = useMemo(() => new THREE.Vector3(), []);
+  const _camFwd = useMemo(() => new THREE.Vector3(), []);
 
   const name = data.name ? data.name[0] : "Unnamed planet";
 
@@ -43,8 +48,8 @@ const Planet = ({ data, starData }) => {
     return isNaN(parsed) ? 1 : parsed;
   })();
 
-  // Classify planet and create shader material
-  const { shaderMaterial, atmosphereMaterial, atmosphereScale, atmosParams } = useMemo(() => {
+  // Classify planet and create shader material + atmosphere ring
+  const { shaderMaterial, atmosParams, atmosRingGeo, atmosRingMat } = useMemo(() => {
     const params = classifyPlanet({
       massJupiter: mass,
       radiusJupiter: radius,
@@ -55,13 +60,85 @@ const Planet = ({ data, starData }) => {
       name,
     });
     const shader = createPlanetMaterial(params);
-    const atmosParams = getAtmosphereParams(params.type, starData?.temperature || 5500);
-    const glowMat = atmosParams ? createGlowSpriteMaterial(atmosParams) : null;
+    const ap = getAtmosphereParams(params.type, starData?.temperature || 5500);
+
+    // Build annular ring geometry for atmosphere glow
+    let ringGeo = null;
+    let ringMat = null;
+    if (ap) {
+      const segments = 64;
+      const planetRadius = 1.0; // unit sphere, scaled by parent mesh
+      const positions = new Float32Array(3 * 2 * segments);
+      let pi = 0;
+      for (let a = 0; a < segments; a++) {
+        const angle = (a / segments) * Math.PI * 2.0;
+        const sx = Math.sin(angle) * planetRadius;
+        const sy = Math.cos(angle) * planetRadius;
+        positions[pi++] = sx; positions[pi++] = sy; positions[pi++] = 0.0;
+        positions[pi++] = sx; positions[pi++] = sy; positions[pi++] = 1.0;
+      }
+      const indices = new Uint16Array(2 * segments * 3);
+      let oi = 0;
+      for (let a = 0; a < segments; a++) {
+        const i0 = 2 * a, i1 = 2 * a + 1;
+        const i2 = 2 * ((a + 1) % segments), i3 = i2 + 1;
+        indices[oi++] = i0; indices[oi++] = i1; indices[oi++] = i2;
+        indices[oi++] = i2; indices[oi++] = i1; indices[oi++] = i3;
+      }
+      ringGeo = new THREE.BufferGeometry();
+      ringGeo.setAttribute("aPos", new THREE.Float32BufferAttribute(positions, 3));
+      ringGeo.setIndex(new THREE.BufferAttribute(indices, 1));
+
+      ringMat = new THREE.ShaderMaterial({
+        vertexShader: `
+          attribute vec3 aPos;
+          varying float vRadial;
+          uniform float uRadius;
+          uniform vec3 uCamRight;
+          uniform vec3 uCamUp;
+          void main() {
+            vRadial = aPos.z;
+            vec3 p = aPos.x * uCamRight + aPos.y * uCamUp;
+            p *= 1.0 + aPos.z * uRadius;
+            vec4 world = modelMatrix * vec4(p, 1.0);
+            gl_Position = projectionMatrix * viewMatrix * world;
+          }
+        `,
+        fragmentShader: `
+          precision highp float;
+          varying float vRadial;
+          uniform vec3 uColor;
+          uniform float uIntensity;
+          uniform float uFalloff;
+          void main() {
+            float alpha = (1.0 - vRadial);
+            alpha = pow(alpha, uFalloff);
+            alpha *= uIntensity;
+            vec3 col = uColor * alpha;
+            gl_FragColor = vec4(col, alpha);
+          }
+        `,
+        transparent: true,
+        depthWrite: false,
+        depthTest: true,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+        uniforms: {
+          uRadius: { value: ap.thickness || 0.3 },
+          uColor: { value: ap.color },
+          uIntensity: { value: ap.intensity || 0.8 },
+          uFalloff: { value: 1.5 },
+          uCamRight: { value: new THREE.Vector3(1, 0, 0) },
+          uCamUp: { value: new THREE.Vector3(0, 1, 0) },
+        },
+      });
+    }
+
     return {
       shaderMaterial: shader,
-      atmosphereMaterial: glowMat,
-      atmosphereScale: atmosParams?.thickness || 1.0,
-      atmosParams,
+      atmosParams: ap,
+      atmosRingGeo: ringGeo,
+      atmosRingMat: ringMat,
     };
   }, [mass, radius, rawSMA, starData?.temperature, starData?.mass, starData?.radius]);
 
@@ -69,20 +146,24 @@ const Planet = ({ data, starData }) => {
     addRef(name, "planet", ref);
   }, [name, addRef, ref]);
 
-  // Update glow texture and colour only when params change (not every frame)
+  // Update atmosphere ring uniforms when controls change
   useEffect(() => {
-    if (!atmosphereMaterial) return;
-    updateGlowTexture(atmosphereMaterial, glowFalloff, glowInner);
-    const baseColor = atmosParams?.color ?? new THREE.Color(0.3, 0.5, 1.0);
-    const hsl = {};
-    baseColor.getHSL(hsl);
-    const shifted = new THREE.Color().setHSL(
-      (hsl.h + glowHueShift) % 1.0,
-      Math.min(1.0, hsl.s * glowSaturation),
-      hsl.l
-    );
-    atmosphereMaterial.color.copy(shifted);
-  }, [atmosphereMaterial, atmosParams, glowFalloff, glowInner, glowHueShift, glowSaturation]);
+    if (!atmosRingMat) return;
+    atmosRingMat.uniforms.uIntensity.value = glowIntensity;
+    atmosRingMat.uniforms.uRadius.value = (atmosParams?.thickness || 0.3) * glowScale;
+    atmosRingMat.uniforms.uFalloff.value = glowFalloff;
+    // Apply hue shift and saturation
+    if (atmosParams?.color) {
+      const hsl = {};
+      atmosParams.color.getHSL(hsl);
+      const shifted = new THREE.Color().setHSL(
+        (hsl.h + glowHueShift) % 1.0,
+        Math.min(1.0, hsl.s * glowSaturation),
+        hsl.l
+      );
+      atmosRingMat.uniforms.uColor.value.copy(shifted);
+    }
+  }, [atmosRingMat, atmosParams, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation]);
 
   const handleClick = (e) => {
     e.stopPropagation();
@@ -143,10 +224,14 @@ const Planet = ({ data, starData }) => {
     if (shaderMaterial.uniforms.u_cloudOpacity) {
       shaderMaterial.uniforms.u_cloudOpacity.value = cloudOpacity;
     }
-    if (atmosphereMaterial) {
-      atmosphereMaterial.opacity = glowIntensity;
+    // Update atmosphere ring billboarding
+    if (atmosRingMat) {
+      const cam = state.camera;
+      cam.matrixWorld.extractBasis(_camRight, _camUp, _camFwd);
+      atmosRingMat.uniforms.uCamRight.value.copy(_camRight);
+      atmosRingMat.uniforms.uCamUp.value.copy(_camUp);
     }
-    // Sync glow sprite position with orbiting planet
+    // Sync ring position with orbiting planet
     if (glowRef.current && ref.current) {
       glowRef.current.position.copy(ref.current.position);
     }
@@ -177,11 +262,14 @@ const Planet = ({ data, starData }) => {
       <mesh ref={ref} name={name} onClick={handleClick} material={shaderMaterial}>
         <sphereGeometry args={[scale, 32, 32]} />
       </mesh>
-      {atmosphereMaterial && glowIntensity > 0 && (
-        <sprite
+      {atmosRingGeo && atmosRingMat && glowIntensity > 0 && (
+        <mesh
           ref={glowRef}
-          material={atmosphereMaterial}
-          scale={[scale * glowScale * 2.5, scale * glowScale * 2.5, 1]}
+          geometry={atmosRingGeo}
+          material={atmosRingMat}
+          scale={[scale, scale, scale]}
+          frustumCulled={false}
+          renderOrder={2}
         />
       )}
     </group>
