@@ -45,20 +45,31 @@ const fragmentShader = `
           mix(hash3(i + vec3(0,1,1)), hash3(i + vec3(1,1,1)), u.x), u.y), u.z);
   }
 
-  // Cloud noise: sin-modulated FBM for wispy filaments (2 octaves for perf)
+  // Cloud noise: sin-modulated FBM for wispy filaments
   float cloudNoise(vec3 p, float freq, float seed) {
+    float v = 0.0, a = 0.5;
     p = p * freq + vec3(seed);
-    float n1 = noise3d(p);
-    float n2 = noise3d(p * 2.02 + vec3(31.7, 17.3, 53.1));
-    return (sin(n1 * 6.2831) * 0.5 + 0.5) * 0.5 + (sin(n2 * 6.2831) * 0.5 + 0.5) * 0.25;
+    for (int i = 0; i < 5; i++) {
+      float n = noise3d(p);
+      v += a * (sin(n * 6.2831) * 0.5 + 0.5);
+      p = p * 2.02 + vec3(31.7, 17.3, 53.1);
+      a *= 0.5;
+    }
+    return v;
   }
 
-  // Ridged noise for dramatic features (2 octaves for perf)
+  // Ridged noise for more dramatic features
   float ridgedNoise(vec3 p, float freq) {
+    float v = 0.0, a = 0.5;
     p = p * freq;
-    float n1 = 1.0 - abs(noise3d(p) * 2.0 - 1.0);
-    float n2 = 1.0 - abs(noise3d(p * 2.03 + vec3(13.7, 29.3, 41.1)) * 2.0 - 1.0);
-    return n1 * n1 * 0.5 + n2 * n2 * 0.25;
+    for (int i = 0; i < 4; i++) {
+      float n = noise3d(p);
+      n = 1.0 - abs(n * 2.0 - 1.0); // ridge
+      v += a * n * n;
+      p = p * 2.03 + vec3(13.7, 29.3, 41.1);
+      a *= 0.5;
+    }
+    return v;
   }
 
   // Worley/cellular noise for bright stars
@@ -101,7 +112,7 @@ const fragmentShader = `
 
     // Colour: spatially varied blending using different noise layers
     // Each colour gets its own region of dominance
-    float zone1 = noise3d(sp * 0.8 + vec3(u_seed.z * 50.0));
+    float zone1 = cloudNoise(sp * 0.5 + vec3(u_seed.z * 50.0), 0.8, u_seed.x * 30.0);
     float zone2 = noise3d(sp * 1.2 + vec3(u_seed.y * 40.0, 0.0, u_seed.z * 60.0));
     vec3 nebulaColor = mix(u_color1, u_color2, smoothstep(0.3, 0.7, c1));
     nebulaColor = mix(nebulaColor, u_color3, smoothstep(0.35, 0.65, zone1));
