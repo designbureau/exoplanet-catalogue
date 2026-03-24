@@ -49,7 +49,7 @@ const fragmentShader = `
   float cloudNoise(vec3 p, float freq, float seed) {
     float v = 0.0, a = 0.5;
     p = p * freq + vec3(seed);
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 3; i++) {
       float n = noise3d(p);
       v += a * (sin(n * 6.2831) * 0.5 + 0.5);
       p = p * 2.02 + vec3(31.7, 17.3, 53.1);
@@ -62,7 +62,7 @@ const fragmentShader = `
   float ridgedNoise(vec3 p, float freq) {
     float v = 0.0, a = 0.5;
     p = p * freq;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 3; i++) {
       float n = noise3d(p);
       n = 1.0 - abs(n * 2.0 - 1.0); // ridge
       v += a * n * n;
@@ -112,7 +112,7 @@ const fragmentShader = `
 
     // Colour: spatially varied blending using different noise layers
     // Each colour gets its own region of dominance
-    float zone1 = cloudNoise(sp * 0.5 + vec3(u_seed.z * 50.0), 0.8, u_seed.x * 30.0);
+    float zone1 = noise3d(sp * 0.8 + vec3(u_seed.z * 50.0));
     float zone2 = noise3d(sp * 1.2 + vec3(u_seed.y * 40.0, 0.0, u_seed.z * 60.0));
     vec3 nebulaColor = mix(u_color1, u_color2, smoothstep(0.3, 0.7, c1));
     nebulaColor = mix(nebulaColor, u_color3, smoothstep(0.35, 0.65, zone1));

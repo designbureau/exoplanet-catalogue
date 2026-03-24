@@ -239,56 +239,29 @@ const gasGiantFragment = `
     float sr = sin(rotAngle);
     p.xz = mat2(cr, -sr, sr, cr) * p.xz;
 
-    // Storm vortices — stronger distortion, larger radii
-    // Great Red Spot analogue
-    vec3 storm1Pos = normalize(vec3(
-      cos(u_seed.x * 6.28),
-      0.25 + u_seed.y * 0.15,
-      sin(u_seed.x * 6.28)
-    ));
+    // Storm vortices
+    vec3 storm1Pos = normalize(vec3(cos(u_seed.x * 6.28), 0.25 + u_seed.y * 0.15, sin(u_seed.x * 6.28)));
     p = stormVortex3D(p, storm1Pos, 0.45, swirl_strength * u_gasStorm);
-
-    // Secondary storm — opposite hemisphere
-    vec3 storm2Pos = normalize(vec3(
-      cos(u_seed.y * 6.28 + 2.5),
-      -0.3 - u_seed.z * 0.15,
-      sin(u_seed.y * 6.28 + 2.5)
-    ));
+    vec3 storm2Pos = normalize(vec3(cos(u_seed.y * 6.28 + 2.5), -0.3 - u_seed.z * 0.15, sin(u_seed.y * 6.28 + 2.5)));
     p = stormVortex3D(p, storm2Pos, 0.3, swirl_strength * -u_gasStorm * 0.67);
-
-    // Small storms at band edges
-    vec3 storm3Pos = normalize(vec3(
-      cos(u_seed.z * 6.28 + 1.0),
-      0.55,
-      sin(u_seed.z * 6.28 + 1.0)
-    ));
+    vec3 storm3Pos = normalize(vec3(cos(u_seed.z * 6.28 + 1.0), 0.55, sin(u_seed.z * 6.28 + 1.0)));
     p = stormVortex3D(p, storm3Pos, 0.2, swirl_strength * u_gasStorm * 0.55);
-
-    vec3 storm4Pos = normalize(vec3(
-      cos(u_seed.x * 6.28 + 4.0),
-      -0.1,
-      sin(u_seed.x * 6.28 + 4.0)
-    ));
+    vec3 storm4Pos = normalize(vec3(cos(u_seed.x * 6.28 + 4.0), -0.1, sin(u_seed.x * 6.28 + 4.0)));
     p = stormVortex3D(p, storm4Pos, 0.22, swirl_strength * -u_gasStorm * 0.44);
-
-    vec3 storm5Pos = normalize(vec3(
-      cos(u_seed.z * 6.28 + 3.2),
-      0.7,
-      sin(u_seed.z * 6.28 + 3.2)
-    ));
+    vec3 storm5Pos = normalize(vec3(cos(u_seed.z * 6.28 + 3.2), 0.7, sin(u_seed.z * 6.28 + 3.2)));
     p = stormVortex3D(p, storm5Pos, 0.15, swirl_strength * u_gasStorm * 0.39);
 
     // Stretched 3D coords for banding
     vec3 bp = vec3(p.x, p.y * scale * 0.5, p.z) + u_seed * 5.0;
 
-    // Domain warp (IQ technique) — stronger warp for more swirly feel
+    // Domain warp (IQ technique)
     float n1 = fbm3d(bp);
     float n2 = fbm3d(bp + vec3(5.2, 1.3, 7.4));
     float r1 = fbm3d(bp + u_gasWarp * vec3(n1, n2, n1 * 0.5) + vec3(1.7, 9.2, 3.1) + vec3(0.0, 0.0, u_time * 0.008));
     float r2 = fbm3d(bp + u_gasWarp * vec3(n1, n2, n2 * 0.5) + vec3(8.3, 2.8, 5.7) + vec3(0.0, 0.0, u_time * 0.006));
     float f = fbm3d(bp + u_gasWarp * vec3(r1, r2, r1 * 0.7));
 
-    // Noise-displaced band edges — perlin noise shifts the band boundary positions
+    // Band structure
     float bandY = p.y * scale * 0.5;
     float edgeNoise = (noise3d(bp * 3.0) * 0.7 + noise3d(bp * 7.0) * 0.3) * u_gasEdgeNoise;
     float bandPhase = bandY * u_gasBands + n1 * 2.5 + edgeNoise;
@@ -298,7 +271,6 @@ const gasGiantFragment = `
     float bandEdge = abs(cos(bandPhase));
     float turbNoise = noise3d(bp * 10.0 + vec3(u_time * 0.012));
     float turbulence = bandEdge * turbNoise * u_gasTurb * 0.5;
-    // Extra wispy turbulence from domain warp intermediates
     float wispTurb = abs(r1 - r2) * bandEdge * u_gasTurb;
 
     float band2Phase = bandY * u_gasBands * 2.5 + n2 * 3.5 + f * 2.5 + edgeNoise * 2.0;
@@ -360,7 +332,7 @@ const rockyFragment = `
     float ridges = ridgedNoise_lod(p, 1.5) * u_ridgeStrength;
 
     // Cloud noise for softer highland areas (skip at low LOD)
-    float soft = (u_lod > 0.5) ? cloudNoise(p + vec3(ridges * 0.3), 2.0) * 0.15 : 0.0;
+    float soft = cloudNoise_lod(p + vec3(ridges * 0.3), 2.0) * 0.15;
 
     // Domain warp for organic shapes (skip at low LOD)
     float detail = 0.0;
