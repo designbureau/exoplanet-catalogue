@@ -15,6 +15,7 @@ import {
   getRadius,
   getTemperature,
   getColor,
+  getInclination,
 } from "../utils/helperFunctions";
 
 const Star = ({ data, position, distance }) => {
@@ -97,26 +98,72 @@ const Star = ({ data, position, distance }) => {
   const spectraltype = data.spectraltype?.[0]?.[0] || "M";
   const habitableZone = calculateHZFromMassAndType({ mass, spectraltype, Constants });
 
+  // Average orbital inclination from planets for HZ ring tilt
+  const avgInclination = useMemo(() => {
+    if (!data.planet) return 0;
+    const inclinations = data.planet
+      .map(p => getInclination({ data: p }))
+      .filter(i => i !== 0);
+    if (inclinations.length === 0) return 0;
+    return inclinations.reduce((a, b) => a + b, 0) / inclinations.length;
+  }, [data.planet]);
+
   return (
     <group position={[position.x, position.y, position.z]}>
       <pointLight color={color} intensity={intensity} distance={30000} />
-      {habitableZone && showHabitableZone && (
-        <mesh>
-          <ringGeometry
-            args={[
-              habitableZone.innerRadiusAU,
-              habitableZone.outerRadiusAU,
-              128,
-            ]}
-          />
-          <meshBasicMaterial
-            transparent={true}
-            opacity={0.15}
-            color={0x008080}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      )}
+      {habitableZone && showHabitableZone && (() => {
+        const inner = habitableZone.innerRadiusAU;
+        const outer = habitableZone.outerRadiusAU;
+        // Extend geometry slightly beyond HZ bounds for soft fade
+        const padding = (outer - inner) * 0.3;
+        const geoInner = Math.max(0, inner - padding);
+        const geoOuter = outer + padding;
+        return (
+          <mesh rotation-x={-Math.PI / 2 + (avgInclination * Math.PI) / 180}>
+            <ringGeometry args={[geoInner, geoOuter, 128]} />
+            <shaderMaterial
+              transparent={true}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+              blending={THREE.AdditiveBlending}
+              uniforms={{
+                uColor: { value: new THREE.Color(0x00aaaa) },
+                uOpacity: { value: 0.2 },
+                uInnerEdge: { value: inner },
+                uOuterEdge: { value: outer },
+                uGeoInner: { value: geoInner },
+                uGeoOuter: { value: geoOuter },
+              }}
+              vertexShader={`
+                varying float vRadius;
+                void main() {
+                  vRadius = length(position.xy);
+                  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+              `}
+              fragmentShader={`
+                uniform vec3 uColor;
+                uniform float uOpacity;
+                uniform float uInnerEdge;
+                uniform float uOuterEdge;
+                uniform float uGeoInner;
+                uniform float uGeoOuter;
+                varying float vRadius;
+                void main() {
+                  // Soft fade at inner edge
+                  float innerFade = smoothstep(uGeoInner, uInnerEdge, vRadius);
+                  // Full opacity in habitable zone
+                  float core = 1.0;
+                  // Soft fade at outer edge
+                  float outerFade = 1.0 - smoothstep(uOuterEdge, uGeoOuter, vRadius);
+                  float alpha = innerFade * outerFade * uOpacity;
+                  gl_FragColor = vec4(uColor, alpha);
+                }
+              `}
+            />
+          </mesh>
+        );
+      })()}
 
       <mesh ref={ref} name={name} onClick={handleClick}>
         <sphereGeometry args={[scale, 64, 64]} />
