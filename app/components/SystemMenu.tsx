@@ -25,35 +25,39 @@ const SystemMenu = ({ xmlFiles, setNavActive }: any) => {
   };
 
   return (
-    <nav className="h-svh overflow-y-auto">
-      <input
-        type="text"
-        placeholder="Search files..."
-        value={searchQuery}
-        onChange={(e) => {
-          setSearchQuery(e.target.value);
-          setActiveIndex(-1); // Reset active index on query change
-        }}
-        onKeyDown={handleKeyPress}
-        className="w-full p-2 border outline-none border-[rgba(255,255,255,0.25)] focus:border-cyan-400 sticky top-0 bg-[rgba(255,255,255,0.1)]"
-      />
-      <ul>
+    <div className="flex flex-col h-full">
+      <div className="p-2">
+        <input
+          type="text"
+          placeholder="Search systems..."
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setActiveIndex(-1);
+          }}
+          onKeyDown={handleKeyPress}
+          className="w-full px-2.5 py-1.5 text-xs rounded bg-white/5 border border-white/10 outline-none focus:border-cyan-400 text-white placeholder:text-muted-foreground"
+          autoFocus
+        />
+      </div>
+      <ul className="overflow-y-auto flex-1 px-1 pb-2" style={{ scrollbarWidth: 'thin' }}>
         {filteredFiles.map((fileName: string, index: number) => (
-          <li
-            key={fileName}
-            className={index === activeIndex ? "bg-cyan-400 text-black" : ""}
-          >
+          <li key={fileName}>
             <Link
               to={`/system/${encodeURIComponent(fileName.replace(".xml", ""))}`}
               onClick={() => setNavActive()}
-              className="focus:bg-cyan-400 focus:text-black outline-none block"
+              className={`block px-2 py-0.5 text-xs rounded transition-colors outline-none ${
+                index === activeIndex
+                  ? "bg-cyan-400/20 text-cyan-400"
+                  : "text-muted-foreground hover:text-white hover:bg-white/5"
+              }`}
             >
               {fileName.replace(".xml", "")}
             </Link>
           </li>
         ))}
       </ul>
-    </nav>
+    </div>
   );
 };
 
