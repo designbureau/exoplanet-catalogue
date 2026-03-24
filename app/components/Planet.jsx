@@ -351,7 +351,7 @@ const Planet = ({ data, starData }) => {
         />
       </line>
       <mesh ref={ref} name={name} onClick={handleClick} material={shaderMaterial}>
-        <sphereGeometry args={[scale, 32, 32]} />
+        <sphereGeometry args={[scale, 64, 64]} />
       </mesh>
       {atmosMat && glowIntensity > 0 && (
         <>
@@ -361,7 +361,7 @@ const Planet = ({ data, starData }) => {
             material={atmosMat}
             frustumCulled={false}
           >
-            <sphereGeometry args={[scale * (1.0 + glowScale * 0.04), 16, 16]} />
+            <sphereGeometry args={[scale * (1.0 + glowScale * 0.04), 48, 48]} />
           </mesh>
           {/* Soft outer glow — annular ring billboard */}
           <mesh
