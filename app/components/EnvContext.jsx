@@ -35,6 +35,26 @@ export const EnvProvider = ({ children }) => {
   const [cloudCoverage, setCloudCoverage] = useState(0.35);
   const [cloudOpacity, setCloudOpacity] = useState(0.6);
 
+  // Gas giant controls
+  const [gasSwirl, setGasSwirl] = useState(0.25);
+  const [gasWarp, setGasWarp] = useState(4.0);
+  const [gasStorm, setGasStorm] = useState(18.0);
+  const [gasTurb, setGasTurb] = useState(0.4);
+  const [gasBands, setGasBands] = useState(6.0);
+  const [gasEdgeNoise, setGasEdgeNoise] = useState(0.4);
+
+  // Planet colour overrides keyed by PlanetType (null entry = use classification default)
+  const [typeColorOverrides, setTypeColorOverrides] = useState({}); // { COLD_GIANT: [hex1,hex2,hex3,hex4], ... }
+  // Track the active planet's type and default colours for the UI picker
+  const [activePlanetInfo, setActivePlanetInfo] = useState(null); // { type, colors: [hex1..4] }
+
+  // Ice giant controls (separate defaults — subtler than gas giants)
+  const [iceWarp, setIceWarp] = useState(2.0);
+  const [iceStorm, setIceStorm] = useState(8.0);
+  const [iceTurb, setIceTurb] = useState(0.3);
+  const [iceBands, setIceBands] = useState(4.0);
+  const [iceEdgeNoise, setIceEdgeNoise] = useState(0.3);
+
   const Constants = useMemo(() => ({
     mass: {
       sol: 1,
@@ -85,6 +105,19 @@ export const EnvProvider = ({ children }) => {
       setCloudCoverage,
       cloudOpacity,
       setCloudOpacity,
+      gasSwirl, setGasSwirl,
+      gasWarp, setGasWarp,
+      gasStorm, setGasStorm,
+      gasTurb, setGasTurb,
+      gasBands, setGasBands,
+      gasEdgeNoise, setGasEdgeNoise,
+      iceWarp, setIceWarp,
+      iceStorm, setIceStorm,
+      iceTurb, setIceTurb,
+      iceBands, setIceBands,
+      iceEdgeNoise, setIceEdgeNoise,
+      typeColorOverrides, setTypeColorOverrides,
+      activePlanetInfo, setActivePlanetInfo,
     }}>
       {children}
     </EnvContext.Provider>

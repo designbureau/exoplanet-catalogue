@@ -26,6 +26,53 @@ function getPrimaryStarTemp(data: any): number {
   return 5500;
 }
 
+function Slider({ label, min, max, step, value, onChange, suffix = "" }: { label: string; min: number; max: number; step: number; value: number; onChange: (v: number) => void; suffix?: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <label className="w-14 shrink-0">{label}</label>
+      <input type="range" min={min} max={max} step={step} value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        className="w-16 accent-cyan-400" />
+      <span className="w-7 tabular-nums text-right">{typeof value === 'number' ? (Number.isInteger(step) ? value : value.toFixed(2)) : value}{suffix}</span>
+    </div>
+  );
+}
+
+function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="flex items-center gap-1.5 cursor-pointer">
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="accent-cyan-400" />
+      {label}
+    </label>
+  );
+}
+
+function ColorRow({ label, colors, onChange }: { label: string; colors: string[]; onChange: (idx: number, hex: string) => void }) {
+  return (
+    <div className="flex items-center gap-1">
+      <label className="w-14 shrink-0">{label}</label>
+      {colors.map((c, i) => (
+        <input key={i} type="color" value={c}
+          onChange={(e) => onChange(i, e.target.value)}
+          className="w-5 h-5 cursor-pointer border-0 p-0 bg-transparent" />
+      ))}
+    </div>
+  );
+}
+
+function Accordion({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div>
+      <button onClick={() => setOpen(!open)} className="flex items-center gap-1 w-full py-0.5 text-left hover:text-cyan-400 transition-colors">
+        <span className="text-[8px]">{open ? '▼' : '▶'}</span>
+        <span className="font-medium">{title}</span>
+      </button>
+      {open && <div className="flex flex-col gap-0.5 pl-2 pb-1">{children}</div>}
+    </div>
+  );
+}
+
 // Milky Way starfield skybox with brightness/contrast — uses equirectangular on a sphere
 // so we can apply a custom shader with uniform controls
 const skyboxVertShader = `
@@ -168,6 +215,41 @@ const App = ({ data }: any) => {
   const setCloudCoverage = ctxSetCloudCoverage;
   const cloudOpacity = ctxCloudOpacity;
   const setCloudOpacity = ctxSetCloudOpacity;
+  const {
+    gasSwirl, setGasSwirl,
+    gasWarp, setGasWarp,
+    gasStorm, setGasStorm,
+    gasTurb, setGasTurb,
+    gasBands, setGasBands,
+    gasEdgeNoise, setGasEdgeNoise,
+    iceWarp, setIceWarp,
+    iceStorm, setIceStorm,
+    iceTurb, setIceTurb,
+    iceBands, setIceBands,
+    iceEdgeNoise, setIceEdgeNoise,
+    typeColorOverrides, setTypeColorOverrides,
+    activePlanetInfo,
+  } = useContext(EnvContext);
+
+  // Colour picker state — syncs with the active planet's type
+  const activeType = activePlanetInfo?.type;
+  const activeDefaultColors = activePlanetInfo?.colors || ["#888888", "#888888", "#888888", "#888888"];
+  const currentColors = (activeType && typeColorOverrides[activeType]) || activeDefaultColors;
+
+  const updateColor = (idx: number, hex: string) => {
+    if (!activeType) return;
+    const next = [...currentColors];
+    next[idx] = hex;
+    setTypeColorOverrides((prev: Record<string, string[]>) => ({ ...prev, [activeType]: next }));
+  };
+  const resetTypeColors = () => {
+    if (!activeType) return;
+    setTypeColorOverrides((prev: Record<string, string[]>) => {
+      const next = { ...prev };
+      delete next[activeType];
+      return next;
+    });
+  };
 
   useEffect(() => {
     resetRefs();
@@ -181,276 +263,68 @@ const App = ({ data }: any) => {
           {follow ? "Following" : "Not following"}
         </button>
       </div>
-      <div className="fixed top-2 right-2 z-10 flex flex-col gap-1 rounded-md bg-black/60 px-3 py-2 backdrop-blur-sm">
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <label htmlFor="planet-distance" className="w-14 shrink-0">Orbit</label>
-          <input
-            id="planet-distance"
-            type="range"
-            min="0.01"
-            max="2"
-            step="0.01"
-            value={planetDistanceFactor}
-            onChange={(e) => setPlanetDistanceFactor(parseFloat(e.target.value))}
-            className="w-16 accent-cyan-400"
-          />
-          <span className="w-7 tabular-nums text-right">{planetDistanceFactor.toFixed(2)}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <label htmlFor="binary-distance" className="w-14 shrink-0">Stars</label>
-          <input
-            id="binary-distance"
-            type="range"
-            min="0.01"
-            max="1"
-            step="0.01"
-            value={binaryDistanceFactor}
-            onChange={(e) => setBinaryDistanceFactor(parseFloat(e.target.value))}
-            className="w-16 accent-cyan-400"
-          />
-          <span className="w-7 tabular-nums text-right">{binaryDistanceFactor.toFixed(2)}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <label htmlFor="body-scale" className="w-14 shrink-0">Bodies</label>
-          <input
-            id="body-scale"
-            type="range"
-            min="1"
-            max="50"
-            step="1"
-            value={bodyScale}
-            onChange={(e) => setBodyScale(parseFloat(e.target.value))}
-            className="w-16 accent-cyan-400"
-          />
-          <span className="w-7 tabular-nums text-right">{bodyScale}x</span>
-        </div>
-        <div className="my-0.5 border-t border-white/10" />
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <label htmlFor="nebula-density" className="w-14 shrink-0">Nebula</label>
-          <input
-            id="nebula-density"
-            type="range"
-            min="0"
-            max="3"
-            step="0.05"
-            value={nebulaDensity}
-            onChange={(e) => setNebulaDensity(parseFloat(e.target.value))}
-            className="w-16 accent-cyan-400"
-          />
-          <span className="w-7 tabular-nums text-right">{nebulaDensity.toFixed(1)}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <label htmlFor="nebula-bright" className="w-14 shrink-0">Bright</label>
-          <input
-            id="nebula-bright"
-            type="range"
-            min="0.05"
-            max="2"
-            step="0.05"
-            value={nebulaBrightness}
-            onChange={(e) => setNebulaBrightness(parseFloat(e.target.value))}
-            className="w-16 accent-cyan-400"
-          />
-          <span className="w-7 tabular-nums text-right">{nebulaBrightness.toFixed(2)}</span>
-        </div>
-        <div className="my-0.5 border-t border-white/10" />
-        <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showHabitableZone}
-            onChange={(e) => setShowHabitableZone(e.target.checked)}
-            className="accent-cyan-400"
-          />
-          Habitable Zone
-        </label>
-        <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showSkybox}
-            onChange={(e) => setShowSkybox(e.target.checked)}
-            className="accent-cyan-400"
-          />
-          Starfield
-        </label>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <label htmlFor="sky-bright" className="w-14 shrink-0">Sky Brt</label>
-          <input
-            id="sky-bright"
-            type="range"
-            min="0.1"
-            max="3"
-            step="0.05"
-            value={skyBrightness}
-            onChange={(e) => setSkyBrightness(parseFloat(e.target.value))}
-            className="w-16 accent-cyan-400"
-          />
-          <span className="w-7 tabular-nums text-right">{skyBrightness.toFixed(2)}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <label htmlFor="sky-contrast" className="w-14 shrink-0">Sky Con</label>
-          <input
-            id="sky-contrast"
-            type="range"
-            min="0.1"
-            max="3"
-            step="0.05"
-            value={skyContrast}
-            onChange={(e) => setSkyContrast(parseFloat(e.target.value))}
-            className="w-16 accent-cyan-400"
-          />
-          <span className="w-7 tabular-nums text-right">{skyContrast.toFixed(2)}</span>
-        </div>
-        <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showNebula}
-            onChange={(e) => setShowNebula(e.target.checked)}
-            className="accent-cyan-400"
-          />
-          Nebula
-        </label>
-        <div className="my-0.5 border-t border-white/10" />
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <label htmlFor="atmos-intensity" className="w-14 shrink-0">Atmos</label>
-          <input
-            id="atmos-intensity"
-            type="range"
-            min="0"
-            max="3"
-            step="0.05"
-            value={atmosIntensity}
-            onChange={(e) => setAtmosIntensity(parseFloat(e.target.value))}
-            className="w-16 accent-cyan-400"
-          />
-          <span className="w-7 tabular-nums text-right">{atmosIntensity.toFixed(1)}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <label htmlFor="atmos-falloff" className="w-14 shrink-0">Falloff</label>
-          <input
-            id="atmos-falloff"
-            type="range"
-            min="0.5"
-            max="8"
-            step="0.1"
-            value={atmosFalloff}
-            onChange={(e) => setAtmosFalloff(parseFloat(e.target.value))}
-            className="w-16 accent-cyan-400"
-          />
-          <span className="w-7 tabular-nums text-right">{atmosFalloff.toFixed(1)}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <label htmlFor="glow-intensity" className="w-14 shrink-0">Glow</label>
-          <input
-            id="glow-intensity"
-            type="range"
-            min="0"
-            max="5"
-            step="0.01"
-            value={glowIntensity}
-            onChange={(e) => setGlowIntensity(parseFloat(e.target.value))}
-            className="w-16 accent-cyan-400"
-          />
-          <span className="w-7 tabular-nums text-right">{glowIntensity.toFixed(1)}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <label htmlFor="glow-scale" className="w-14 shrink-0">G.Scale</label>
-          <input
-            id="glow-scale"
-            type="range"
-            min="0.5"
-            max="10.0"
-            step="0.05"
-            value={glowScale}
-            onChange={(e) => setGlowScale(parseFloat(e.target.value))}
-            className="w-16 accent-cyan-400"
-          />
-          <span className="w-7 tabular-nums text-right">{glowScale.toFixed(2)}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <label htmlFor="glow-falloff" className="w-14 shrink-0">G.Fall</label>
-          <input
-            id="glow-falloff"
-            type="range"
-            min="0.05"
-            max="5"
-            step="0.05"
-            value={glowFalloff}
-            onChange={(e) => setGlowFalloff(parseFloat(e.target.value))}
-            className="w-16 accent-cyan-400"
-          />
-          <span className="w-7 tabular-nums text-right">{glowFalloff.toFixed(2)}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <label htmlFor="glow-inner" className="w-14 shrink-0">G.Inner</label>
-          <input
-            id="glow-inner"
-            type="range"
-            min="0"
-            max="0.9"
-            step="0.01"
-            value={glowInner}
-            onChange={(e) => setGlowInner(parseFloat(e.target.value))}
-            className="w-16 accent-cyan-400"
-          />
-          <span className="w-7 tabular-nums text-right">{glowInner.toFixed(2)}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <label htmlFor="glow-hue" className="w-14 shrink-0">G.Hue</label>
-          <input
-            id="glow-hue"
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={glowHueShift}
-            onChange={(e) => setGlowHueShift(parseFloat(e.target.value))}
-            className="w-16 accent-cyan-400"
-          />
-          <span className="w-7 tabular-nums text-right">{glowHueShift.toFixed(2)}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <label htmlFor="glow-sat" className="w-14 shrink-0">G.Sat</label>
-          <input
-            id="glow-sat"
-            type="range"
-            min="0"
-            max="3"
-            step="0.05"
-            value={glowSaturation}
-            onChange={(e) => setGlowSaturation(parseFloat(e.target.value))}
-            className="w-16 accent-cyan-400"
-          />
-          <span className="w-7 tabular-nums text-right">{glowSaturation.toFixed(2)}</span>
-        </div>
-        <div className="my-0.5 border-t border-white/10" />
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <label htmlFor="cloud-coverage" className="w-14 shrink-0">Clouds</label>
-          <input
-            id="cloud-coverage"
-            type="range"
-            min="0.1"
-            max="0.7"
-            step="0.01"
-            value={cloudCoverage}
-            onChange={(e) => setCloudCoverage(parseFloat(e.target.value))}
-            className="w-16 accent-cyan-400"
-          />
-          <span className="w-7 tabular-nums text-right">{cloudCoverage.toFixed(2)}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <label htmlFor="cloud-opacity" className="w-14 shrink-0">Cl.Opac</label>
-          <input
-            id="cloud-opacity"
-            type="range"
-            min="0"
-            max="1"
-            step="0.05"
-            value={cloudOpacity}
-            onChange={(e) => setCloudOpacity(parseFloat(e.target.value))}
-            className="w-16 accent-cyan-400"
-          />
-          <span className="w-7 tabular-nums text-right">{cloudOpacity.toFixed(2)}</span>
-        </div>
+      <div className="fixed top-2 right-2 z-10 flex flex-col gap-0.5 rounded-md bg-black/60 px-3 py-2 backdrop-blur-sm max-h-[90vh] overflow-y-auto text-[10px] text-muted-foreground" style={{ scrollbarWidth: 'thin' }}>
+        {/* Scale controls — always visible */}
+        <Slider label="Orbit" min={0.01} max={2} step={0.01} value={planetDistanceFactor} onChange={setPlanetDistanceFactor} />
+        <Slider label="Stars" min={0.01} max={0.5} step={0.01} value={binaryDistanceFactor} onChange={setBinaryDistanceFactor} />
+        <Slider label="Bodies" min={1} max={50} step={1} value={bodyScale} onChange={setBodyScale} suffix="x" />
+
+        <Accordion title="Environment" defaultOpen={false}>
+          <Slider label="Nebula" min={0} max={3} step={0.05} value={nebulaDensity} onChange={setNebulaDensity} />
+          <Slider label="Bright" min={0.05} max={2} step={0.05} value={nebulaBrightness} onChange={setNebulaBrightness} />
+          <Toggle label="Habitable Zone" checked={showHabitableZone} onChange={setShowHabitableZone} />
+          <Toggle label="Starfield" checked={showSkybox} onChange={setShowSkybox} />
+          <Slider label="Sky Brt" min={0.1} max={3} step={0.05} value={skyBrightness} onChange={setSkyBrightness} />
+          <Slider label="Sky Con" min={0.1} max={3} step={0.05} value={skyContrast} onChange={setSkyContrast} />
+          <Toggle label="Nebula" checked={showNebula} onChange={setShowNebula} />
+        </Accordion>
+
+        <Accordion title="Atmosphere" defaultOpen={false}>
+          <Slider label="Atmos" min={0} max={3} step={0.05} value={atmosIntensity} onChange={setAtmosIntensity} />
+          <Slider label="Falloff" min={0.5} max={8} step={0.1} value={atmosFalloff} onChange={setAtmosFalloff} />
+          <Slider label="Glow" min={0} max={5} step={0.01} value={glowIntensity} onChange={setGlowIntensity} />
+          <Slider label="G.Scale" min={0.5} max={10} step={0.05} value={glowScale} onChange={setGlowScale} />
+          <Slider label="G.Fall" min={0.05} max={5} step={0.05} value={glowFalloff} onChange={setGlowFalloff} />
+          <Slider label="G.Inner" min={0} max={0.9} step={0.01} value={glowInner} onChange={setGlowInner} />
+          <Slider label="G.Hue" min={0} max={1} step={0.01} value={glowHueShift} onChange={setGlowHueShift} />
+          <Slider label="G.Sat" min={0} max={3} step={0.05} value={glowSaturation} onChange={setGlowSaturation} />
+        </Accordion>
+
+        <Accordion title="Clouds" defaultOpen={false}>
+          <Slider label="Cover" min={0.1} max={0.7} step={0.01} value={cloudCoverage} onChange={setCloudCoverage} />
+          <Slider label="Opacity" min={0} max={1} step={0.05} value={cloudOpacity} onChange={setCloudOpacity} />
+        </Accordion>
+
+        <Accordion title={`Colours${activeType ? ` (${activeType.replace(/_/g, ' ').toLowerCase()})` : ''}`} defaultOpen={false}>
+          {activeType ? (
+            <>
+              <ColorRow label="C1-C4" colors={currentColors} onChange={updateColor} />
+              <button
+                className="text-[9px] text-cyan-400 hover:text-cyan-300 text-left"
+                onClick={resetTypeColors}
+              >Reset {activeType.replace(/_/g, ' ').toLowerCase()}</button>
+            </>
+          ) : (
+            <span className="text-[9px] opacity-50">Click a planet to edit its type colours</span>
+          )}
+        </Accordion>
+
+        <Accordion title="Gas Giant" defaultOpen={false}>
+          <Slider label="Swirl" min={0} max={1} step={0.01} value={gasSwirl} onChange={setGasSwirl} />
+          <Slider label="Warp" min={1} max={8} step={0.1} value={gasWarp} onChange={setGasWarp} />
+          <Slider label="Storm" min={0} max={30} step={0.5} value={gasStorm} onChange={setGasStorm} />
+          <Slider label="Turb" min={0} max={1} step={0.01} value={gasTurb} onChange={setGasTurb} />
+          <Slider label="Bands" min={1} max={20} step={0.5} value={gasBands} onChange={setGasBands} />
+          <Slider label="Edge" min={0} max={1} step={0.01} value={gasEdgeNoise} onChange={setGasEdgeNoise} />
+        </Accordion>
+
+        <Accordion title="Ice Giant" defaultOpen={false}>
+          <Slider label="Warp" min={0.5} max={6} step={0.1} value={iceWarp} onChange={setIceWarp} />
+          <Slider label="Spots" min={0} max={20} step={0.5} value={iceStorm} onChange={setIceStorm} />
+          <Slider label="Turb" min={0} max={1} step={0.01} value={iceTurb} onChange={setIceTurb} />
+          <Slider label="Bands" min={1} max={15} step={0.5} value={iceBands} onChange={setIceBands} />
+          <Slider label="Edge" min={0} max={1} step={0.01} value={iceEdgeNoise} onChange={setIceEdgeNoise} />
+        </Accordion>
       </div>
       <div id="canvas-container">
         <Canvas dpr={[1, 2]} camera={{ far: 100000000, near: 0.001, fov: 50 }}>
