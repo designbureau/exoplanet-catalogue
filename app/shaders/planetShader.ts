@@ -199,6 +199,11 @@ const gasGiantFragment = `
   uniform float swirl_strength;
   uniform float swirl_speed;
   uniform float warp_intensity;
+  uniform float u_gasWarp;
+  uniform float u_gasStorm;
+  uniform float u_gasTurb;
+  uniform float u_gasBands;
+  uniform float u_gasEdgeNoise;
   uniform vec3 color1, color2, color3, color4;
   uniform vec3 emissiveColor;
   uniform float emissiveIntensity;
@@ -207,9 +212,24 @@ const gasGiantFragment = `
 
   ${noiseLib}
 
+  // 3D storm vortex: swirl the XZ plane near a point on the sphere
+  vec3 stormVortex3D(vec3 p, vec3 center, float radius, float strength) {
+    vec3 d = p - center;
+    float dist = length(d);
+    float t = 1.0 - clamp(dist / radius, 0.0, 1.0);
+    t = t * t * t; // cubic falloff for tight eye
+    float angle = strength * t;
+    float sa = sin(angle);
+    float ca = cos(angle);
+    // Rotate in the tangent plane (XZ relative to storm centre)
+    vec3 result = p;
+    result.xz = center.xz + mat2(ca, -sa, sa, ca) * (p.xz - center.xz);
+    // Slight Y compression towards storm eye
+    result.y = mix(p.y, center.y, t * 0.3);
+    return result;
+  }
+
   void main() {
-    // Use 3D position directly to avoid atan seam
-    // Stretch Y for horizontal banding, keep X/Z for seamless longitude
     vec3 p = vPosition;
     float latitude = abs(p.y);
 
@@ -219,20 +239,70 @@ const gasGiantFragment = `
     float sr = sin(rotAngle);
     p.xz = mat2(cr, -sr, sr, cr) * p.xz;
 
-    // Stretched 3D coords for banding (compress X/Z, stretch Y)
+    // Storm vortices — stronger distortion, larger radii
+    // Great Red Spot analogue
+    vec3 storm1Pos = normalize(vec3(
+      cos(u_seed.x * 6.28),
+      0.25 + u_seed.y * 0.15,
+      sin(u_seed.x * 6.28)
+    ));
+    p = stormVortex3D(p, storm1Pos, 0.45, swirl_strength * u_gasStorm);
+
+    // Secondary storm — opposite hemisphere
+    vec3 storm2Pos = normalize(vec3(
+      cos(u_seed.y * 6.28 + 2.5),
+      -0.3 - u_seed.z * 0.15,
+      sin(u_seed.y * 6.28 + 2.5)
+    ));
+    p = stormVortex3D(p, storm2Pos, 0.3, swirl_strength * -u_gasStorm * 0.67);
+
+    // Small storms at band edges
+    vec3 storm3Pos = normalize(vec3(
+      cos(u_seed.z * 6.28 + 1.0),
+      0.55,
+      sin(u_seed.z * 6.28 + 1.0)
+    ));
+    p = stormVortex3D(p, storm3Pos, 0.2, swirl_strength * u_gasStorm * 0.55);
+
+    vec3 storm4Pos = normalize(vec3(
+      cos(u_seed.x * 6.28 + 4.0),
+      -0.1,
+      sin(u_seed.x * 6.28 + 4.0)
+    ));
+    p = stormVortex3D(p, storm4Pos, 0.22, swirl_strength * -u_gasStorm * 0.44);
+
+    vec3 storm5Pos = normalize(vec3(
+      cos(u_seed.z * 6.28 + 3.2),
+      0.7,
+      sin(u_seed.z * 6.28 + 3.2)
+    ));
+    p = stormVortex3D(p, storm5Pos, 0.15, swirl_strength * u_gasStorm * 0.39);
+
+    // Stretched 3D coords for banding
     vec3 bp = vec3(p.x, p.y * scale * 0.5, p.z) + u_seed * 5.0;
 
-    // Domain warp (IQ technique) — fully 3D, no seam
+    // Domain warp (IQ technique) — stronger warp for more swirly feel
     float n1 = fbm3d(bp);
     float n2 = fbm3d(bp + vec3(5.2, 1.3, 7.4));
-    float r1 = fbm3d(bp + 3.0 * vec3(n1, n2, n1 * 0.5) + vec3(1.7, 9.2, 3.1) + vec3(0.0, 0.0, u_time * 0.008));
-    float r2 = fbm3d(bp + 3.0 * vec3(n1, n2, n2 * 0.5) + vec3(8.3, 2.8, 5.7) + vec3(0.0, 0.0, u_time * 0.006));
-    float f = fbm3d(bp + 3.0 * vec3(r1, r2, r1 * 0.7));
+    float r1 = fbm3d(bp + u_gasWarp * vec3(n1, n2, n1 * 0.5) + vec3(1.7, 9.2, 3.1) + vec3(0.0, 0.0, u_time * 0.008));
+    float r2 = fbm3d(bp + u_gasWarp * vec3(n1, n2, n2 * 0.5) + vec3(8.3, 2.8, 5.7) + vec3(0.0, 0.0, u_time * 0.006));
+    float f = fbm3d(bp + u_gasWarp * vec3(r1, r2, r1 * 0.7));
 
-    // Band structure from stretched Y
+    // Noise-displaced band edges — perlin noise shifts the band boundary positions
     float bandY = p.y * scale * 0.5;
-    float band1 = sin(bandY * 6.0 + n1 * 2.0) * 0.5 + 0.5;
-    float band2 = sin(bandY * 15.0 + n2 * 3.0 + f * 2.0) * 0.5 + 0.5;
+    float edgeNoise = (noise3d(bp * 3.0) * 0.7 + noise3d(bp * 7.0) * 0.3) * u_gasEdgeNoise;
+    float bandPhase = bandY * u_gasBands + n1 * 2.5 + edgeNoise;
+    float band1 = sin(bandPhase) * 0.5 + 0.5;
+
+    // Turbulence at band edges
+    float bandEdge = abs(cos(bandPhase));
+    float turbNoise = noise3d(bp * 10.0 + vec3(u_time * 0.012));
+    float turbulence = bandEdge * turbNoise * u_gasTurb * 0.5;
+    // Extra wispy turbulence from domain warp intermediates
+    float wispTurb = abs(r1 - r2) * bandEdge * u_gasTurb;
+
+    float band2Phase = bandY * u_gasBands * 2.5 + n2 * 3.5 + f * 2.5 + edgeNoise * 2.0;
+    float band2 = sin(band2Phase) * 0.5 + 0.5;
 
     // Colour mapping
     vec3 color = mix(color1, color2, smoothstep(0.3, 0.7, band1));
@@ -240,6 +310,19 @@ const gasGiantFragment = `
     color = mix(color, color4, smoothstep(0.3, 0.8, r2) * 0.3);
     color *= 0.8 + 0.4 * f;
     color *= 0.9 + 0.2 * band2;
+
+    // Turbulence brightens and mixes band edges chaotically
+    color += color3 * turbulence;
+    color = mix(color, color4, wispTurb);
+
+    // Storm eye darkening — darken the very centre of large storms
+    float d1 = length(p - storm1Pos);
+    float eye1 = smoothstep(0.08, 0.0, d1);
+    color = mix(color, color3 * 0.6, eye1 * 0.5);
+
+    float d2 = length(p - storm2Pos);
+    float eye2 = smoothstep(0.05, 0.0, d2);
+    color = mix(color, color3 * 0.6, eye2 * 0.4);
 
     // Polar darkening
     color *= 1.0 - latitude * 0.2;
@@ -570,10 +653,14 @@ const terrestrialFragment = `
   }
 `;
 
-// Venus/hazy atmosphere shader
+// Venus/hazy atmosphere shader — thick opaque clouds with domain-warped swirls
 const hazyFragment = `
   uniform float u_time;
   uniform float scale;
+  uniform float u_gasWarp;
+  uniform float u_gasBands;
+  uniform float u_gasTurb;
+  uniform float u_gasEdgeNoise;
   uniform vec3 color1, color2, color3, color4;
   varying vec3 vPosition;
   varying vec3 vNormal;
@@ -581,29 +668,58 @@ const hazyFragment = `
   ${noiseLib}
 
   void main() {
-    vec3 p = seededPos(vPosition, 100.0) * scale;
-    p += vec3(u_time * 0.001, u_time * 0.0005, 0.0);
+    vec3 p = vPosition;
 
-    // Very subtle banding through thick haze
-    float band = fbm3d(p * 0.5) * 0.3 + fbm3d(p * 1.5) * 0.1;
-    vec3 color = mix(color1, color2, band);
-    color = mix(color, color3, fbm3d(p * 0.3 + vec3(20.0)) * 0.2);
+    // Slow global rotation
+    float rotAngle = u_time * 0.005;
+    float cr = cos(rotAngle);
+    float sr = sin(rotAngle);
+    p.xz = mat2(cr, -sr, sr, cr) * p.xz;
 
-    // Fresnel-like limb brightening (thick atmosphere scatters at edges)
+    // 3D domain warp for thick swirling cloud tops
+    vec3 bp = p * scale * 0.3 + u_seed * 5.0;
+    float n1 = fbm3d(bp);
+    float n2 = fbm3d(bp + vec3(4.1, 2.7, 6.3));
+    float r1 = fbm3d(bp + u_gasWarp * 0.6 * vec3(n1, n2, n1 * 0.3) + vec3(u_time * 0.003));
+    float r2 = fbm3d(bp + u_gasWarp * 0.5 * vec3(n2, r1, n1 * 0.4) + vec3(7.3, 3.1, u_time * 0.002));
+    float f = fbm3d(bp + u_gasWarp * 0.5 * vec3(r1, r2, r1 * 0.5));
+
+    // Broad banding through the haze
+    float bandY = p.y * scale * 0.2;
+    float edgeN = noise3d(bp * 2.5) * u_gasEdgeNoise;
+    float band = sin(bandY * u_gasBands * 0.5 + n1 * 1.5 + edgeN) * 0.5 + 0.5;
+
+    // Colour with more variance: use all 4 colours
+    vec3 color = mix(color1, color2, band * 0.5 + 0.25);
+    color = mix(color, color3, clamp(f * 0.6 + 0.2, 0.0, 1.0) * 0.25);
+    color = mix(color, color4, smoothstep(0.4, 0.7, r2) * 0.2);
+    // Turbulent detail at cloud boundaries
+    float turbDetail = abs(r1 - n2) * u_gasTurb;
+    color = mix(color, color3 * 1.1, turbDetail * 0.3);
+    color *= 0.85 + 0.3 * r1;
+
+    // Strong fresnel limb brightening
     float fresnel = 1.0 - abs(dot(vNormal, normalize(vec3(0.0, 0.0, 1.0))));
-    fresnel = pow(fresnel, 2.0);
-    color = mix(color, color4, fresnel * 0.3);
+    fresnel = pow(fresnel, 1.8);
+    color = mix(color, color4, fresnel * 0.4);
 
-    float diff = max(dot(vNormal, normalize(vec3(1.0, 0.5, 0.8))), 0.15);
+    float diff = max(dot(vNormal, normalize(vec3(1.0, 0.5, 0.8))), 0.2);
     color *= (0.4 + 0.6 * diff);
     gl_FragColor = vec4(color, 1.0);
   }
 `;
 
-// Ice giant shader (methane blue with subtle bands)
+// Ice giant shader — Uranus/Neptune: methane blue, faint bands, dark spots, strong haze
 const iceGiantFragment = `
   uniform float u_time;
   uniform float scale;
+  uniform float swirl_strength;
+  uniform float swirl_speed;
+  uniform float u_gasWarp;
+  uniform float u_gasStorm;
+  uniform float u_gasTurb;
+  uniform float u_gasBands;
+  uniform float u_gasEdgeNoise;
   uniform vec3 color1, color2, color3, color4;
   varying vec3 vPosition;
   varying vec3 vNormal;
@@ -611,27 +727,75 @@ const iceGiantFragment = `
   ${noiseLib}
 
   void main() {
-    vec3 p = seededPos(vPosition, 100.0) * scale;
+    vec3 p = vPosition;
+    float latitude = abs(p.y);
 
-    // Subtle horizontal banding
-    float lat = vPosition.y * 8.0 + u_seed.x * 20.0;
-    float band = sin(lat + fbm(vPosition.xz * 4.0 + u_seed.xy * 10.0) * 2.0) * 0.5 + 0.5;
-    band = smoothstep(0.3, 0.7, band);
+    // Differential rotation
+    float rotAngle = u_time * (1.0 - latitude * 0.3) * swirl_speed * 0.02;
+    float cr = cos(rotAngle);
+    float sr = sin(rotAngle);
+    p.xz = mat2(cr, -sr, sr, cr) * p.xz;
 
-    vec3 color = mix(color1, color2, band);
+    // 3D noise
+    vec3 bp = vec3(p.x, p.y * scale * 0.3, p.z) + u_seed * 5.0;
 
-    // Subtle haze variation
-    float haze = fbm3d(p * 0.5 + vec3(0.0, 0.0, u_time * 0.002));
-    color = mix(color, color3, haze * 0.2);
+    // Domain warp — controllable
+    float n1 = fbm3d(bp);
+    float n2 = fbm3d(bp + vec3(5.2, 1.3, 7.4));
+    float r1 = fbm3d(bp + u_gasWarp * 0.5 * vec3(n1, n2, n1 * 0.3) + vec3(0.0, 0.0, u_time * 0.004));
+    float r2 = fbm3d(bp + u_gasWarp * 0.4 * vec3(n2, r1, n1 * 0.5) + vec3(3.7, 8.1, u_time * 0.003));
+    float f = fbm3d(bp + u_gasWarp * 0.4 * vec3(r1, r2, r1 * 0.5));
 
-    // Storm spot at unique position per planet
-    vec2 stormPos = vec2(u_seed.x * 0.6 - 0.3, u_seed.y * 0.4 - 0.2);
-    float storm = 1.0 - smoothstep(0.0, 0.15, length(vPosition.xz - stormPos));
-    color = mix(color, color4, storm * 0.4);
+    // Faint banding with noise-disrupted edges
+    float bandY = p.y * scale * 0.3;
+    float edgeN = (noise3d(bp * 2.5) * 0.7 + noise3d(bp * 6.0) * 0.3) * u_gasEdgeNoise;
+    float band = sin(bandY * u_gasBands * 0.7 + n1 * 1.0 + edgeN) * 0.5 + 0.5;
+    float band2 = sin(bandY * u_gasBands * 1.8 + n2 * 2.0 + f * 1.5) * 0.5 + 0.5;
 
-    // Fresnel for atmosphere haze
+    // Colour with more variance across all 4 colours
+    vec3 color = mix(color1, color2, band * 0.35 + 0.32);
+    color = mix(color, color3, clamp(f * 0.5 + 0.2, 0.0, 1.0) * 0.2);
+    color = mix(color, color4, smoothstep(0.4, 0.7, r2) * 0.15);
+    color *= 0.9 + 0.2 * band2;
+
+    // Turbulent wispy detail between bands
+    float bandEdge = abs(cos(bandY * u_gasBands * 0.7 + n1));
+    float turbDetail = bandEdge * abs(r1 - r2) * u_gasTurb;
+    color = mix(color, color4 * 0.9, turbDetail * 0.3);
+
+    // Polar brightening
+    float polarBright = smoothstep(0.5, 0.9, latitude) * 0.15;
+    color += color2 * polarBright;
+
+    // Dark spot(s) with controllable prominence
+    vec3 spot1Pos = normalize(vec3(
+      cos(u_seed.x * 6.28),
+      -0.2 + u_seed.y * 0.2,
+      sin(u_seed.x * 6.28)
+    ));
+    float spot1 = smoothstep(0.2, 0.0, length(p - spot1Pos));
+    color = mix(color, color3 * 0.4, spot1 * u_gasStorm * 0.025);
+
+    // Bright companion cloud
+    vec3 compPos = normalize(spot1Pos + vec3(0.15, 0.1, 0.0));
+    float comp = smoothstep(0.08, 0.0, length(p - compPos));
+    color = mix(color, color4 * 1.2, comp * u_gasStorm * 0.03);
+
+    // Second dark spot
+    vec3 spot2Pos = normalize(vec3(
+      cos(u_seed.z * 6.28 + 3.0),
+      0.4,
+      sin(u_seed.z * 6.28 + 3.0)
+    ));
+    float spot2 = smoothstep(0.12, 0.0, length(p - spot2Pos));
+    color = mix(color, color3 * 0.5, spot2 * u_gasStorm * 0.02);
+
+    // Overall haze variation
+    color *= 0.88 + 0.24 * r1;
+
+    // Strong atmospheric fresnel — methane haze at limb
     float fresnel = 1.0 - abs(dot(vNormal, normalize(vec3(0.0, 0.0, 1.0))));
-    color = mix(color, color2 * 1.2, pow(fresnel, 3.0) * 0.2);
+    color = mix(color, color2 * 1.3, pow(fresnel, 2.5) * 0.25);
 
     float diff = max(dot(vNormal, normalize(vec3(1.0, 0.5, 0.8))), 0.15);
     color *= (0.3 + 0.7 * diff);
@@ -692,6 +856,11 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_cloudCoverage: { value: 0.35 },
       u_cloudOpacity: { value: 0.6 },
       u_lod: { value: 0.0 },
+      u_gasWarp: { value: 4.0 },
+      u_gasStorm: { value: 18.0 },
+      u_gasTurb: { value: 0.4 },
+      u_gasBands: { value: 6.0 },
+      u_gasEdgeNoise: { value: 0.4 },
     },
     vertexShader,
     fragmentShader: selectFragmentShader(params.type),

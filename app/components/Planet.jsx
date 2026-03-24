@@ -23,7 +23,7 @@ const Planet = ({ data, starData }) => {
   const ref = useRef();
   const glowRef = useRef();
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, typeColorOverrides, setActivePlanetInfo } = useContext(EnvContext);
 
   // Pre-allocated vectors for per-frame camera updates
   const _camRight = useMemo(() => new THREE.Vector3(), []);
@@ -49,7 +49,7 @@ const Planet = ({ data, starData }) => {
   })();
 
   // Classify planet and create shader material + atmosphere ring
-  const { shaderMaterial, atmosParams, atmosRingGeo, atmosRingMat } = useMemo(() => {
+  const { shaderMaterial, atmosParams, atmosRingGeo, atmosRingMat, planetType } = useMemo(() => {
     const params = classifyPlanet({
       massJupiter: mass,
       radiusJupiter: radius,
@@ -139,6 +139,7 @@ const Planet = ({ data, starData }) => {
       atmosParams: ap,
       atmosRingGeo: ringGeo,
       atmosRingMat: ringMat,
+      planetType: params.type,
     };
   }, [mass, radius, rawSMA, starData?.temperature, starData?.mass, starData?.radius]);
 
@@ -168,6 +169,19 @@ const Planet = ({ data, starData }) => {
   const handleClick = (e) => {
     e.stopPropagation();
     setActive(ref);
+    // Publish active planet's type and default colours for the UI picker
+    if (shaderMaterial.uniforms.color1) {
+      const toHex = (c) => '#' + c.getHexString();
+      setActivePlanetInfo({
+        type: planetType,
+        colors: [
+          toHex(shaderMaterial.uniforms.color1.value),
+          toHex(shaderMaterial.uniforms.color2.value),
+          toHex(shaderMaterial.uniforms.color3.value),
+          toHex(shaderMaterial.uniforms.color4.value),
+        ],
+      });
+    }
   };
 
   /* Mass-radius relation: R ∝ M^0.55 for small planets (<124 M⊕), R ∝ M^0.01 for large */
@@ -223,6 +237,24 @@ const Planet = ({ data, starData }) => {
     }
     if (shaderMaterial.uniforms.u_cloudOpacity) {
       shaderMaterial.uniforms.u_cloudOpacity.value = cloudOpacity;
+    }
+    // Gas/ice giant controls — use ice controls for ICE_GIANT and hazy types
+    if (shaderMaterial.uniforms.u_gasWarp) {
+      const isIce = planetType === "ICE_GIANT" || planetType === "VENUS_LIKE" || planetType === "WATER_WORLD" || planetType === "SUB_NEPTUNE";
+      shaderMaterial.uniforms.swirl_strength.value = isIce ? gasSwirl : gasSwirl;
+      shaderMaterial.uniforms.u_gasWarp.value = isIce ? iceWarp : gasWarp;
+      shaderMaterial.uniforms.u_gasStorm.value = isIce ? iceStorm : gasStorm;
+      shaderMaterial.uniforms.u_gasTurb.value = isIce ? iceTurb : gasTurb;
+      shaderMaterial.uniforms.u_gasBands.value = isIce ? iceBands : gasBands;
+      shaderMaterial.uniforms.u_gasEdgeNoise.value = isIce ? iceEdgeNoise : gasEdgeNoise;
+    }
+    // Apply colour overrides for this planet's type (affects all planets of this type)
+    const typeColors = typeColorOverrides[planetType];
+    if (typeColors) {
+      if (shaderMaterial.uniforms.color1) shaderMaterial.uniforms.color1.value.set(typeColors[0]);
+      if (shaderMaterial.uniforms.color2) shaderMaterial.uniforms.color2.value.set(typeColors[1]);
+      if (shaderMaterial.uniforms.color3) shaderMaterial.uniforms.color3.value.set(typeColors[2]);
+      if (shaderMaterial.uniforms.color4) shaderMaterial.uniforms.color4.value.set(typeColors[3]);
     }
     // Update atmosphere ring billboarding
     if (atmosRingMat) {
