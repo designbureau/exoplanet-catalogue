@@ -150,6 +150,11 @@ const Controls = ({ follow }) => {
         );
         setKeyDown(true);
       }
+
+      // Gentle auto-rotate when user isn't interacting
+      if (!keyDown && !cameraControlsRef.current.active) {
+        cameraControlsRef.current.azimuthAngle += 0.0001 * delta * 60;
+      }
     }
   });
 
