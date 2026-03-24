@@ -17,8 +17,7 @@ html,
 body {
   padding: 0;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
-    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
   color: white;
   background: rgba(var(--background-black), 1);
   font-size: 100%;

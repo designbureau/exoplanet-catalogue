@@ -92,14 +92,22 @@ const Planet = ({ data, starData }) => {
           attribute vec3 aPos;
           varying float vRadial;
           uniform float uRadius;
-          uniform vec3 uCamRight;
-          uniform vec3 uCamUp;
+          uniform vec3 uCamPos;
+          uniform vec3 uPlanetWorldPos;
           void main() {
             vRadial = aPos.z;
-            vec3 p = aPos.x * uCamRight + aPos.y * uCamUp;
+            // Billboard towards camera from planet's world position
+            vec3 lookDir = normalize(uCamPos - uPlanetWorldPos);
+            vec3 worldUp = vec3(0.0, 1.0, 0.0);
+            // Handle degenerate case when looking straight down
+            if (abs(dot(lookDir, worldUp)) > 0.99) worldUp = vec3(0.0, 0.0, 1.0);
+            vec3 right = normalize(cross(worldUp, lookDir));
+            vec3 up = cross(lookDir, right);
+            vec3 p = aPos.x * right + aPos.y * up;
             p *= 1.0 + aPos.z * uRadius;
-            vec4 world = modelMatrix * vec4(p, 1.0);
-            gl_Position = projectionMatrix * viewMatrix * world;
+            // Position in world space directly (bypass modelMatrix rotation)
+            vec3 worldP = uPlanetWorldPos + p * length((modelMatrix * vec4(1.0, 0.0, 0.0, 0.0)).xyz);
+            gl_Position = projectionMatrix * viewMatrix * vec4(worldP, 1.0);
           }
         `,
         fragmentShader: `
@@ -125,8 +133,8 @@ const Planet = ({ data, starData }) => {
           uColor: { value: ap.color },
           uIntensity: { value: ap.intensity || 0.8 },
           uFalloff: { value: 1.5 },
-          uCamRight: { value: new THREE.Vector3(1, 0, 0) },
-          uCamUp: { value: new THREE.Vector3(0, 1, 0) },
+          uCamPos: { value: new THREE.Vector3(0, 0, 5) },
+          uPlanetWorldPos: { value: new THREE.Vector3() },
         },
       });
     }
@@ -264,10 +272,13 @@ const Planet = ({ data, starData }) => {
     }
     // Update atmosphere ring billboarding
     if (atmosRingMat) {
-      const cam = state.camera;
-      cam.matrixWorld.extractBasis(_camRight, _camUp, _camFwd);
-      atmosRingMat.uniforms.uCamRight.value.copy(_camRight);
-      atmosRingMat.uniforms.uCamUp.value.copy(_camUp);
+      state.camera.getWorldPosition(_camRight); // reuse vector for cam pos
+      atmosRingMat.uniforms.uCamPos.value.copy(_camRight);
+      // Get planet's world position
+      if (ref.current) {
+        ref.current.getWorldPosition(_camUp); // reuse vector
+        atmosRingMat.uniforms.uPlanetWorldPos.value.copy(_camUp);
+      }
       atmosRingMat.uniforms.uIntensity.value = glowIntensity;
       atmosRingMat.uniforms.uRadius.value = (atmosParams?.thickness || 0.3) * glowScale;
       atmosRingMat.uniforms.uFalloff.value = glowFalloff;
