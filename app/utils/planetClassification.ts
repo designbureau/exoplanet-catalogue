@@ -163,10 +163,10 @@ export function classifyPlanet(input: ClassificationInput): ShaderParams {
     else type = PlanetType.COLD_GIANT;
   }
 
-  return getShaderParams(type, tEq, input.name || "planet", starTemp || 5500);
+  return getShaderParams(type, tEq, input.name || "planet", starTemp || 5500, massJupiter, radiusJupiter);
 }
 
-function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: number): ShaderParams {
+function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: number, massJup: number = 0, radiusJup: number = 0): ShaderParams {
   const base: ShaderParams = {
     type,
     color1: new THREE.Color(0.5, 0.5, 0.5),
@@ -436,6 +436,53 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
 
     default:
       break;
+  }
+
+  // Gas giant mass/radius-based colour variation
+  // Heavier giants (>0.5 Jup) → more Jupiter-like (orange/brown, strong bands)
+  // Lighter giants (<0.5 Jup) → more Saturn-like (pale gold/azure, muted bands)
+  if (type === PlanetType.COLD_GIANT || type === PlanetType.COOL_GIANT) {
+    const massRatio = Math.min(massJup / 1.0, 2.0); // normalise to Jupiter=1
+
+    if (massRatio < 0.5) {
+      // Saturn-like: pale gold/butter/azure, muted contrast
+      const saturnFactor = 1.0 - massRatio * 2.0; // 1.0 at 0 mass, 0.0 at 0.5 Jup
+      const satGold = new THREE.Color(0.75, 0.65, 0.4);
+      const satCream = new THREE.Color(0.9, 0.85, 0.65);
+      const satBlue = new THREE.Color(0.5, 0.55, 0.65);
+      const satPale = new THREE.Color(0.85, 0.82, 0.7);
+
+      base.color1.lerp(satGold, saturnFactor * 0.7);
+      base.color2.lerp(satCream, saturnFactor * 0.6);
+      base.color3.lerp(satBlue, saturnFactor * 0.5);
+      base.color4.lerp(satPale, saturnFactor * 0.6);
+      // Saturn has less band contrast and weaker storms
+      base.swirlStrength *= (1.0 - saturnFactor * 0.5);
+      base.warpIntensity *= (1.0 - saturnFactor * 0.3);
+    } else if (massRatio > 1.5) {
+      // Super-Jupiters: deeper, more saturated oranges and darker bands
+      const superFactor = Math.min((massRatio - 1.5) / 1.5, 1.0);
+      base.color1.lerp(new THREE.Color(0.5, 0.25, 0.08), superFactor * 0.4);
+      base.color3.lerp(new THREE.Color(0.35, 0.15, 0.05), superFactor * 0.4);
+      base.swirlStrength *= (1.0 + superFactor * 0.3);
+      base.warpIntensity *= (1.0 + superFactor * 0.2);
+    }
+
+    // Radius-based: larger radius = puffier, more washed out
+    if (radiusJup > 1.2) {
+      const puffFactor = Math.min((radiusJup - 1.2) / 0.8, 1.0);
+      base.color1.lerp(base.color2, puffFactor * 0.3);
+      base.color3.lerp(base.color4, puffFactor * 0.3);
+    }
+  }
+
+  // Hot Jupiters: mass-based deepening
+  if (type === PlanetType.HOT_JUPITER_IV || type === PlanetType.HOT_JUPITER_V) {
+    if (massJup > 3) {
+      const deepFactor = Math.min((massJup - 3) / 5, 1.0);
+      base.color1.lerp(new THREE.Color(0.15, 0.05, 0.02), deepFactor * 0.5);
+      base.color3.lerp(new THREE.Color(0.08, 0.02, 0.01), deepFactor * 0.4);
+    }
   }
 
   return base;
