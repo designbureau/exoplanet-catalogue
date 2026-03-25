@@ -61,6 +61,7 @@ import { useFrame } from "@react-three/fiber";
 import { useRef, useContext, useEffect, useMemo } from "react";
 import { RefContext } from "./RefContext";
 import { EnvContext } from "./EnvContext";
+import { getRingParams, createRingMaterial } from "../shaders/ringShader";
 import {
   getSemimajoraxis,
   getPeriod,
@@ -80,6 +81,7 @@ const Planet = ({ data, starData }) => {
   const ref = useRef();
   const glowRef = useRef();
   const softGlowRef = useRef();
+  const ringRef = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
   const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, spriteGlowIntensity, spriteGlowScale, spriteGlowFalloff, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo } = useContext(EnvContext);
@@ -110,7 +112,7 @@ const Planet = ({ data, starData }) => {
   })();
 
   // Classify planet and create shader material + atmosphere ring
-  const { shaderMaterial, atmosParams, atmosMat, planetType } = useMemo(() => {
+  const { shaderMaterial, atmosParams, atmosMat, planetType, ringData } = useMemo(() => {
     const params = classifyPlanet({
       massJupiter: mass,
       radiusJupiter: radius,
@@ -122,6 +124,12 @@ const Planet = ({ data, starData }) => {
     });
     const shader = createPlanetMaterial(params);
     const ap = getAtmosphereParams(params.type, starData?.temperature || 5500);
+
+    // Ring system
+    const nameSeed = [...name].reduce((a, c) => a + c.charCodeAt(0), 0);
+    const ringSeed = ((nameSeed * 9301 + 49297) % 233280) / 233280;
+    const ringParams = getRingParams(params.type, ringSeed, name);
+    const ringMat = ringParams ? createRingMaterial(ringParams, ringSeed) : null;
     // console.log(`[Planet] ${name} → type=${params.type}`);
 
     // Atmosphere glow — BackSide sphere (dual-layer technique from 38-earth-shaders-final)
@@ -185,8 +193,9 @@ const Planet = ({ data, starData }) => {
       atmosParams: ap,
       atmosMat,
       planetType: params.type,
+      ringData: ringParams ? { params: ringParams, material: ringMat } : null,
     };
-  }, [mass, radius, rawSMA, starData?.temperature, starData?.mass, starData?.radius]);
+  }, [mass, radius, rawSMA, starData?.temperature, starData?.mass, starData?.radius, name]);
 
   useEffect(() => {
     addRef(name, "planet", ref);
@@ -329,6 +338,18 @@ const Planet = ({ data, starData }) => {
 
     // Sync glow positions with orbiting planet
     if (glowRef.current) glowRef.current.position.copy(ref.current.position);
+    if (ringRef.current && ringData) {
+      ringRef.current.position.copy(ref.current.position);
+      const rm = ringRef.current.material;
+      if (rm.uniforms.u_sunDirection) {
+        rm.uniforms.u_sunDirection.value.copy(shaderMaterial.uniforms.u_sunDirection.value);
+      }
+      rm.uniforms.u_innerRadius.value = scale * ringData.params.innerRadius;
+      rm.uniforms.u_outerRadius.value = scale * ringData.params.outerRadius;
+      // Planet shadow: pass world position and radius
+      ref.current.getWorldPosition(rm.uniforms.u_planetPos.value);
+      rm.uniforms.u_planetRadius.value = scale;
+    }
     if (softGlowRef.current) softGlowRef.current.position.copy(ref.current.position);
   });
 
@@ -354,6 +375,16 @@ const Planet = ({ data, starData }) => {
       <mesh ref={ref} name={name} onClick={handleClick} material={shaderMaterial}>
         <sphereGeometry args={[scale, 64, 64]} />
       </mesh>
+      {ringData && (
+        <mesh
+          ref={ringRef}
+          material={ringData.material}
+          rotation={[Math.PI / 2 + ringData.params.tilt, 0, 0]}
+          frustumCulled={false}
+        >
+          <ringGeometry args={[scale * ringData.params.innerRadius, scale * ringData.params.outerRadius, 128, 1]} />
+        </mesh>
+      )}
       {atmosMat && glowIntensity > 0 && (
         <>
           {/* BackSide atmosphere sphere — crisp day/twilight structure */}
