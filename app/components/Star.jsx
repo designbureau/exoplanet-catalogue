@@ -84,7 +84,7 @@ const Star = ({ data, position, distance }) => {
     const elapsed = state.clock.getElapsedTime();
     ref.current.rotation.y += 0.002;
     if (starMaterial.uniforms.u_time) {
-      starMaterial.uniforms.u_time.value = elapsed * 0.075;
+      starMaterial.uniforms.u_time.value = elapsed * 0.035;
     }
   });
 

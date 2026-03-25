@@ -384,6 +384,16 @@ export default function StarEffects({ starRadius, temperature = 5500 }: StarEffe
   }, [temperature]);
 
   const { raysGeo, raysMat, flaresGeo, flaresMat, glowGeo, glowMat } = useMemo(() => {
+    // Non-linear scaling: sqrt(r) so small stars get proportionally bigger effects
+    const r = starRadius;
+    const s = Math.sqrt(r);
+    const rayLength = s * 0.04;
+    const rayWidth = s * 0.03;
+    const rayOpacity = 0.35;
+    const flareAmp = s * 0.06;
+    const flareWidth = s * 0.003;
+    const flareOpacity = 0.7;
+
     const rGeo = buildRaysGeometry(starRadius);
     const rMat = new THREE.ShaderMaterial({
       vertexShader: sunRaysVS,
@@ -396,9 +406,9 @@ export default function StarEffects({ starRadius, temperature = 5500 }: StarEffe
       uniforms: {
         uTime: { value: 0 },
         uCamPos: { value: new THREE.Vector3() },
-        uWidth: { value: 0.25 },
-        uLength: { value: 0.3 },
-        uOpacity: { value: 0.35 },
+        uWidth: { value: rayWidth },
+        uLength: { value: rayLength },
+        uOpacity: { value: rayOpacity },
         uNoiseFrequency: { value: 8.0 },
         uNoiseAmplitude: { value: 0.4 },
         uHueSpread: { value: 0.15 },
@@ -419,9 +429,9 @@ export default function StarEffects({ starRadius, temperature = 5500 }: StarEffe
       uniforms: {
         uTime: { value: 0 },
         uCamPos: { value: new THREE.Vector3() },
-        uWidth: { value: 0.02 },
-        uAmp: { value: 0.5 },
-        uOpacity: { value: 0.8 },
+        uWidth: { value: flareWidth },
+        uAmp: { value: flareAmp },
+        uOpacity: { value: flareOpacity },
         uAlphaBlended: { value: 0.65 },
         uHueSpread: { value: 0.16 },
         uHue: { value: hue },
@@ -515,7 +525,7 @@ export default function StarEffects({ starRadius, temperature = 5500 }: StarEffe
   const frameSkip = useRef(0);
 
   useFrame((state) => {
-    const t = state.clock.getElapsedTime() * 0.5;
+    const t = state.clock.getElapsedTime() * 0.25;
 
     // Time always updates (cheap)
     raysMat.uniforms.uTime.value = t;
