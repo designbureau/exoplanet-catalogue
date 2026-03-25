@@ -702,10 +702,9 @@ const hazyFragment = `
     color = mix(color, color3 * 1.1, turbDetail * 0.3);
     color *= 0.85 + 0.3 * r1;
 
-    // Strong fresnel limb brightening
-    float fresnel = 1.0 - abs(dot(vNormal, normalize(vec3(0.0, 0.0, 1.0))));
-    fresnel = pow(fresnel, 1.8);
-    color = mix(color, color4, fresnel * 0.4);
+    // Subtle limb brightening (hazy atmosphere scatters at edges)
+    float limb = 1.0 - abs(dot(vNormal, normalize(vec3(0.0, 0.0, 1.0))));
+    color = mix(color, color4, pow(limb, 3.0) * 0.15);
 
     float diff = max(dot(vNormal, u_sunDirection), 0.0);
     color *= (0.15 + 0.85 * diff);
@@ -798,9 +797,9 @@ const iceGiantFragment = `
     // Overall haze variation
     color *= 0.88 + 0.24 * r1;
 
-    // Strong atmospheric fresnel — methane haze at limb
-    float fresnel = 1.0 - abs(dot(vNormal, normalize(vec3(0.0, 0.0, 1.0))));
-    color = mix(color, color2 * 1.3, pow(fresnel, 2.5) * 0.25);
+    // Subtle limb darkening (no atmosphere shell for ice giants)
+    float limb = max(dot(vNormal, normalize(vec3(0.0, 0.0, 1.0))), 0.0);
+    color *= 0.85 + 0.15 * limb;
 
     float diff = max(dot(vNormal, u_sunDirection), 0.0);
     color *= (0.08 + 0.92 * diff);

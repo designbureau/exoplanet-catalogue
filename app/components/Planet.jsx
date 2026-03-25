@@ -122,6 +122,7 @@ const Planet = ({ data, starData }) => {
     });
     const shader = createPlanetMaterial(params);
     const ap = getAtmosphereParams(params.type, starData?.temperature || 5500);
+    // console.log(`[Planet] ${name} → type=${params.type}`);
 
     // Atmosphere glow — BackSide sphere (dual-layer technique from 38-earth-shaders-final)
     let atmosMat = null;
