@@ -20,17 +20,12 @@ export function getAtmosphereParams(type: PlanetType, starTemp: number): Atmosph
     case PlanetType.WATER_WORLD:
       return { color: new THREE.Color(0.2, 0.4, 0.75), intensity: 1.0, thickness: 1.15, dayColor: new THREE.Color(0x2266cc), twilightColor: new THREE.Color(0x554422) };
     case PlanetType.COLD_GIANT:
-      return { color: new THREE.Color(0.6, 0.45, 0.25), intensity: 0.6, thickness: 1.08, dayColor: new THREE.Color(0x998866), twilightColor: new THREE.Color(0x554433) };
     case PlanetType.COOL_GIANT:
-      return { color: new THREE.Color(0.65, 0.65, 0.6), intensity: 0.5, thickness: 1.08, dayColor: new THREE.Color(0x8899bb), twilightColor: new THREE.Color(0x665544) };
     case PlanetType.WARM_GIANT:
-      return { color: new THREE.Color(0.3, 0.4, 0.7), intensity: 0.6, thickness: 1.08, dayColor: new THREE.Color(0x4466aa), twilightColor: new THREE.Color(0x443322) };
     case PlanetType.HOT_JUPITER_IV:
-      return { color: new THREE.Color(0.15, 0.1, 0.25), intensity: 0.5, thickness: 1.1, dayColor: new THREE.Color(0x221133), twilightColor: new THREE.Color(0x110011) };
     case PlanetType.HOT_JUPITER_V:
-      return { color: new THREE.Color(0.8, 0.4, 0.1), intensity: 0.8, thickness: 1.12, dayColor: new THREE.Color(0xcc6611), twilightColor: new THREE.Color(0x882200) };
     case PlanetType.ICE_GIANT:
-      return { color: new THREE.Color(0.2, 0.45, 0.7), intensity: 0.7, thickness: 1.1, dayColor: new THREE.Color(0x4488cc), twilightColor: new THREE.Color(0x336688) };
+      return null; // Gas/ice giants: the atmosphere IS the planet, no separate shell
     case PlanetType.LAVA_WORLD:
       return { color: new THREE.Color(0.9, 0.3, 0.05), intensity: 0.6, thickness: 1.08, dayColor: new THREE.Color(0xff4400), twilightColor: new THREE.Color(0x881100) };
     case PlanetType.FROZEN:

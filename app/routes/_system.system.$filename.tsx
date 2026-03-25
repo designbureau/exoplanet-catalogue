@@ -12,6 +12,7 @@ import { Canvas, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import Controls from "~/components/Controls";
 import { getTemperature } from "~/utils/helperFunctions";
+// import { EffectComposer } from "@react-three/postprocessing";
 
 // Extract primary star temperature from system data (traverses binaries)
 function getPrimaryStarTemp(data: any): number {
@@ -192,12 +193,12 @@ const App = ({ data }: any) => {
     cloudOpacity: ctxCloudOpacity, setCloudOpacity: ctxSetCloudOpacity,
   } = useContext(EnvContext);
   const [follow, setFollow] = useState(true);
-  const [nebulaDensity, setNebulaDensity] = useState(1.4);
+  const [nebulaDensity, setNebulaDensity] = useState(1.0);
   const [nebulaBrightness, setNebulaBrightness] = useState(0.6);
   const [showNebula, setShowNebula] = useState(true);
   const [showSkybox, setShowSkybox] = useState(true);
-  const [skyBrightness, setSkyBrightness] = useState(2.2);
-  const [skyContrast, setSkyContrast] = useState(1.2);
+  const [skyBrightness, setSkyBrightness] = useState(1.0);
+  const [skyContrast, setSkyContrast] = useState(1.0);
   const cloudCoverage = ctxCloudCoverage;
   const setCloudCoverage = ctxSetCloudCoverage;
   const cloudOpacity = ctxCloudOpacity;
@@ -350,6 +351,7 @@ const App = ({ data }: any) => {
           {showNebula && <Nebula seed={data?.name?.[0] ?? "system"} density={nebulaDensity} brightness={nebulaBrightness} starTemp={getPrimaryStarTemp(data)} />}
           <Binary data={data} />
           <Controls follow={follow} />
+          {/* Post-processing removed */}
         </Canvas>
       </div>
     </>

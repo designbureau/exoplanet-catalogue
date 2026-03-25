@@ -107,8 +107,9 @@ export const getMass = ({ data }: any) => {
 };
 
 export const getRadius = ({ data }: any) => {
-  const radiusValue =
-    typeof data.radius === "object" ? data.radius._ : data.radius;
+  let radiusValue = data.radius;
+  if (Array.isArray(radiusValue)) radiusValue = radiusValue[0];
+  if (typeof radiusValue === "object" && radiusValue !== null) radiusValue = radiusValue._ ?? radiusValue["$t"];
   return parseFloat(radiusValue ?? "0");
 };
 
