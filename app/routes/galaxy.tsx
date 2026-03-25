@@ -2,7 +2,7 @@ import { useLoaderData, useNavigate, Link } from "react-router";
 import type { MetaFunction } from "react-router";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
-import { useRef, useState, useCallback, useMemo } from "react";
+import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import * as THREE from "three";
 import {
   getSystemPositions,
@@ -27,9 +27,13 @@ const SCALE = 1;
 function StarField({
   systems,
   onSelect,
+  onHover,
+  onDoubleClick,
 }: {
   systems: SystemPosition[];
   onSelect: (system: SystemPosition | null) => void;
+  onHover: (system: SystemPosition | null) => void;
+  onDoubleClick: (system: SystemPosition) => void;
 }) {
   const pointsRef = useRef<THREE.Points>(null);
   const { raycaster, camera, pointer } = useThree();
@@ -41,10 +45,9 @@ function StarField({
 
     for (let i = 0; i < systems.length; i++) {
       positions[i * 3] = systems[i].x * SCALE;
-      positions[i * 3 + 1] = systems[i].z * SCALE; // z (dec) maps to Y in scene
-      positions[i * 3 + 2] = systems[i].y * SCALE; // y (RA) maps to Z in scene
+      positions[i * 3 + 1] = systems[i].z * SCALE;
+      positions[i * 3 + 2] = systems[i].y * SCALE;
 
-      // Color by planet count: white (0) → cyan (1-3) → gold (4+)
       const pc = systems[i].planetCount;
       if (pc === 0) {
         colorArray[i * 3] = 0.6;
@@ -68,34 +71,100 @@ function StarField({
     return { geometry: geo, colors: colorArray };
   }, [systems]);
 
-  // Raycasting for hover/click
+  // Raycast helper — returns nearest system or null
+  const raycastNearest = useCallback(() => {
+    if (!pointsRef.current) return null;
+    raycaster.setFromCamera(pointer, camera);
+    raycaster.params.Points = { threshold: 5 };
+    const intersects = raycaster.intersectObject(pointsRef.current);
+    if (intersects.length > 0 && intersects[0].index !== undefined) {
+      return systems[intersects[0].index];
+    }
+    return null;
+  }, [systems, raycaster, camera, pointer]);
+
   const handleClick = useCallback(
     (e: any) => {
       e.stopPropagation();
-      if (!pointsRef.current) return;
-
-      raycaster.setFromCamera(pointer, camera);
-      raycaster.params.Points = { threshold: 2 };
-      const intersects = raycaster.intersectObject(pointsRef.current);
-
-      if (intersects.length > 0 && intersects[0].index !== undefined) {
-        onSelect(systems[intersects[0].index]);
-      } else {
-        onSelect(null);
-      }
+      const system = raycastNearest();
+      onSelect(system);
     },
-    [systems, raycaster, camera, pointer, onSelect]
+    [raycastNearest, onSelect]
+  );
+
+  const handleDoubleClick = useCallback(
+    (e: any) => {
+      e.stopPropagation();
+      const system = raycastNearest();
+      if (system) onDoubleClick(system);
+    },
+    [raycastNearest, onDoubleClick]
+  );
+
+  // Update camera distance uniform for point size scaling
+  useFrame(({ camera }) => {
+    if (pointsRef.current) {
+      const mat = (pointsRef.current as any).material;
+      if (mat?.uniforms?.uCamDist) {
+        mat.uniforms.uCamDist.value = camera.position.length();
+      }
+    }
+  });
+
+  const handlePointerMove = useCallback(
+    (e: any) => {
+      e.stopPropagation();
+      const system = raycastNearest();
+      document.body.style.cursor = system ? "pointer" : "default";
+      onHover(system);
+    },
+    [raycastNearest, onHover]
   );
 
   return (
-    <points ref={pointsRef} geometry={geometry} onClick={handleClick}>
-      <pointsMaterial
-        size={1.5}
-        sizeAttenuation={false}
-        vertexColors={true}
-        transparent={true}
-        opacity={0.85}
+    <points
+      ref={pointsRef}
+      geometry={geometry}
+      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={() => {
+        document.body.style.cursor = "default";
+        onHover(null);
+      }}
+    >
+      <shaderMaterial
+        transparent
         depthWrite={false}
+        vertexColors
+        uniforms={{
+          uCamDist: { value: 1000 },
+        }}
+        vertexShader={`
+          varying vec3 vColor;
+          uniform float uCamDist;
+          void main() {
+            vColor = color;
+            vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+            float dist = -mvPos.z;
+            // Size grows as camera gets closer: min 2px, max 12px
+            float size = clamp(300.0 / dist, 2.0, 12.0);
+            gl_PointSize = size;
+            gl_Position = projectionMatrix * mvPos;
+          }
+        `}
+        fragmentShader={`
+          varying vec3 vColor;
+          void main() {
+            // Radial gradient: soft glow circle
+            float d = length(gl_PointCoord - 0.5) * 2.0;
+            if (d > 1.0) discard;
+            float alpha = 1.0 - d * d; // soft falloff
+            float core = smoothstep(0.5, 0.0, d); // bright centre
+            vec3 col = vColor + vec3(0.3) * core; // whiter in centre
+            gl_FragColor = vec4(col, alpha * 0.85);
+          }
+        `}
       />
     </points>
   );
@@ -124,6 +193,69 @@ function SelectionMarker({ system }: { system: SystemPosition }) {
       <meshBasicMaterial color="#22d3ee" side={THREE.DoubleSide} transparent opacity={0.8} />
     </mesh>
   );
+}
+
+// Smooth camera fly-to animation that also updates OrbitControls target
+function CameraFlyTo({
+  target,
+  controlsRef,
+}: {
+  target: SystemPosition | null;
+  controlsRef: React.RefObject<any>;
+}) {
+  const { camera } = useThree();
+  const targetPos = useRef(new THREE.Vector3());
+  const isFlying = useRef(false);
+  const progress = useRef(0);
+  const startPos = useRef(new THREE.Vector3());
+  const startOrbitTarget = useRef(new THREE.Vector3());
+
+  useEffect(() => {
+    if (!target) return;
+    const dest = new THREE.Vector3(
+      target.x * SCALE,
+      target.z * SCALE,
+      target.y * SCALE
+    );
+    targetPos.current.copy(dest);
+    startPos.current.copy(camera.position);
+    try {
+      if (controlsRef && controlsRef.current && controlsRef.current.target) {
+        startOrbitTarget.current.copy(controlsRef.current.target);
+      }
+    } catch (_) {}
+    isFlying.current = true;
+    progress.current = 0;
+  }, [target, camera]);
+
+  useFrame((_, delta) => {
+    if (!isFlying.current) return;
+
+    progress.current += delta * 0.8;
+    const t = Math.min(1, progress.current);
+    const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+    // Camera flies to an offset position looking at the target
+    const dir = new THREE.Vector3().subVectors(targetPos.current, startPos.current).normalize();
+    const offset = new THREE.Vector3(-dir.z, 15, dir.x).normalize().multiplyScalar(30);
+    const dest = targetPos.current.clone().add(offset);
+
+    camera.position.lerpVectors(startPos.current, dest, ease);
+
+    // Smoothly move orbit target to the selected system
+    try {
+      if (controlsRef && controlsRef.current && controlsRef.current.target) {
+        controlsRef.current.target.lerpVectors(startOrbitTarget.current, targetPos.current, ease);
+        controlsRef.current.update();
+      }
+    } catch (_) {}
+
+    if (t >= 1) {
+      isFlying.current = false;
+    }
+  });
+
+  return null;
 }
 
 // Convert RA (decimal hours) / Dec (decimal degrees) / Distance (parsecs) to scene coords
@@ -284,11 +416,39 @@ function GalacticReference({ onSolClick }: { onSolClick: () => void }) {
 export default function GalaxyMap() {
   const { systems } = useLoaderData<{ systems: SystemPosition[] }>();
   const [selected, setSelected] = useState<SystemPosition | null>(null);
+  const [hovered, setHovered] = useState<SystemPosition | null>(null);
+  const [flyTarget, setFlyTarget] = useState<SystemPosition | null>(null);
   const [galaxyParams, setGalaxyParams] = useState<MilkyWayParams>(defaultParams);
   const [galaxyScale, setGalaxyScale] = useState(15);
   const [showZodiac, setShowZodiac] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const navigate = useNavigate();
+  const controlsRef = useRef<any>(null);
+
+  // Click selects + flies to; double-click navigates to system
+  const handleSelect = useCallback((system: SystemPosition | null) => {
+    setSelected(system);
+    if (system) setFlyTarget(system);
+  }, []);
+
+  const handleDoubleClick = useCallback((system: SystemPosition) => {
+    navigate(`/system/${encodeURIComponent(system.filename)}`);
+  }, [navigate]);
+
+  // Enter key navigates to selected system
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && selected) {
+        navigate(`/system/${encodeURIComponent(selected.filename)}`);
+      }
+      if (e.key === "Escape") {
+        setSelected(null);
+        setFlyTarget(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selected, navigate]);
 
   const updateParam = (key: keyof MilkyWayParams, value: number) => {
     setGalaxyParams((prev) => ({ ...prev, [key]: value }));
@@ -389,12 +549,25 @@ export default function GalaxyMap() {
         ))}
       </div>}
 
+      {/* Hover tooltip */}
+      {hovered && !selected && (
+        <div className="fixed top-2 right-2 z-10 rounded-md bg-black/60 px-3 py-2 backdrop-blur-sm pointer-events-none">
+          <p className="text-xs font-medium text-foreground">{hovered.name}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {hovered.distance.toFixed(1)} pc &middot; {hovered.planetCount} planet{hovered.planetCount !== 1 ? "s" : ""}
+          </p>
+        </div>
+      )}
+
       {/* Selected system info */}
       {selected && (
         <div className="fixed top-2 right-2 z-10 rounded-md bg-black/80 px-4 py-3 backdrop-blur-sm">
           <p className="text-sm font-medium text-foreground">{selected.name}</p>
           <p className="text-[10px] text-muted-foreground">
             {selected.distance.toFixed(1)} pc &middot; {selected.planetCount} planet{selected.planetCount !== 1 ? "s" : ""}
+          </p>
+          <p className="text-[9px] text-muted-foreground/60 mt-1">
+            Press Enter or double-click to visit &middot; Esc to deselect
           </p>
           <button
             onClick={() => navigate(`/system/${encodeURIComponent(selected.filename)}`)}
@@ -416,7 +589,13 @@ export default function GalaxyMap() {
         <color attach="background" args={["#050510"]} />
         <ambientLight intensity={0.1} />
         <MilkyWay sunPosition={[0, 0, 0]} scale={galaxyScale} params={galaxyParams} />
-        <StarField systems={systems} onSelect={setSelected} />
+        <StarField
+          systems={systems}
+          onSelect={handleSelect}
+          onHover={setHovered}
+          onDoubleClick={handleDoubleClick}
+        />
+        <CameraFlyTo target={flyTarget} controlsRef={controlsRef} />
         <ConstellationLines visible={showZodiac} />
         <GalacticReference onSolClick={() => setSelected({
           name: "Solar System",
@@ -427,9 +606,10 @@ export default function GalaxyMap() {
         })} />
         {selected && <SelectionMarker system={selected} />}
         <OrbitControls
+          ref={controlsRef}
           enableDamping
           dampingFactor={0.1}
-          minDistance={10}
+          minDistance={selected ? 5 : 1}
           maxDistance={500000}
         />
       </Canvas>
