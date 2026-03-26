@@ -175,8 +175,10 @@ function StarField({
 // Render the selected star exactly like in the system view
 const STAR_RADIUS = 0.5;
 
-function SelectionMarker({ system, onNavigate }: { system: SystemPosition; onNavigate: () => void }) {
-  const ringRef = useRef<THREE.Mesh>(null);
+function SelectionMarker({ system }: { system: SystemPosition }) {
+  const ringRef = useRef<THREE.LineSegments>(null);
+  const innerRingRef = useRef<THREE.LineSegments>(null);
+  const midRingRef = useRef<THREE.Line>(null);
   const glowRef = useRef<THREE.Sprite>(null);
 
   const temp = 5800;
@@ -191,6 +193,13 @@ function SelectionMarker({ system, onNavigate }: { system: SystemPosition; onNav
       ringRef.current.lookAt(state.camera.position);
       ringRef.current.rotation.z = t * 0.5;
     }
+    if (midRingRef.current) {
+      midRingRef.current.lookAt(state.camera.position);
+    }
+    if (innerRingRef.current) {
+      innerRingRef.current.lookAt(state.camera.position);
+      innerRingRef.current.rotation.z = -t * 0.3;
+    }
     starMat.uniforms.u_time.value = t * 0.033; // 30x slower
   });
 
@@ -203,12 +212,7 @@ function SelectionMarker({ system, onNavigate }: { system: SystemPosition; onNav
   return (
     <group position={pos}>
       {/* Star sphere — same as system view */}
-      <mesh
-        material={starMat}
-        onClick={(e) => { e.stopPropagation(); onNavigate(); }}
-        onPointerOver={() => document.body.style.cursor = 'pointer'}
-        onPointerOut={() => document.body.style.cursor = 'default'}
-      >
+      <mesh material={starMat}>
         <sphereGeometry args={[STAR_RADIUS, 32, 32]} />
       </mesh>
 
@@ -220,17 +224,106 @@ function SelectionMarker({ system, onNavigate }: { system: SystemPosition; onNav
       {/* Star effects — rays, flares, corona glow ring */}
       <StarEffects starRadius={STAR_RADIUS} temperature={temp} />
 
-      {/* Selection ring */}
-      <mesh ref={ringRef} raycast={() => {}}>
-        <ringGeometry args={[1.2, 1.5, 64]} />
-        <meshBasicMaterial
-          color="#22d3ee"
-          side={THREE.DoubleSide}
-          transparent
-          opacity={0.8}
-          depthWrite={false}
-        />
-      </mesh>
+      {/* Outer crosshair ring — quarter marks extend outward */}
+      <lineSegments ref={ringRef} raycast={() => {}}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={8}
+            array={(() => {
+              const pts = new Float32Array(8 * 3);
+              const rInner = 1.3;
+              const rOuter = 1.6;
+              const angles = [0, Math.PI / 2, Math.PI, Math.PI * 1.5];
+              for (let i = 0; i < 4; i++) {
+                const cos = Math.cos(angles[i]);
+                const sin = Math.sin(angles[i]);
+                pts[i * 6] = cos * rInner;
+                pts[i * 6 + 1] = sin * rInner;
+                pts[i * 6 + 2] = 0;
+                pts[i * 6 + 3] = cos * rOuter;
+                pts[i * 6 + 4] = sin * rOuter;
+                pts[i * 6 + 5] = 0;
+              }
+              return pts;
+            })()}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial color="#ffffff" transparent opacity={0.7} depthWrite={false} />
+      </lineSegments>
+      {/* Thin solid circle between outer and inner rings */}
+      <line ref={midRingRef} raycast={() => {}}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={65}
+            array={(() => {
+              const pts = new Float32Array(65 * 3);
+              const r = 1.215; // midpoint of gap between inner (1.13) and outer (1.3)
+              for (let i = 0; i <= 64; i++) {
+                const a = (i / 64) * Math.PI * 2;
+                pts[i * 3] = Math.cos(a) * r;
+                pts[i * 3 + 1] = Math.sin(a) * r;
+                pts[i * 3 + 2] = 0;
+              }
+              return pts;
+            })()}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial color="#22d3ee" transparent opacity={0.2} depthWrite={false} />
+      </line>
+      {/* Inner crosshair ring — quarter marks extend inward */}
+      <lineSegments ref={innerRingRef} raycast={() => {}}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={128}
+            array={(() => {
+              const pts = new Float32Array(128 * 3);
+              const segments = 64;
+              const rInner = 1.0;
+              const rOuter = 1.13;
+              const rInnerLong = 1.0 - (1.13 - 1.0) * 0.5; // 50% longer inward
+              for (let i = 0; i < segments; i++) {
+                const a = (i / segments) * Math.PI * 2;
+                const cos = Math.cos(a);
+                const sin = Math.sin(a);
+                const isQuarter = (i % 16 === 0);
+                const ri = isQuarter ? rInnerLong : rInner;
+                pts[i * 6] = cos * ri;
+                pts[i * 6 + 1] = sin * ri;
+                pts[i * 6 + 2] = 0;
+                pts[i * 6 + 3] = cos * rOuter;
+                pts[i * 6 + 4] = sin * rOuter;
+                pts[i * 6 + 5] = 0;
+              }
+              return pts;
+            })()}
+            itemSize={3}
+          />
+          <bufferAttribute
+            attach="attributes-color"
+            count={128}
+            array={(() => {
+              const cols = new Float32Array(128 * 3);
+              const segments = 64;
+              for (let i = 0; i < segments; i++) {
+                const isQuarter = (i % 16 === 0);
+                const r = isQuarter ? 1.0 : 0.133;
+                const g = isQuarter ? 1.0 : 0.827;
+                const b = isQuarter ? 1.0 : 0.933;
+                cols[i * 6] = r; cols[i * 6 + 1] = g; cols[i * 6 + 2] = b;
+                cols[i * 6 + 3] = r; cols[i * 6 + 4] = g; cols[i * 6 + 5] = b;
+              }
+              return cols;
+            })()}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial color="#22d3ee" transparent opacity={0.5} depthWrite={false} />
+      </lineSegments>
     </group>
   );
 }
@@ -431,9 +524,8 @@ export default function GalaxyMap() {
     if (system) setFlyTarget(system);
   }, []);
 
-  const handleDoubleClick = useCallback((system: SystemPosition) => {
-    navigate(`/system/${encodeURIComponent(system.filename)}`);
-  }, [navigate]);
+  // Navigation only via Enter key — no double-click
+  const handleDoubleClick = useCallback(() => {}, []);
 
   // Enter key navigates to selected system
   useEffect(() => {
@@ -604,7 +696,7 @@ export default function GalaxyMap() {
           distance: 0,
           planetCount: 8,
         })} />
-        {selected && <SelectionMarker system={selected} onNavigate={() => navigate(`/system/${encodeURIComponent(selected.filename)}`)} />}
+        {selected && <SelectionMarker system={selected} />}
         <CameraControls
           ref={controlsRef}
           makeDefault
