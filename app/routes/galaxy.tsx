@@ -1,7 +1,7 @@
 import { useLoaderData, useNavigate, Link } from "react-router";
 import type { MetaFunction } from "react-router";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Html } from "@react-three/drei";
+import { CameraControls, Html } from "@react-three/drei";
 import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import * as THREE from "three";
 import {
@@ -9,6 +9,8 @@ import {
   type SystemPosition,
 } from "~/utils/parseSystemPositions";
 import MilkyWay, { defaultParams, type MilkyWayParams } from "~/components/MilkyWay";
+import { createStarMaterial, createStarGlowMaterial } from "~/shaders/starShader";
+import StarEffects from "~/components/StarEffects";
 import { ZODIAC_CONSTELLATIONS, type ConstellationStar } from "~/data/zodiacConstellations";
 
 export const meta: MetaFunction = () => [
@@ -170,32 +172,70 @@ function StarField({
   );
 }
 
-// Highlight the selected system with a ring
-function SelectionMarker({ system }: { system: SystemPosition }) {
-  const ref = useRef<THREE.Mesh>(null);
+// Render the selected star exactly like in the system view
+const STAR_RADIUS = 0.5;
+
+function SelectionMarker({ system, onNavigate }: { system: SystemPosition; onNavigate: () => void }) {
+  const ringRef = useRef<THREE.Mesh>(null);
+  const glowRef = useRef<THREE.Sprite>(null);
+
+  const temp = 5800;
+  const { starMat, glowMat } = useMemo(() => ({
+    starMat: createStarMaterial({ temperature: temp }),
+    glowMat: createStarGlowMaterial({ temperature: temp }),
+  }), []);
 
   useFrame((state) => {
-    if (ref.current) {
-      ref.current.rotation.z = state.clock.getElapsedTime() * 0.5;
+    const t = state.clock.getElapsedTime();
+    if (ringRef.current) {
+      ringRef.current.lookAt(state.camera.position);
+      ringRef.current.rotation.z = t * 0.5;
     }
+    starMat.uniforms.u_time.value = t * 0.033; // 30x slower
   });
 
+  const pos: [number, number, number] = [
+    system.x * SCALE,
+    system.z * SCALE,
+    system.y * SCALE,
+  ];
+
   return (
-    <mesh
-      ref={ref}
-      position={[
-        system.x * SCALE,
-        system.z * SCALE,
-        system.y * SCALE,
-      ]}
-    >
-      <ringGeometry args={[3, 4, 32]} />
-      <meshBasicMaterial color="#22d3ee" side={THREE.DoubleSide} transparent opacity={0.8} />
-    </mesh>
+    <group position={pos}>
+      {/* Star sphere — same as system view */}
+      <mesh
+        material={starMat}
+        onClick={(e) => { e.stopPropagation(); onNavigate(); }}
+        onPointerOver={() => document.body.style.cursor = 'pointer'}
+        onPointerOut={() => document.body.style.cursor = 'default'}
+      >
+        <sphereGeometry args={[STAR_RADIUS, 32, 32]} />
+      </mesh>
+
+      {/* Glow sprite — same as system view (scale * 4) */}
+      <sprite ref={glowRef} scale={[STAR_RADIUS * 4, STAR_RADIUS * 4, 1]}>
+        <primitive object={glowMat} attach="material" />
+      </sprite>
+
+      {/* Star effects — rays, flares, corona glow ring */}
+      <StarEffects starRadius={STAR_RADIUS} temperature={temp} />
+
+      {/* Selection ring */}
+      <mesh ref={ringRef} raycast={() => {}}>
+        <ringGeometry args={[1.2, 1.5, 64]} />
+        <meshBasicMaterial
+          color="#22d3ee"
+          side={THREE.DoubleSide}
+          transparent
+          opacity={0.8}
+          depthWrite={false}
+        />
+      </mesh>
+    </group>
   );
 }
 
-// Smooth camera fly-to animation that also updates OrbitControls target
+// Smooth camera fly-to using CameraControls built-in transitions
 function CameraFlyTo({
   target,
   controlsRef,
@@ -203,57 +243,17 @@ function CameraFlyTo({
   target: SystemPosition | null;
   controlsRef: React.RefObject<any>;
 }) {
-  const { camera } = useThree();
-  const targetPos = useRef(new THREE.Vector3());
-  const isFlying = useRef(false);
-  const progress = useRef(0);
-  const startPos = useRef(new THREE.Vector3());
-  const startOrbitTarget = useRef(new THREE.Vector3());
-
   useEffect(() => {
-    if (!target) return;
-    const dest = new THREE.Vector3(
-      target.x * SCALE,
-      target.z * SCALE,
-      target.y * SCALE
-    );
-    targetPos.current.copy(dest);
-    startPos.current.copy(camera.position);
-    try {
-      if (controlsRef && controlsRef.current && controlsRef.current.target) {
-        startOrbitTarget.current.copy(controlsRef.current.target);
-      }
-    } catch (_) {}
-    isFlying.current = true;
-    progress.current = 0;
-  }, [target, camera]);
-
-  useFrame((_, delta) => {
-    if (!isFlying.current) return;
-
-    progress.current += delta * 0.8;
-    const t = Math.min(1, progress.current);
-    const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-
-    // Camera flies to an offset position looking at the target
-    const dir = new THREE.Vector3().subVectors(targetPos.current, startPos.current).normalize();
-    const offset = new THREE.Vector3(-dir.z, 15, dir.x).normalize().multiplyScalar(30);
-    const dest = targetPos.current.clone().add(offset);
-
-    camera.position.lerpVectors(startPos.current, dest, ease);
-
-    // Smoothly move orbit target to the selected system
-    try {
-      if (controlsRef && controlsRef.current && controlsRef.current.target) {
-        controlsRef.current.target.lerpVectors(startOrbitTarget.current, targetPos.current, ease);
-        controlsRef.current.update();
-      }
-    } catch (_) {}
-
-    if (t >= 1) {
-      isFlying.current = false;
-    }
-  });
+    if (!target || !controlsRef?.current) return;
+    const cc = controlsRef.current;
+    const x = target.x * SCALE;
+    const y = target.z * SCALE;
+    const z = target.y * SCALE;
+    // Move look-at target to the star, keep current camera distance
+    cc.setTarget(x, y, z, true);
+    // Zoom to min distance
+    cc.dollyTo(2, true);
+  }, [target]);
 
   return null;
 }
@@ -604,13 +604,14 @@ export default function GalaxyMap() {
           distance: 0,
           planetCount: 8,
         })} />
-        {selected && <SelectionMarker system={selected} />}
-        <OrbitControls
+        {selected && <SelectionMarker system={selected} onNavigate={() => navigate(`/system/${encodeURIComponent(selected.filename)}`)} />}
+        <CameraControls
           ref={controlsRef}
-          enableDamping
-          dampingFactor={0.1}
-          minDistance={selected ? 5 : 1}
+          makeDefault
+          minDistance={selected ? 1 : 1}
           maxDistance={500000}
+          smoothTime={0.5}
+          draggingSmoothTime={0.15}
         />
       </Canvas>
     </div>
