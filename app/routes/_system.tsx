@@ -28,7 +28,7 @@ export default function SystemsLayout() {
 
       {/* Sidebar */}
       {navActive && (
-        <aside className="fixed top-10 left-2 z-40 w-64 max-h-[85vh] rounded-md bg-black/70 backdrop-blur-sm border border-white/10 overflow-hidden">
+        <aside className="fixed top-10 left-2 z-40 w-64 h-[85vh] rounded-md bg-black/70 backdrop-blur-sm border border-white/10 overflow-hidden flex flex-col">
           <SystemMenu xmlFiles={xmlFiles} setNavActive={() => setNavActive(false)} />
         </aside>
       )}
