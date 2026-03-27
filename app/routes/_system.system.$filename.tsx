@@ -266,7 +266,7 @@ const App = ({ data }: any) => {
       <div className="fixed top-2 right-2 z-10 flex flex-col gap-0.5 rounded-md bg-black/60 px-3 py-2 backdrop-blur-sm max-h-[90vh] overflow-y-auto text-[10px] text-muted-foreground" style={{ scrollbarWidth: 'thin' }}>
         {/* Scale controls — always visible */}
         <Slider label="Orbit" min={0.01} max={2} step={0.01} value={planetDistanceFactor} onChange={setPlanetDistanceFactor} />
-        <Slider label="Stars" min={0.01} max={0.5} step={0.01} value={binaryDistanceFactor} onChange={setBinaryDistanceFactor} />
+        <Slider label="Stars" min={0.01} max={1.0} step={0.01} value={binaryDistanceFactor} onChange={setBinaryDistanceFactor} />
         <Slider label="Bodies" min={1} max={50} step={1} value={bodyScale} onChange={setBodyScale} suffix="x" />
 
         <Accordion title="Environment" defaultOpen={false}>
