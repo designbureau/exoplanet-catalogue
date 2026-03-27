@@ -93,9 +93,21 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
         />
       ))}
       {data.planet &&
-        data.planet.map((planet, index) => (
-          <Planet key={index} data={planet} starData={{ temperature: 5500, mass: 1, radius: 1 }} />
-        ))}
+        (() => {
+          // Derive primary star properties for circumbinary planet classification
+          const primaryStar = stars[0] || {};
+          const starTemp = parseFloat(primaryStar.temperature?.[0] ?? 5500);
+          const starMass = getMass({ data: primaryStar }) || 1;
+          const starRadius = parseFloat(primaryStar.radius?.[0] ?? 1);
+          const starData = { temperature: starTemp, mass: starMass, radius: starRadius };
+          return data.planet.map((planet, index) => (
+            <Planet
+              key={index}
+              data={planet}
+              starData={starData}
+            />
+          ));
+        })()}
     </group>
   );
 };
