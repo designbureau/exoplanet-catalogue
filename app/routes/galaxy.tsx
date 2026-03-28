@@ -127,6 +127,7 @@ function StarField({
     <points
       ref={pointsRef}
       geometry={geometry}
+      renderOrder={10}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       onPointerMove={handlePointerMove}
@@ -210,7 +211,7 @@ function SelectionMarker({ system }: { system: SystemPosition }) {
   ];
 
   return (
-    <group position={pos}>
+    <group position={pos} renderOrder={10}>
       {/* Star sphere — same as system view */}
       <mesh material={starMat}>
         <sphereGeometry args={[STAR_RADIUS, 32, 32]} />
@@ -512,7 +513,7 @@ export default function GalaxyMap() {
   const [hovered, setHovered] = useState<SystemPosition | null>(null);
   const [flyTarget, setFlyTarget] = useState<SystemPosition | null>(null);
   const [galaxyParams, setGalaxyParams] = useState<MilkyWayParams>(defaultParams);
-  const [galaxyScale, setGalaxyScale] = useState(15);
+  const [galaxyScale, setGalaxyScale] = useState(6);
   const [showZodiac, setShowZodiac] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const navigate = useNavigate();
@@ -624,6 +625,15 @@ export default function GalaxyMap() {
           { key: "bulgeSize", label: "Bulge size", min: 400, max: 3000, step: 50, unit: "pc" },
           { key: "bulgeDensity", label: "Bulge density", min: 0.5, max: 3, step: 0.1, unit: "x" },
           { key: "bulgeFlattening", label: "Bulge flat", min: 0, max: 0.9, step: 0.05, unit: "" },
+          { key: "hiiCount", label: "H-II count", min: 50, max: 2000, step: 50, unit: "" },
+          { key: "hiiSize", label: "H-II size", min: 0.1, max: 3, step: 0.1, unit: "x" },
+          { key: "hiiBrightness", label: "H-II bright", min: 0.1, max: 3, step: 0.1, unit: "x" },
+          { key: "dustCount", label: "Dust count", min: 100, max: 3000, step: 100, unit: "" },
+          { key: "dustSize", label: "Dust size", min: 0.1, max: 3, step: 0.1, unit: "x" },
+          { key: "dustOpacity", label: "Dust opacity", min: 0.1, max: 3, step: 0.1, unit: "x" },
+          { key: "fogCount", label: "Fog count", min: 1000, max: 15000, step: 500, unit: "" },
+          { key: "fogSize", label: "Fog size", min: 0.1, max: 5, step: 0.1, unit: "x" },
+          { key: "fogBrightness", label: "Fog bright", min: 0.1, max: 5, step: 0.1, unit: "x" },
         ] as const).map(({ key, label, min, max, step, unit }) => (
           <div key={key} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
             <label className="w-20 shrink-0">{label}</label>
