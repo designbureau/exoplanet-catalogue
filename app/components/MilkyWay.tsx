@@ -494,13 +494,13 @@ export default function MilkyWay({ sunPosition, scale = 1, params = defaultParam
   }, []);
 
   return (
-    <group>
+    <group raycast={() => {}}>
       {/* Star particles with soft glow shader */}
-      <points geometry={starGeo} material={starMaterial} renderOrder={0} />
+      <points geometry={starGeo} material={starMaterial} renderOrder={0} raycast={() => {}} />
 
       {/* H-II emission nebulae — rendered as points with soft circle shader */}
       {hiiData.positions.length > 0 && (
-        <points key={`hii-${params.hiiCount}-${params.hiiSize}-${params.hiiBrightness}`} renderOrder={1}>
+        <points key={`hii-${params.hiiCount}-${params.hiiSize}-${params.hiiBrightness}`} renderOrder={1} raycast={() => {}}>
           <bufferGeometry>
             <bufferAttribute attach="attributes-position" array={new Float32Array(hiiData.positions)} count={hiiData.positions.length / 3} itemSize={3} />
             <bufferAttribute attach="attributes-color" array={new Float32Array(hiiData.colors)} count={hiiData.colors.length / 3} itemSize={3} />
@@ -536,7 +536,7 @@ export default function MilkyWay({ sunPosition, scale = 1, params = defaultParam
 
       {/* Arm fog — additive accumulation for milky white band */}
       {fogData.positions.length > 0 && (
-        <points key={`fog-${params.fogCount}-${params.fogSize}-${params.fogBrightness}`} renderOrder={2}>
+        <points key={`fog-${params.fogCount}-${params.fogSize}-${params.fogBrightness}`} renderOrder={2} raycast={() => {}}>
           <bufferGeometry>
             <bufferAttribute attach="attributes-position" array={new Float32Array(fogData.positions)} count={fogData.positions.length / 3} itemSize={3} />
             <bufferAttribute attach="attributes-color" array={new Float32Array(fogData.colors)} count={fogData.colors.length / 3} itemSize={3} />
@@ -572,7 +572,7 @@ export default function MilkyWay({ sunPosition, scale = 1, params = defaultParam
 
       {/* Dark dust lanes — rendered as points with soft dark circle shader */}
       {dustData.positions.length > 0 && (
-        <points key={`dust-${params.dustCount}-${params.dustSize}-${params.dustOpacity}`} renderOrder={3}>
+        <points key={`dust-${params.dustCount}-${params.dustSize}-${params.dustOpacity}`} renderOrder={3} raycast={() => {}}>
           <bufferGeometry>
             <bufferAttribute attach="attributes-position" array={new Float32Array(dustData.positions)} count={dustData.positions.length / 3} itemSize={3} />
             <bufferAttribute attach="attributes-size" array={new Float32Array(dustData.sizes)} count={dustData.sizes.length} itemSize={1} />

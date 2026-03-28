@@ -73,15 +73,17 @@ function StarField({
     return { geometry: geo, colors: colorArray };
   }, [systems]);
 
-  // Raycast helper — returns nearest system or null
+  // Raycast helper — returns system closest to cursor ray
   const raycastNearest = useCallback(() => {
     if (!pointsRef.current) return null;
     raycaster.setFromCamera(pointer, camera);
-    raycaster.params.Points = { threshold: 5 };
+    raycaster.params.Points = { threshold: 15 };
     const intersects = raycaster.intersectObject(pointsRef.current);
-    if (intersects.length > 0 && intersects[0].index !== undefined) {
-      return systems[intersects[0].index];
-    }
+    if (intersects.length === 0) return null;
+    // Sort by distanceToRay to pick the star closest to the actual click point
+    intersects.sort((a, b) => (a.distanceToRay ?? Infinity) - (b.distanceToRay ?? Infinity));
+    const hit = intersects[0];
+    if (hit.index !== undefined) return systems[hit.index];
     return null;
   }, [systems, raycaster, camera, pointer]);
 
@@ -177,10 +179,12 @@ function StarField({
 const STAR_RADIUS = 0.5;
 
 function SelectionMarker({ system }: { system: SystemPosition }) {
+  const groupRef = useRef<THREE.Group>(null);
   const ringRef = useRef<THREE.LineSegments>(null);
   const innerRingRef = useRef<THREE.LineSegments>(null);
   const midRingRef = useRef<THREE.Line>(null);
   const glowRef = useRef<THREE.Sprite>(null);
+  const scaleRef = useRef(0);
 
   const temp = 5800;
   const { starMat, glowMat } = useMemo(() => ({
@@ -188,8 +192,19 @@ function SelectionMarker({ system }: { system: SystemPosition }) {
     glowMat: createStarGlowMaterial({ temperature: temp }),
   }), []);
 
-  useFrame((state) => {
+  // Reset scale on system change
+  useEffect(() => {
+    scaleRef.current = 0;
+  }, [system]);
+
+  useFrame((state, delta) => {
     const t = state.clock.getElapsedTime();
+    // Animate scale from 0 to 1
+    scaleRef.current = Math.min(1, scaleRef.current + delta * 3);
+    const s = 1 - Math.pow(1 - scaleRef.current, 3); // ease-out cubic
+    if (groupRef.current) {
+      groupRef.current.scale.setScalar(s);
+    }
     if (ringRef.current) {
       ringRef.current.lookAt(state.camera.position);
       ringRef.current.rotation.z = t * 0.5;
@@ -211,14 +226,14 @@ function SelectionMarker({ system }: { system: SystemPosition }) {
   ];
 
   return (
-    <group position={pos} renderOrder={10}>
+    <group ref={groupRef} position={pos} renderOrder={10} raycast={() => {}}>
       {/* Star sphere — same as system view */}
-      <mesh material={starMat}>
+      <mesh material={starMat} raycast={() => {}}>
         <sphereGeometry args={[STAR_RADIUS, 32, 32]} />
       </mesh>
 
       {/* Glow sprite — same as system view (scale * 4) */}
-      <sprite ref={glowRef} scale={[STAR_RADIUS * 4, STAR_RADIUS * 4, 1]}>
+      <sprite ref={glowRef} scale={[STAR_RADIUS * 4, STAR_RADIUS * 4, 1]} raycast={() => {}}>
         <primitive object={glowMat} attach="material" />
       </sprite>
 
@@ -340,13 +355,26 @@ function CameraFlyTo({
   useEffect(() => {
     if (!target || !controlsRef?.current) return;
     const cc = controlsRef.current;
-    const x = target.x * SCALE;
-    const y = target.z * SCALE;
-    const z = target.y * SCALE;
-    // Move look-at target to the star, keep current camera distance
-    cc.setTarget(x, y, z, true);
-    // Zoom to min distance
-    cc.dollyTo(2, true);
+    const tx = target.x * SCALE;
+    const ty = target.z * SCALE;
+    const tz = target.y * SCALE;
+
+    // Get current camera position and direction to preserve viewing angle
+    const camPos = cc.camera.position.clone();
+    const curTarget = new THREE.Vector3();
+    cc.getTarget(curTarget);
+
+    // Compute the offset from current target to camera (viewing direction)
+    const offset = camPos.clone().sub(curTarget);
+    // Scale offset to desired final distance
+    offset.normalize().multiplyScalar(2);
+
+    // Smoothly transition both camera and target together
+    cc.setLookAt(
+      tx + offset.x, ty + offset.y, tz + offset.z, // new camera position
+      tx, ty, tz,                                     // new look-at target
+      true                                            // animate
+    );
   }, [target]);
 
   return null;
@@ -457,16 +485,7 @@ function ConstellationLines({ visible }: { visible: boolean }) {
 function GalacticReference({ onSolClick }: { onSolClick: () => void }) {
   return (
     <group>
-      {/* Sun / origin marker */}
-      <mesh
-        position={[0, 0, 0]}
-        onClick={(e) => { e.stopPropagation(); onSolClick(); }}
-        onPointerOver={() => (document.body.style.cursor = "pointer")}
-        onPointerOut={() => (document.body.style.cursor = "default")}
-      >
-        <sphereGeometry args={[0.5, 16, 16]} />
-        <meshBasicMaterial color="#ffdd44" />
-      </mesh>
+      {/* Sol label — clicking selects Sol as a system */}
       <Html position={[0, 3, 0]} center>
         <div
           role="button"
@@ -480,10 +499,10 @@ function GalacticReference({ onSolClick }: { onSolClick: () => void }) {
         </div>
       </Html>
       {/* Equatorial plane - circular grid (rings + radial lines) */}
-      <group rotation={[-Math.PI / 2, 0, 0]}>
+      <group rotation={[-Math.PI / 2, 0, 0]} raycast={() => {}}>
         {/* Concentric rings */}
         {[200, 400, 600, 800, 1000].map((r) => (
-          <mesh key={r}>
+          <mesh key={r} raycast={() => {}}>
             <ringGeometry args={[r - 0.5, r + 0.5, 128]} />
             <meshBasicMaterial color="#445566" transparent opacity={0.6} side={THREE.DoubleSide} />
           </mesh>
@@ -497,7 +516,7 @@ function GalacticReference({ onSolClick }: { onSolClick: () => void }) {
           ];
           const geo = new THREE.BufferGeometry().setFromPoints(points);
           return (
-            <line key={i} geometry={geo}>
+            <line key={i} geometry={geo} raycast={() => {}}>
               <lineBasicMaterial color="#556677" transparent opacity={0.6} />
             </line>
           );
@@ -699,13 +718,11 @@ export default function GalaxyMap() {
         />
         <CameraFlyTo target={flyTarget} controlsRef={controlsRef} />
         <ConstellationLines visible={showZodiac} />
-        <GalacticReference onSolClick={() => setSelected({
-          name: "Solar System",
-          filename: "Sun",
-          x: 0, y: 0, z: 0,
-          distance: 0,
-          planetCount: 8,
-        })} />
+        <GalacticReference onSolClick={() => {
+          const sol = { name: "Solar System", filename: "Sun", x: 0, y: 0, z: 0, distance: 0, planetCount: 8 };
+          setSelected(sol);
+          setFlyTarget(sol);
+        }} />
         {selected && <SelectionMarker system={selected} />}
         <CameraControls
           ref={controlsRef}
