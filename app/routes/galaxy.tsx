@@ -499,12 +499,12 @@ function GalacticReference({ onSolClick }: { onSolClick: () => void }) {
         </div>
       </Html>
       {/* Equatorial plane - circular grid (rings + radial lines) */}
-      <group rotation={[-Math.PI / 2, 0, 0]} raycast={() => {}}>
+      <group rotation={[-Math.PI / 2, 0, 0]} raycast={() => {}} renderOrder={-1}>
         {/* Concentric rings */}
         {[200, 400, 600, 800, 1000].map((r) => (
-          <mesh key={r} raycast={() => {}}>
+          <mesh key={r} raycast={() => {}} renderOrder={-1}>
             <ringGeometry args={[r - 0.5, r + 0.5, 128]} />
-            <meshBasicMaterial color="#445566" transparent opacity={0.6} side={THREE.DoubleSide} />
+            <meshBasicMaterial color="#445566" transparent opacity={0.6} side={THREE.DoubleSide} depthWrite={false} />
           </mesh>
         ))}
         {/* Radial lines every 30° (12 spokes) */}
@@ -516,8 +516,8 @@ function GalacticReference({ onSolClick }: { onSolClick: () => void }) {
           ];
           const geo = new THREE.BufferGeometry().setFromPoints(points);
           return (
-            <line key={i} geometry={geo} raycast={() => {}}>
-              <lineBasicMaterial color="#556677" transparent opacity={0.6} />
+            <line key={i} geometry={geo} raycast={() => {}} renderOrder={-1}>
+              <lineBasicMaterial color="#556677" transparent opacity={0.6} depthWrite={false} />
             </line>
           );
         })}
