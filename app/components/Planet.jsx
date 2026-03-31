@@ -421,12 +421,14 @@ const Planet = ({ data, starData }) => {
                 uniform float uRadius;
                 void main() {
                   vRadial = aPos.z;
-                  // Billboard: extract camera right/up from view matrix
-                  vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
-                  vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
-                  // Ring in local space: inner circle at radius 1, outer at 1+uRadius
-                  vec3 localPos = (aPos.x * right + aPos.y * up) * (1.0 + aPos.z * uRadius);
-                  gl_Position = projectionMatrix * modelViewMatrix * vec4(localPos, 1.0);
+                  // Billboard: compute centre in view space (respects all parent transforms)
+                  vec4 mvCenter = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+                  // Extract uniform scale from model matrix
+                  float s = length(vec3(modelMatrix[0][0], modelMatrix[1][0], modelMatrix[2][0]));
+                  float r = (1.0 + aPos.z * uRadius) * s;
+                  // Offset in screen-aligned view-space X/Y (always faces camera)
+                  vec3 viewPos = mvCenter.xyz + vec3(aPos.x * r, aPos.y * r, 0.0);
+                  gl_Position = projectionMatrix * vec4(viewPos, 1.0);
                 }
               `}
               fragmentShader={`
