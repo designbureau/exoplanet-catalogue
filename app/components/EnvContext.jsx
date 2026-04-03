@@ -79,9 +79,9 @@ export const EnvProvider = ({ children }) => {
   const [hzContinentFreqRange, setHzContinentFreqRange] = useState([0.12, 0.19]);
 
   // Lava controls
-  const [lavaWarp, setLavaWarp] = useState(0.04);
-  const [lavaGlow, setLavaGlow] = useState(0.6);
-  const [lavaHeightOffset, setLavaHeightOffset] = useState(-0.3);
+  const [lavaWarp, setLavaWarp] = useState(0.2);
+  const [lavaGlow, setLavaGlow] = useState(1.8);
+  const [lavaHeightOffset, setLavaHeightOffset] = useState(-0.4);
   const [lavaFlowScale, setLavaFlowScale] = useState(1.5);
 
   // Rocky controls
