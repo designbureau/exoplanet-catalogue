@@ -78,7 +78,9 @@ import { createPlanetMaterial } from "../shaders/planetShader";
 import { getAtmosphereParams } from "../shaders/atmosphereShader";
 import { getScatteringPreset, createScatteringMaterial } from "../shaders/scatteringShader";
 
-const Planet = ({ data, starData }) => {
+const _starWorldPos = new THREE.Vector3();
+
+const Planet = ({ data, starData, starRef }) => {
   const ref = useRef();
   const glowRef = useRef();
   const softGlowRef = useRef();
@@ -389,16 +391,25 @@ const Planet = ({ data, starData }) => {
       shaderMaterial.uniforms.u_lod.value = isActive ? 1.0 : 0.0;
     }
 
-    // Sun direction + scattering LOD (depends on planet position which changes per-frame)
-    if (atmosMat && ref.current) {
-      ref.current.getWorldPosition(_camUp);
-      const sunDir = _camRight.set(0, 0, 0).sub(_camUp).normalize();
-      atmosMat.uniforms.uSunDirection.value.copy(sunDir.negate());
+    // Sun direction — pass world-space, shader transforms to match normalMatrix space
+    if (ref.current) {
+      ref.current.getWorldPosition(_camUp); // planet world pos
+      // World-space direction: planet → actual star position
+      if (starRef?.current) {
+        starRef.current.getWorldPosition(_starWorldPos);
+      } else {
+        _starWorldPos.set(0, 0, 0);
+      }
+      const sunDirWorld = _camRight.copy(_starWorldPos).sub(_camUp).normalize();
       if (shaderMaterial.uniforms.u_sunDirection) {
-        shaderMaterial.uniforms.u_sunDirection.value.copy(atmosMat.uniforms.uSunDirection.value);
+        shaderMaterial.uniforms.u_sunDirection.value.copy(sunDirWorld);
+      }
+      // Atmosphere uses world-space (negated convention)
+      if (atmosMat) {
+        atmosMat.uniforms.uSunDirection.value.copy(sunDirWorld).negate();
       }
       // Scattering-specific uniforms (only present on scattering materials)
-      if (atmosMat.uniforms.uPlanetCenter) {
+      if (atmosMat && atmosMat.uniforms.uPlanetCenter) {
         atmosMat.uniforms.uPlanetCenter.value.copy(_camUp); // planet world position
         atmosMat.uniforms.uPlanetRadius.value = scale;
         atmosMat.uniforms.uAtmosRadius.value = scale * atmosScale;

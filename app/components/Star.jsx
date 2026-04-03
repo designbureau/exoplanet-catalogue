@@ -179,6 +179,7 @@ const Star = ({ data, position, distance }) => {
             key={index}
             data={planet}
             starData={{ temperature, mass, radius }}
+            starRef={ref}
           />
         ))}
     </group>
