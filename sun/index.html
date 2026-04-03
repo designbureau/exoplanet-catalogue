@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no"/>
+    <link rel="stylesheet" href="./content/global.css">
+    <title>Start</title>
+
+    <style>
+      body{
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+
+    <script type="module" crossorigin="*" src="./js/FWDDS.js"></script>
+
+    <script type="module">
+
+      import FWDDS from './js/FWDDS';
+
+      new FWDDS({
+        // Main settings.  
+        instance: 'fwdds0',
+        displayType: 'afterParent',
+        parentId: 'afterParent',
+        sliderDataId: 'sliderData',
+        maxWidth: 1200,
+        maxHeight: 800,
+        autoScale: 'yes',
+        backgroundColor: '#ffffff'
+      })
+    </script>
+
+  </head>
+  <body>
+    <!-- <div id="myDiv"></div> -->
+    <div id="afterParent" style="position:absolute; width:100vw; height:100vh;"></div>
+
+    <!-- Slider data. -->
+    <div id="sliderData" style="display: none;">
+     
+      <div data-src="media/images/1.jpg" data-width="1920" data-height="1280">
+      </div>
+
+      <div data-src="media/images/2.jpg" data-width="1920" data-height="1280">
+      </div>
+      
+      <div data-src="media/images/3.jpg" data-width="1920" data-height="1280">
+      </div>
+      
+      <div data-src="media/images/4.jpg" data-width="1920" data-height="1280">
+      </div>
+
+      <div data-src="media/videos/fwd-1080p.mp4" data-width="1920" data-height="1080">
+      </div>
+
+      <div data-src="media/images/5.jpg" data-width="1920" data-height="1284">
+      </div>
+
+      <div data-src="media/videos/zombie.mp4" data-width="400" data-height="400">
+      </div>
+
+     <div data-src="media/images/6.jpg" data-width="1440" data-height="1800">
+      </div>
+
+      <div data-src="media/videos/fwd-1080p.mp4" data-width="1920" data-height="1080">
+      </div>
+
+    </div>
+
+  </body>
+</html>
