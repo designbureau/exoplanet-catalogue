@@ -1,0 +1,39 @@
+<system>
+	<name>HD 85390</name>
+	<rightascension>09 50 02.4969</rightascension>
+	<declination>-49 47 24.9576</declination>
+	<distance>33.96</distance>
+	<star>
+		<mass>0.76</mass>
+		<magV>8.54</magV>
+		<magB>9.40</magB>
+		<magJ errorminus="0.024" errorplus="0.024">7.012</magJ>
+		<magH errorminus="0.033" errorplus="0.033">6.612</magH>
+		<magK errorminus="0.023" errorplus="0.023">6.491</magK>
+		<metallicity>-0.07</metallicity>
+		<spectraltype>K1V</spectraltype>
+		<planet>
+			<name>HD 85390 b</name>
+			<name>Natasha b</name>
+			<name>TYC 8189-1278-1 b</name>
+			<name>Gaia DR2 5406324138654973824 b</name>
+			<name>HIP 48235 b</name>
+			<list>Confirmed planets</list>
+			<mass>0.132</mass>
+			<period>788</period>
+			<semimajoraxis>1.52</semimajoraxis>
+			<eccentricity>0.41</eccentricity>
+			<discoverymethod>RV</discoverymethod>
+			<lastupdate>10/10/06</lastupdate>
+			<discoveryyear>2009</discoveryyear>
+			<temperature>166.3</temperature>
+		</planet>
+		<name>HD 85390</name>
+		<name>Natasha</name>
+		<name>TYC 8189-1278-1</name>
+		<name>Gaia DR2 5406324138654973824</name>
+		<name>HIP 48235</name>
+		<temperature>5186.0</temperature>
+	</star>
+	<constellation>Vela</constellation>
+</system>

@@ -1,0 +1,39 @@
+<system>
+	<name>HD 175167</name>
+	<rightascension>19 00 00.8345</rightascension>
+	<declination>-69 56 39.2704</declination>
+	<distance>67.02</distance>
+	<star>
+		<mass>1.102</mass>
+		<magV>9.18</magV>
+		<magB errorminus="0.01" errorplus="0.01">8.78</magB>
+		<magR>7.89</magR>
+		<magI errorminus="0.03" errorplus="0.03">8.86</magI>
+		<magJ errorminus="0.019" errorplus="0.019">6.713</magJ>
+		<magH errorminus="0.018" errorplus="0.018">6.381</magH>
+		<magK errorminus="0.018" errorplus="0.018">6.288</magK>
+		<metallicity>0.19</metallicity>
+		<spectraltype>G5 IV/V</spectraltype>
+		<planet>
+			<name>HD 175167 b</name>
+			<name>HIP 93281 b</name>
+			<name>TYC 9296-423-1 b</name>
+			<name>Gaia DR2 6421118739093252224 b</name>
+			<list>Confirmed planets</list>
+			<mass>7.8</mass>
+			<period>1290</period>
+			<semimajoraxis>2.4</semimajoraxis>
+			<eccentricity>0.54</eccentricity>
+			<discoverymethod>RV</discoverymethod>
+			<lastupdate>10/01/26</lastupdate>
+			<discoveryyear>2010</discoveryyear>
+			<temperature>154.0</temperature>
+		</planet>
+		<name>HD 175167</name>
+		<name>HIP 93281</name>
+		<name>TYC 9296-423-1</name>
+		<name>Gaia DR2 6421118739093252224</name>
+		<temperature>5940.0</temperature>
+	</star>
+	<constellation>Pavo</constellation>
+</system>

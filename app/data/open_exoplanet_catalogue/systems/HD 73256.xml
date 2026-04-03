@@ -1,0 +1,38 @@
+<system>
+	<name>HD 73256</name>
+	<rightascension>08 36 23.0163</rightascension>
+	<declination>-30 02 15.4418</declination>
+	<distance>36.5</distance>
+	<star>
+		<mass>1.05</mass>
+		<radius>0.89</radius>
+		<magV>8.08</magV>
+		<magJ errorminus="0.029" errorplus="0.029">6.719</magJ>
+		<magH errorminus="0.024" errorplus="0.024">6.376</magH>
+		<magK errorminus="0.023" errorplus="0.023">6.264</magK>
+		<magB errorminus="0.01" errorplus="0.01">8.84</magB>
+		<metallicity>0.29</metallicity>
+		<spectraltype>G8/K0</spectraltype>
+		<planet>
+			<name>HD 73256 b</name>
+			<name>TYC 7136-2007-1 b</name>
+			<name>Gaia DR2 5643762781311698048 b</name>
+			<name>HIP 42214 b</name>
+			<list>Confirmed planets</list>
+			<mass>1.87</mass>
+			<period>2.54858</period>
+			<semimajoraxis>0.037</semimajoraxis>
+			<eccentricity>0.029</eccentricity>
+			<discoverymethod>RV</discoverymethod>
+			<lastupdate>10/12/23</lastupdate>
+			<discoveryyear>2003</discoveryyear>
+			<temperature>1204.5</temperature>
+		</planet>
+		<name>HD 73256</name>
+		<name>TYC 7136-2007-1</name>
+		<name>Gaia DR2 5643762781311698048</name>
+		<name>HIP 42214</name>
+		<temperature>5570.0</temperature>
+	</star>
+	<constellation>Pyxis</constellation>
+</system>

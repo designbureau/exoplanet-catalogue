@@ -1,0 +1,43 @@
+<system>
+	<name>HD 210277</name>
+	<rightascension>22 09 29.8657</rightascension>
+	<declination>-07 32 55.1630</declination>
+	<distance>21.29</distance>
+	<star>
+		<mass>1.09</mass>
+		<radius>1.1</radius>
+		<magV>6.63</magV>
+		<magB>7.34</magB>
+		<magJ errorminus="0.024" errorplus="0.024">5.275</magJ>
+		<magH errorminus="0.03" errorplus="0.03">4.96</magH>
+		<magK errorminus="0.020" errorplus="0.020">4.799</magK>
+		<metallicity>0.19</metallicity>
+		<spectraltype>G0</spectraltype>
+		<planet>
+			<name>HD 210277 b</name>
+			<name>GJ 9769 b</name>
+			<name>TYC 5803-1956-1 b</name>
+			<name>Gaia DR2 2619706544757416192 b</name>
+			<name>HIP 109378 b</name>
+			<name>GJ 848.4 b</name>
+			<list>Confirmed planets</list>
+			<mass>1.23</mass>
+			<period>442.1</period>
+			<semimajoraxis>1.1</semimajoraxis>
+			<eccentricity>0.472</eccentricity>
+			<discoverymethod>RV</discoverymethod>
+			<lastupdate>06/09/06</lastupdate>
+			<discoveryyear>1998</discoveryyear>
+			<temperature>240.3</temperature>
+		</planet>
+		<name>HD 210277</name>
+		<name>GJ 9769</name>
+		<name>TYC 5803-1956-1</name>
+		<name>Gaia DR2 2619706544757416192</name>
+		<name>HIP 109378</name>
+		<name>GJ 848.4</name>
+		<magR errorminus="0.30" errorplus="0.30">7.36</magR>
+		<temperature>5532.0</temperature>
+	</star>
+	<constellation>Aquarius</constellation>
+</system>

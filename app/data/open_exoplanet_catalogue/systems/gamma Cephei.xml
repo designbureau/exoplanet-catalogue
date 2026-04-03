@@ -1,0 +1,119 @@
+<system>
+	<name>gamma Cephei</name>
+	<name>Gamma Cephei</name>
+	<name>Errai</name>
+	<name>Alrai</name>
+	<name>GJ 903</name>
+	<name>HR 8974</name>
+	<name>HD 222404</name>
+	<name>HIP 116727</name>
+	<rightascension>23 39 20.85153</rightascension>
+	<declination>+77 37 56.1876</declination>
+	<distance errorminus="0.026" errorplus="0.026">13.523</distance>
+	<binary>
+		<name>gamma Cephei</name>
+		<name>Gamma Cephei</name>
+		<name>gam Cep</name>
+		<name>γ Cep</name>
+		<name>γ Cephei</name>
+		<name>35 Cep</name>
+		<name>35 Cephei</name>
+		<name>Errai</name>
+		<name>Alrai</name>
+		<name>Gliese 903</name>
+		<name>GJ 903</name>
+		<name>HR 8974</name>
+		<name>HD 222404</name>
+		<name>HIP 116727</name>
+		<name>TYC 4606-3584-1</name>
+		<name>BD+76 928</name>
+		<name>2MASS J23392083+7737563</name>
+		<name>WDS J23393+7738</name>
+		<name>NHR 9</name>
+		<semimajoraxis errorminus="0.66" errorplus="0.66">20.18</semimajoraxis>
+		<eccentricity errorminus="0.007" errorplus="0.007">0.401</eccentricity>
+		<period errorminus="341" errorplus="341">27041</period>
+		<periastron errorminus="0.2" errorplus="0.2">161.9</periastron>
+		<periastrontime errorminus="8" errorplus="8">2448502</periastrontime>
+		<ascendingnode errorminus="0.8" errorplus="0.8">14.2</ascendingnode>
+		<inclination errorminus="1.5" errorplus="1.5">101.1</inclination>
+		<star>
+			<name>gamma Cephei A</name>
+			<name>Gamma Cephei A</name>
+			<name>gam Cep A</name>
+			<name>γ Cep A</name>
+			<name>γ Cephei A</name>
+			<name>35 Cep A</name>
+			<name>35 Cephei A</name>
+			<name>Errai A</name>
+			<name>Alrai A</name>
+			<name>Gliese 903 A</name>
+			<name>GJ 903 A</name>
+			<name>HR 8974 A</name>
+			<name>HD 222404 A</name>
+			<name>HIP 116727 A</name>
+			<name>TYC 4606-3584-1 A</name>
+			<name>BD+76 928 A</name>
+			<name>2MASS J23392083+7737563 A</name>
+			<name>WDS J23393+7738 A</name>
+			<name>NHR 9 A</name>
+			<mass>1.18</mass>
+			<radius>4.9</radius>
+			<magV errorminus="0.009" errorplus="0.009">3.220</magV>
+			<magB errorminus="0.007" errorplus="0.007">4.250</magB>
+			<magR>2.6</magR>
+			<magI>2.1</magI>
+			<magJ>1.66</magJ>
+			<magH>1.19</magH>
+			<magK>1.04</magK>
+			<metallicity>0.18</metallicity>
+			<temperature errorminus="100" errorplus="100">4800.0</temperature>
+			<spectraltype>K1 III-IV</spectraltype>
+			<planet>
+				<name>Gamma Cephei b</name>
+				<name>Gamma Cephei A b</name>
+				<name>gam Cep A b</name>
+				<name>HD 222404 A b</name>
+				<list>Confirmed planets</list>
+				<mass errorminus="1.1" errorplus="0.7">9.4</mass>
+				<period>905.0</period>
+				<semimajoraxis>1.94</semimajoraxis>
+				<eccentricity>0.08</eccentricity>
+				<periastron>86</periastron>
+				<periastrontime>24532481</periastrontime>
+				<inclination errorminus="1.1" errorplus="1.1">169.5</inclination>
+				<ascendingnode errorminus="6" errorplus="6">47</ascendingnode>
+				<discoverymethod>RV</discoverymethod>
+				<lastupdate>18/04/20</lastupdate>
+				<discoveryyear>2003</discoveryyear>
+				<list>Planets in binary systems, S-type</list>
+			</planet>
+		</star>
+		<star>
+			<name>gamma Cephei B</name>
+			<name>Gamma Cephei B</name>
+			<name>gam Cep B</name>
+			<name>γ Cep B</name>
+			<name>γ Cephei B</name>
+			<name>35 Cep B</name>
+			<name>35 Cephei B</name>
+			<name>Errai B</name>
+			<name>Alrai B</name>
+			<name>Gliese 903 B</name>
+			<name>GJ 903 B</name>
+			<name>HR 8974 B</name>
+			<name>HD 222404 B</name>
+			<name>HIP 116727 B</name>
+			<name>TYC 4606-3584-1 B</name>
+			<name>BD+76 928 B</name>
+			<name>2MASS J23392083+7737563 B</name>
+			<name>WDS J23393+7738 B</name>
+			<name>NHR 9 B</name>
+			<magK errorminus="0.2" errorplus="0.2">7.3</magK>
+			<mass>0.32</mass>
+			<spectraltype>M4</spectraltype>
+		</star>
+	</binary>
+	<videolink>http://youtu.be/lJ3HMtDK4ms</videolink>
+	<constellation>Cepheus</constellation>
+</system>
