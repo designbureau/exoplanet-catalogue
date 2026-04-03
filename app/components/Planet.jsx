@@ -85,7 +85,7 @@ const Planet = ({ data, starData }) => {
   const ringRef = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, spriteGlowIntensity, spriteGlowScale, spriteGlowFalloff, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, layerOverrides, hzAtmosRange, hzCloudCoverRange, hzCloudOpacityRange, hzSeaLevelRange, hzIceCapRange, hzContinentFreqRange } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, spriteGlowIntensity, spriteGlowScale, spriteGlowFalloff, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, layerOverrides, showOrbits, hzAtmosRange, hzCloudCoverRange, hzCloudOpacityRange, hzSeaLevelRange, hzIceCapRange, hzContinentFreqRange } = useContext(EnvContext);
 
   const softGlowTexture = getSoftGlowTexture(spriteGlowFalloff, spriteGlowInner);
 
@@ -419,24 +419,46 @@ const Planet = ({ data, starData }) => {
   });
 
   const position = [periapsis, 0, 0];
-  const orbitRef = useRef();
-
   const orbitGeometry = useMemo(() => {
+    // Scale point count with orbit size for smooth curves at all scales
+    const circumference = Math.PI * (ellipse.xRadius + ellipse.yRadius);
+    const segments = Math.max(128, Math.min(512, Math.round(circumference * 0.5)));
     const curve = new THREE.EllipseCurve(0, 0, ellipse.xRadius, ellipse.yRadius, 0, 2 * Math.PI, false, 0);
-    const points = curve.getPoints(128); // enough for smooth orbit
-    return new THREE.BufferGeometry().setFromPoints(points);
+    const points = curve.getPoints(segments);
+    const geo = new THREE.BufferGeometry().setFromPoints(points);
+    // computeLineDistances required for dashed lines
+    geo.computeBoundingSphere();
+    return geo;
   }, [ellipse.xRadius, ellipse.yRadius]);
+
+  // Dash scale proportional to orbit size so dashes look consistent
+  const dashSize = useMemo(() => {
+    const circ = Math.PI * (ellipse.xRadius + ellipse.yRadius);
+    return Math.max(0.2, circ * 0.003);
+  }, [ellipse.xRadius, ellipse.yRadius]);
+
+  // Compute line distances on the geometry for dashed material
+  const orbitLine = useRef();
+  useEffect(() => {
+    if (orbitLine.current) {
+      orbitLine.current.computeLineDistances();
+    }
+  }, [orbitGeometry]);
 
   return (
     <group position={position} rotation={[(inclination * Math.PI) / 90, 0, 0]}>
-      <line ref={orbitRef} geometry={orbitGeometry}>
-        <lineBasicMaterial
-          attach="material"
-          color={"#ffffff"}
-          opacity={0.25}
-          transparent={true}
-        />
-      </line>
+      {showOrbits && (
+        <line ref={orbitLine} geometry={orbitGeometry}>
+          <lineDashedMaterial
+            attach="material"
+            color={"#ffffff"}
+            opacity={0.2}
+            transparent={true}
+            dashSize={dashSize}
+            gapSize={dashSize * 0.6}
+          />
+        </line>
+      )}
       <mesh ref={ref} name={name} onClick={handleClick} material={shaderMaterial}>
         <sphereGeometry args={[scale, 64, 64]} />
       </mesh>
