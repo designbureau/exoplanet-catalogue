@@ -346,6 +346,10 @@ const rockyFragment = `
   uniform float u_craterScale;
   uniform float u_ridgeStrength;
   uniform float u_craterDepth;
+  uniform float u_lavaWarp;
+  uniform float u_lavaGlow;
+  uniform float u_lavaHeightOffset;
+  uniform float u_lavaFlowScale;
   varying vec3 vPosition;
   varying vec3 vNormal;
   varying vec3 vWorldNormal;
@@ -353,18 +357,32 @@ const rockyFragment = `
 
   ${noiseLib}
 
-  // Compute terrain height using ridged noise + craters (LOD-aware)
+  // Compute terrain height (LOD-aware)
+  // Lava worlds: flowing domain-warped noise, no craters
+  // Rocky worlds: ridged noise + craters
   float computeHeight(vec3 p) {
-    // Base terrain: smooth continental-scale features
+    bool isLava = emissiveIntensity > 0.01;
     float base = noise3d(p * 0.8) * 0.5;
 
-    // Ridged mountain ranges layered on top
+    if (isLava) {
+      // Lava: domain-warped flowing terrain, no craters
+      vec3 wp = p + warp_intensity * u_lavaWarp * vec3(
+        noise3d(p * 0.8 + vec3(5.0)),
+        noise3d(p * 0.8 + vec3(9.0)),
+        noise3d(p * 0.8 + vec3(13.0))
+      );
+      float flow1 = noise3d(wp * u_lavaFlowScale) * 0.5;
+      float flow2 = cloudNoise_lod(wp + vec3(flow1 * 0.3), u_lavaFlowScale * 2.0) * 0.25;
+      float detail = 0.0;
+      if (u_lod > 0.5) {
+        detail = noise3d(wp * u_lavaFlowScale * 4.0 + vec3(flow1)) * 0.1;
+      }
+      return (base + flow1 + flow2 + detail) + u_lavaHeightOffset;
+    }
+
+    // Rocky: ridged noise + craters
     float ridges = ridgedNoise_lod(p, 1.5) * u_ridgeStrength;
-
-    // Cloud noise for softer highland areas (skip at low LOD)
     float soft = cloudNoise_lod(p + vec3(ridges * 0.3), 2.0) * 0.15;
-
-    // Domain warp for organic shapes (skip at low LOD)
     float detail = 0.0;
     if (u_lod > 0.5) {
       vec3 wp = p + warp_intensity * 0.05 * vec3(
@@ -374,14 +392,10 @@ const rockyFragment = `
       );
       detail = noise3d(wp * 6.0) * 0.08;
     }
-
     float terrain = base + ridges + soft + detail;
 
-    // Giant impact basins: 3-4 per planet, very wide and shallow
     vec2 v0 = voronoi(p * 0.18);
     terrain += craterProfile(v0.x, 3.5) * u_craterDepth * 0.6;
-
-    // Craters: large scale always, medium/small only at high LOD
     vec2 v1 = voronoi(p * 0.7 * u_craterScale);
     terrain += craterProfile(v1.x, 2.0) * u_craterDepth;
     if (u_lod > 0.5) {
@@ -390,7 +404,6 @@ const rockyFragment = `
       vec2 v3 = voronoi(p * 5.0 * u_craterScale);
       terrain += craterProfile(v3.x, 0.5) * 0.15;
     }
-
     return terrain;
   }
 
@@ -420,18 +433,19 @@ const rockyFragment = `
     // Fine surface roughness for colour variation
     color *= 0.9 + 0.1 * noise3d(p * 40.0);
 
-    // Lighting with bump normal — apply before emissive so lava glows in shadow
+    // Lighting — lava worlds have higher ambient (self-radiant heat)
     float diff = max(dot(vWorldNormal, u_sunDirection), 0.0);
-    color *= (0.06 + 0.94 * diff);
+    float ambient = emissiveIntensity > 0.01 ? 0.08 : 0.06;
+    color *= (ambient + (1.0 - ambient) * diff);
 
     // Emissive (for lava worlds) — added after lighting so it glows in shadow
-    float lavaGlow = smoothstep(0.25, 0.0, h) * emissiveIntensity;
-    color += emissiveColor * lavaGlow;
-    // Magma cracks: large voronoi cells for wide tectonic plates
+    // Lava emissive — glow in low areas + voronoi cracks
+    float lavaEmit = smoothstep(0.35, 0.0, h) * u_lavaGlow;
+    color += emissiveColor * lavaEmit;
     vec2 v1 = voronoi(p * 0.3);
     float cracks = 1.0 - smoothstep(0.0, 0.1, v1.y - v1.x);
     cracks *= cracks;
-    cracks *= smoothstep(0.5, 0.15, h); // brighter in low areas
+    cracks *= smoothstep(0.5, 0.15, h) * u_lavaGlow;
     color += emissiveColor * cracks * emissiveIntensity;
 
     gl_FragColor = vec4(color, 1.0);
@@ -884,6 +898,10 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_craterScale: { value: 1.0 },
       u_ridgeStrength: { value: 0.35 },
       u_craterDepth: { value: 0.7 },
+      u_lavaWarp: { value: 0.04 },
+      u_lavaGlow: { value: 0.6 },
+      u_lavaHeightOffset: { value: -0.3 },
+      u_lavaFlowScale: { value: 1.5 },
       u_sunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
       u_atmosDayColor: { value: params.atmosDayColor || new THREE.Color(0x00aaff) },
       u_atmosTwilightColor: { value: params.atmosTwilightColor || new THREE.Color(0xff6600) },

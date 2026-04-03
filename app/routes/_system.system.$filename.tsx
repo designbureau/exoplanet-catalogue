@@ -267,6 +267,10 @@ const App = ({ data }: any) => {
     terrContinentFreq, setTerrContinentFreq,
     terrWarpStrength, setTerrWarpStrength,
     terrIceCapSize, setTerrIceCapSize,
+    lavaWarp, setLavaWarp,
+    lavaGlow, setLavaGlow,
+    lavaHeightOffset, setLavaHeightOffset,
+    lavaFlowScale, setLavaFlowScale,
     rockyCraterScale, setRockyCraterScale,
     rockyRidgeStrength, setRockyRidgeStrength,
     rockyCraterDepth, setRockyCraterDepth,
@@ -298,7 +302,7 @@ const App = ({ data }: any) => {
     resetRefs();
   }, [data, resetRefs]);
 
-  const [showControls, setShowControls] = useState(true);
+  const [showControls, setShowControls] = useState(false);
 
   return (
     <>
@@ -394,6 +398,13 @@ const App = ({ data }: any) => {
           <RangeSlider label="Sea Level" min={0} max={0.8} step={0.01} value={hzSeaLevelRange} onChange={setHzSeaLevelRange} />
           <RangeSlider label="Ice Cap" min={0.5} max={1} step={0.01} value={hzIceCapRange} onChange={setHzIceCapRange} />
           <RangeSlider label="Continent Freq" min={0.05} max={0.4} step={0.01} value={hzContinentFreqRange} onChange={setHzContinentFreqRange} />
+        </Accordion>
+
+        <Accordion title="Lava" defaultOpen={false}>
+          <Slider label="Warp" min={0} max={0.2} step={0.005} value={lavaWarp} onChange={setLavaWarp} />
+          <Slider label="Glow" min={0} max={2} step={0.05} value={lavaGlow} onChange={setLavaGlow} />
+          <Slider label="Height" min={-0.6} max={0.3} step={0.02} value={lavaHeightOffset} onChange={setLavaHeightOffset} />
+          <Slider label="Flow Scl" min={0.5} max={5} step={0.1} value={lavaFlowScale} onChange={setLavaFlowScale} />
         </Accordion>
 
         <Accordion title="Rocky" defaultOpen={false}>
