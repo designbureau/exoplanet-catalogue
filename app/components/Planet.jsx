@@ -374,6 +374,12 @@ const Planet = ({ data, starData }) => {
     ref.current.position.y =
       ellipse.yRadius * Math.sin((elapsedTime / period) * speed);
 
+    // Update ribbon trail phase to follow planet
+    if (orbitMat?.uniforms?.uPhase) {
+      const orbitAngle = ((elapsedTime / period) * speed) % (Math.PI * 2);
+      orbitMat.uniforms.uPhase.value = orbitAngle / (Math.PI * 2);
+    }
+
     // Time + LOD — only animate active planet's clouds
     const isActive = activeRef?.current === ref.current;
     if (shaderMaterial.uniforms.u_time && isActive) {
@@ -419,45 +425,59 @@ const Planet = ({ data, starData }) => {
   });
 
   const position = [periapsis, 0, 0];
-  const orbitGeometry = useMemo(() => {
-    // Scale point count with orbit size for smooth curves at all scales
+  // Orbit line with per-vertex alpha for taper effect
+  const orbitLine = useRef();
+  const { orbitGeo, orbitMat } = useMemo(() => {
     const circumference = Math.PI * (ellipse.xRadius + ellipse.yRadius);
     const segments = Math.max(128, Math.min(512, Math.round(circumference * 0.5)));
     const curve = new THREE.EllipseCurve(0, 0, ellipse.xRadius, ellipse.yRadius, 0, 2 * Math.PI, false, 0);
     const points = curve.getPoints(segments);
     const geo = new THREE.BufferGeometry().setFromPoints(points);
-    // computeLineDistances required for dashed lines
-    geo.computeBoundingSphere();
-    return geo;
-  }, [ellipse.xRadius, ellipse.yRadius]);
 
-  // Dash scale proportional to orbit size so dashes look consistent
-  const dashSize = useMemo(() => {
-    const circ = Math.PI * (ellipse.xRadius + ellipse.yRadius);
-    return Math.max(0.2, circ * 0.003);
-  }, [ellipse.xRadius, ellipse.yRadius]);
+    // Store normalized t (0→1) per vertex for the shader taper
+    const tValues = new Float32Array(segments + 1);
+    for (let i = 0; i <= segments; i++) tValues[i] = i / segments;
+    geo.setAttribute("aT", new THREE.BufferAttribute(tValues, 1));
 
-  // Compute line distances on the geometry for dashed material
-  const orbitLine = useRef();
-  useEffect(() => {
-    if (orbitLine.current) {
-      orbitLine.current.computeLineDistances();
-    }
-  }, [orbitGeometry]);
+    const mat = new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      uniforms: {
+        uPhase: { value: 0 },
+      },
+      vertexShader: `
+        attribute float aT;
+        varying float vT;
+        void main() {
+          vT = aT;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        precision highp float;
+        varying float vT;
+        uniform float uPhase;
+        void main() {
+          // How far behind the planet (0=at planet, 1=full orbit)
+          float dist = vT - uPhase;
+          if (dist < 0.0) dist += 1.0;
+
+          // 98% visible: full for first 90%, taper over next 8%, tiny 2% gap
+          float taper = 1.0 - smoothstep(0.90, 0.98, dist);
+          if (taper < 0.01) discard;
+
+          gl_FragColor = vec4(1.0, 1.0, 1.0, taper * 0.25);
+        }
+      `,
+    });
+
+    return { orbitGeo: geo, orbitMat: mat };
+  }, [ellipse.xRadius, ellipse.yRadius]);
 
   return (
     <group position={position} rotation={[(inclination * Math.PI) / 90, 0, 0]}>
       {showOrbits && (
-        <line ref={orbitLine} geometry={orbitGeometry}>
-          <lineDashedMaterial
-            attach="material"
-            color={"#ffffff"}
-            opacity={0.2}
-            transparent={true}
-            dashSize={dashSize}
-            gapSize={dashSize * 0.6}
-          />
-        </line>
+        <line geometry={orbitGeo} material={orbitMat} />
       )}
       <mesh ref={ref} name={name} onClick={handleClick} material={shaderMaterial}>
         <sphereGeometry args={[scale, 64, 64]} />
