@@ -424,11 +424,14 @@ const rockyFragment = `
     color *= (0.06 + 0.94 * diff);
 
     // Emissive (for lava worlds) — added after lighting so it glows in shadow
-    float lavaGlow = smoothstep(0.2, 0.0, h) * emissiveIntensity;
+    float lavaGlow = smoothstep(0.25, 0.0, h) * emissiveIntensity;
     color += emissiveColor * lavaGlow;
-    vec2 v1 = voronoi(p * 0.7);
-    float cracks = smoothstep(0.02, 0.0, abs(v1.y - v1.x - 0.1)) * emissiveIntensity * 0.5;
-    color += emissiveColor * cracks;
+    // Magma cracks: large voronoi cells for wide tectonic plates
+    vec2 v1 = voronoi(p * 0.3);
+    float cracks = 1.0 - smoothstep(0.0, 0.1, v1.y - v1.x);
+    cracks *= cracks;
+    cracks *= smoothstep(0.5, 0.15, h); // brighter in low areas
+    color += emissiveColor * cracks * emissiveIntensity;
 
     gl_FragColor = vec4(color, 1.0);
   }
