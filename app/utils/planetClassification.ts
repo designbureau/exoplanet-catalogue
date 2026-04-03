@@ -335,11 +335,11 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       break;
 
     case PlanetType.LAVA_WORLD:
-      // Dark rock with glowing magma cracks
-      base.color1 = new THREE.Color(0.08, 0.06, 0.05);
-      base.color2 = new THREE.Color(0.12, 0.08, 0.05);
-      base.color3 = new THREE.Color(0.9, 0.3, 0.02);
-      base.color4 = new THREE.Color(1.0, 0.6, 0.1);
+      // Mostly black cooled crust with magma in low areas
+      base.color1 = new THREE.Color(0.8, 0.25, 0.02);     // low: exposed magma (orange)
+      base.color2 = new THREE.Color(0.3, 0.08, 0.02);     // mid-low: cooling rock (dark red)
+      base.color3 = new THREE.Color(0.06, 0.04, 0.03);    // mid-high: cooled basalt (near black)
+      base.color4 = new THREE.Color(0.03, 0.02, 0.02);    // high: cold crust (black)
       base.swirlStrength = 0.0;
       base.warpIntensity = 4.0;
       base.noiseScale = 15;
