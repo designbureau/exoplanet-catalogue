@@ -435,7 +435,7 @@ const rockyFragment = `
 
     // Lighting — lava worlds have higher ambient (self-radiant heat)
     float diff = max(dot(vWorldNormal, u_sunDirection), 0.0);
-    float ambient = emissiveIntensity > 0.01 ? 0.25 : 0.06;
+    float ambient = emissiveIntensity > 0.01 ? 0.08 : 0.06;
     color *= (ambient + (1.0 - ambient) * diff);
 
     // Emissive (for lava worlds) — added after lighting so it glows in shadow
