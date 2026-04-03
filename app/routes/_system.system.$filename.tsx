@@ -33,8 +33,30 @@ function Slider({ label, min, max, step, value, onChange, suffix = "" }: { label
       <label className="w-14 shrink-0">{label}</label>
       <input type="range" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-16 accent-cyan-400" />
-      <span className="w-7 tabular-nums text-right">{typeof value === 'number' ? (Number.isInteger(step) ? value : value.toFixed(2)) : value}{suffix}</span>
+        className="w-28 accent-cyan-400" />
+      <span className="w-10 tabular-nums text-right">{typeof value === 'number' ? (Number.isInteger(step) ? value : value.toFixed(2)) : value}{suffix}</span>
+    </div>
+  );
+}
+
+function RangeSlider({ label, min, max, step, value, onChange }: { label: string; min: number; max: number; step: number; value: [number, number]; onChange: (v: [number, number]) => void }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <label className="text-[9px] text-muted-foreground/70">{label}</label>
+      <div className="flex items-center gap-1">
+        <span className="text-[8px] text-cyan-400/60 w-6">cold</span>
+        <input type="range" min={min} max={max} step={step} value={value[0]}
+          onChange={(e) => onChange([parseFloat(e.target.value), value[1]])}
+          className="w-20 accent-cyan-400" />
+        <span className="w-8 tabular-nums text-right text-[9px]">{value[0].toFixed(2)}</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <span className="text-[8px] text-orange-400/60 w-6">warm</span>
+        <input type="range" min={min} max={max} step={step} value={value[1]}
+          onChange={(e) => onChange([value[0], parseFloat(e.target.value)])}
+          className="w-20 accent-orange-400" />
+        <span className="w-8 tabular-nums text-right text-[9px]">{value[1].toFixed(2)}</span>
+      </div>
     </div>
   );
 }
@@ -191,7 +213,26 @@ const App = ({ data }: any) => {
     spriteGlowInner, setSpriteGlowInner,
     cloudCoverage: ctxCloudCoverage, setCloudCoverage: ctxSetCloudCoverage,
     cloudOpacity: ctxCloudOpacity, setCloudOpacity: ctxSetCloudOpacity,
+    hzAtmosRange, setHzAtmosRange,
+    hzCloudCoverRange, setHzCloudCoverRange,
+    hzCloudOpacityRange, setHzCloudOpacityRange,
+    hzSeaLevelRange, setHzSeaLevelRange,
+    hzIceCapRange, setHzIceCapRange,
+    hzContinentFreqRange, setHzContinentFreqRange,
+    layerOverrides, setLayerOverrides,
   } = useContext(EnvContext);
+  // Local soft glow sliders — move instantly, apply on button press
+  const [localSGInt, setLocalSGInt] = useState(spriteGlowIntensity);
+  const [localSGScale, setLocalSGScale] = useState(spriteGlowScale);
+  const [localSGFall, setLocalSGFall] = useState(spriteGlowFalloff);
+  const [localSGInner, setLocalSGInner] = useState(spriteGlowInner);
+  const applySoftGlow = () => {
+    setSpriteGlowIntensity(localSGInt);
+    setSpriteGlowScale(localSGScale);
+    setSpriteGlowFalloff(localSGFall);
+    setSpriteGlowInner(localSGInner);
+  };
+
   const [follow, setFollow] = useState(true);
   const [nebulaDensity, setNebulaDensity] = useState(1.0);
   const [nebulaBrightness, setNebulaBrightness] = useState(0.6);
@@ -280,19 +321,42 @@ const App = ({ data }: any) => {
         </Accordion>
 
         <Accordion title="Atmosphere" defaultOpen={false}>
-          <Slider label="Atmos" min={0} max={3} step={0.05} value={atmosIntensity} onChange={setAtmosIntensity} />
+          {(() => {
+            const atmosTypes = ['TEMPERATE', 'VENUS_LIKE', 'WATER_WORLD', 'SUB_NEPTUNE', 'LAVA_WORLD', 'FROZEN'];
+            const setLayer = (t: string, key: string, val: boolean) => setLayerOverrides((prev: any) => ({ ...prev, [t]: { ...prev[t], [key]: val } }));
+            return (
+              <div className="flex flex-col gap-0.5 mb-1 pb-1 border-b border-white/10">
+                <div className="text-[9px] text-muted-foreground/60 mb-0.5">Layers by type</div>
+                {atmosTypes.map(t => {
+                  const lo = layerOverrides[t] || {};
+                  return (
+                    <div key={t} className="flex items-center gap-2 text-[9px]">
+                      <span className="w-20 text-muted-foreground/70 truncate">{t.replace(/_/g, ' ').toLowerCase()}</span>
+                      <label className="flex items-center gap-0.5 cursor-pointer"><input type="checkbox" checked={lo.rim ?? true} onChange={e => setLayer(t, 'rim', e.target.checked)} className="accent-cyan-400" /><span className="text-[8px]">R</span></label>
+                      <label className="flex items-center gap-0.5 cursor-pointer"><input type="checkbox" checked={lo.shell ?? true} onChange={e => setLayer(t, 'shell', e.target.checked)} className="accent-cyan-400" /><span className="text-[8px]">S</span></label>
+                      <label className="flex items-center gap-0.5 cursor-pointer"><input type="checkbox" checked={lo.halo ?? true} onChange={e => setLayer(t, 'halo', e.target.checked)} className="accent-cyan-400" /><span className="text-[8px]">H</span></label>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Rim (surface fresnel)</div>
+          <Slider label="Intensity" min={0} max={3} step={0.05} value={atmosIntensity} onChange={setAtmosIntensity} />
           <Slider label="Falloff" min={0.5} max={8} step={0.1} value={atmosFalloff} onChange={setAtmosFalloff} />
-          <Slider label="Glow" min={0} max={5} step={0.01} value={glowIntensity} onChange={setGlowIntensity} />
-          <Slider label="G.Scale" min={0.5} max={10} step={0.05} value={glowScale} onChange={setGlowScale} />
-          <Slider label="G.Fall" min={0.05} max={5} step={0.05} value={glowFalloff} onChange={setGlowFalloff} />
-          <Slider label="G.Inner" min={0} max={0.9} step={0.01} value={glowInner} onChange={setGlowInner} />
-          <Slider label="G.Hue" min={0} max={1} step={0.01} value={glowHueShift} onChange={setGlowHueShift} />
-          <Slider label="G.Sat" min={0} max={3} step={0.05} value={glowSaturation} onChange={setGlowSaturation} />
-          <div className="text-[9px] text-muted-foreground/60 mt-1 mb-0.5">Soft Glow</div>
-          <Slider label="S.Int" min={0} max={3} step={0.01} value={spriteGlowIntensity} onChange={setSpriteGlowIntensity} />
-          <Slider label="S.Scale" min={1} max={10} step={0.1} value={spriteGlowScale} onChange={setSpriteGlowScale} />
-          <Slider label="S.Fall" min={0.1} max={5} step={0.05} value={spriteGlowFalloff} onChange={setSpriteGlowFalloff} />
-          <Slider label="S.Inner" min={0} max={0.9} step={0.01} value={spriteGlowInner} onChange={setSpriteGlowInner} />
+          <div className="text-[9px] text-muted-foreground/60 mt-1 mb-0.5">Shell (day/twilight)</div>
+          <Slider label="Intensity" min={0} max={5} step={0.01} value={glowIntensity} onChange={setGlowIntensity} />
+          <Slider label="Scale" min={0.5} max={10} step={0.05} value={glowScale} onChange={setGlowScale} />
+          <Slider label="Falloff" min={0.05} max={5} step={0.05} value={glowFalloff} onChange={setGlowFalloff} />
+          <Slider label="Inner" min={0} max={0.9} step={0.01} value={glowInner} onChange={setGlowInner} />
+          <Slider label="Hue" min={0} max={1} step={0.01} value={glowHueShift} onChange={setGlowHueShift} />
+          <Slider label="Sat" min={0} max={3} step={0.05} value={glowSaturation} onChange={setGlowSaturation} />
+          <div className="text-[9px] text-muted-foreground/60 mt-1 mb-0.5">Halo (outer glow)</div>
+          <Slider label="Intensity" min={0} max={3} step={0.01} value={localSGInt} onChange={setLocalSGInt} />
+          <Slider label="Scale" min={1} max={10} step={0.1} value={localSGScale} onChange={setLocalSGScale} />
+          <Slider label="Falloff" min={0.1} max={5} step={0.05} value={localSGFall} onChange={setLocalSGFall} />
+          <Slider label="Inner" min={0} max={0.9} step={0.01} value={localSGInner} onChange={setLocalSGInner} />
+          <button onClick={applySoftGlow} className="mt-1 rounded bg-cyan-900/50 px-2 py-0.5 text-[9px] text-cyan-400 hover:bg-cyan-900/80">Apply</button>
         </Accordion>
 
         <Accordion title="Clouds" defaultOpen={false}>
@@ -305,6 +369,15 @@ const App = ({ data }: any) => {
           <Slider label="Cont Freq" min={0.05} max={0.5} step={0.01} value={terrContinentFreq} onChange={setTerrContinentFreq} />
           <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={terrWarpStrength} onChange={setTerrWarpStrength} />
           <Slider label="Ice Cap" min={0.6} max={0.98} step={0.01} value={terrIceCapSize} onChange={setTerrIceCapSize} />
+        </Accordion>
+
+        <Accordion title="HZ Gradient" defaultOpen={false}>
+          <RangeSlider label="Atmosphere" min={0} max={1} step={0.01} value={hzAtmosRange} onChange={setHzAtmosRange} />
+          <RangeSlider label="Cloud Cover" min={0} max={1} step={0.01} value={hzCloudCoverRange} onChange={setHzCloudCoverRange} />
+          <RangeSlider label="Cloud Opacity" min={0} max={1} step={0.01} value={hzCloudOpacityRange} onChange={setHzCloudOpacityRange} />
+          <RangeSlider label="Sea Level" min={0} max={0.8} step={0.01} value={hzSeaLevelRange} onChange={setHzSeaLevelRange} />
+          <RangeSlider label="Ice Cap" min={0.5} max={1} step={0.01} value={hzIceCapRange} onChange={setHzIceCapRange} />
+          <RangeSlider label="Continent Freq" min={0.05} max={0.4} step={0.01} value={hzContinentFreqRange} onChange={setHzContinentFreqRange} />
         </Accordion>
 
         <Accordion title="Rocky" defaultOpen={false}>
