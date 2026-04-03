@@ -1,0 +1,199 @@
+/**
+ * Distortion Slider PACKAGED v:1.0
+ * Distortion Slider global CSS.
+ * @author Tibi - FWDesign [https://webdesign-flash.ro/]
+ * Copyright © Since 2006 All Rights Reserved.
+ */
+
+
+/* Import font. */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap');
+
+
+/* Font icon. */
+@font-face {
+    font-family: 'fwddsicon';
+    src:  url('fonts/fwddsicon.eot?w9rz1w');
+    src:  url('fonts/fwddsicon.eot?w9rz1w#iefix') format('embedded-opentype'),
+      url('fonts/fwddsicon.ttf?w9rz1w') format('truetype'),
+      url('fonts/fwddsicon.woff?w9rz1w') format('woff'),
+      url('fonts/fwddsicon.svg?w9rz1w#fwddsicon') format('svg');
+    font-weight: normal;
+    font-style: normal;
+    font-display: block;
+  }
+  
+  .fwddsicon,
+  [class^="fwddsicon-"]:before,
+  [class*=" fwddsicon-"]:before {
+    /* use !important to prevent issues with browser extensions that change fonts */
+    font-family: 'fwddsicon' !important;
+    speak: never;
+    font-style: normal;
+    font-weight: normal;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+  
+    /* Better Font Rendering =========== */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  .fwddsicon-fullscreen:before {
+    content: "\e900";
+  }
+  .fwddsicon-gallery-fullscreen:before {
+    content: "\e901";
+  }
+  .fwddsicon-gallery-normalscreen:before {
+    content: "\e902";
+  }
+  .fwddsicon-headephone:before {
+    content: "\e903";
+  }
+  .fwddsicon-left:before {
+    content: "\e904";
+  }
+  .fwddsicon-normalscreen:before {
+    content: "\e905";
+  }
+  .fwddsicon-pause:before {
+    content: "\e906";
+  }
+  .fwddsicon-play:before {
+    content: "\e907";
+  }
+  .fwddsicon-right:before {
+    content: "\e908";
+  }
+  .fwddsicon-settings:before {
+    content: "\e909";
+  }
+  .fwddsicon-sound:before {
+    content: "\e90a";
+  }
+  .fwddsicon-sound-off:before {
+    content: "\e90b";
+  }
+  .fwddsicon-uncast:before {
+    content: "\e90c";
+  }
+  .fwddsicon-vr:before {
+    content: "\e90d";
+  }
+  .fwddsicon-watch-later:before {
+    content: "\e90e";
+  }
+  .fwddsicon-zoomin:before {
+    content: "\e90f";
+  }
+  .fwddsicon-zoomout:before {
+    content: "\e910";
+  }
+  .fwddsicon-10:before {
+    content: "\e911";
+  }
+  .fwddsicon-cast:before {
+    content: "\e912";
+  }
+  .fwddsicon-CC:before {
+    content: "\e913";
+  }
+  .fwddsicon-CC-off:before {
+    content: "\e914";
+  }
+  .fwddsicon-close:before {
+    content: "\e915";
+  }
+  .fwddsicon-error:before {
+    content: "\e916";
+  }
+
+
+/* General. */
+.fwdds-error-window{
+    background: #FFF !important;
+}
+
+.fwdds-error-window-text{
+    font: 400 16px Roboto, Arial !important;
+    padding: 7px 21px 9px 23px !important;
+    color: #000;
+}
+
+.fwddsicon-error{
+    position: relative !important;
+    top: 5px !important;
+    left: -5px !important;
+    margin: 0 1px 0 0;
+    color: #F00;
+}
+
+.fwddsicon-error:before{
+  font-size: 26px;
+}
+
+
+/* Navigation buttons, the buttons colors are set in the slider settings. */
+.fwdds-navigation-button{
+    width: 40px !important;
+    height: 40px !important;
+}
+
+.fwdds-first-button .fwddsicon,
+.fwdds-second-button .fwddsicon{
+    position: relative !important; 
+    top: calc(50% - 8px) !important;
+    left: calc(50% - 8px) !important;
+}
+
+
+/* GUI. */
+.dg.main.a{
+    z-index: 9999;
+    margin:0;
+}
+
+.dg.main.a.closed{
+ 
+}
+
+.dg.main.a.opened{
+  
+}
+
+.dg .c{
+    width: 50% !important;
+}
+
+.dg .property-name{
+    width: 50% !important;
+}
+
+.dg.main.a .slider{
+    width: 71%;
+    margin-left:0;
+}
+
+.dg.main.a .has-slider input[type=text]{
+    width: 24% !important;
+    padding: 2px !important;
+}
+
+.dg.main.a .cr.color input[type=text]{
+    padding: 2px 0;
+}
+
+.dg .close-button{
+  width: 100% !important;
+}
+
+.dg > ul{
+  height: auto !important;
+}
+
+/* Stats. */
+.fwdds-imafe-manager > div{
+    position: absolute !important;
+}

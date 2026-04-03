@@ -236,6 +236,7 @@ const gasGiantFragment = `
   uniform float emissiveIntensity;
   varying vec3 vPosition;
   varying vec3 vNormal;
+  varying vec3 vWorldNormal;
   varying vec3 vWorldPosition;
 
   ${noiseLib}
@@ -327,8 +328,7 @@ const gasGiantFragment = `
     // Polar darkening
     color *= 1.0 - latitude * 0.2;
 
-    // Lighting — use actual sun direction
-    float diff = max(dot(vNormal, u_sunDirection), 0.0);
+    float diff = max(dot(vWorldNormal, u_sunDirection), 0.0);
     color *= (0.08 + 0.92 * diff);
 
     gl_FragColor = vec4(color, 1.0);
@@ -352,6 +352,7 @@ const rockyFragment = `
   uniform float u_lavaFlowScale;
   varying vec3 vPosition;
   varying vec3 vNormal;
+  varying vec3 vWorldNormal;
   varying vec3 vWorldPosition;
 
   ${noiseLib}
@@ -433,7 +434,7 @@ const rockyFragment = `
     color *= 0.9 + 0.1 * noise3d(p * 40.0);
 
     // Lighting — lava worlds have higher ambient (self-radiant heat)
-    float diff = max(dot(bumpNormal, u_sunDirection), 0.0);
+    float diff = max(dot(vWorldNormal, u_sunDirection), 0.0);
     float ambient = emissiveIntensity > 0.01 ? 0.25 : 0.06;
     color *= (ambient + (1.0 - ambient) * diff);
 
@@ -465,8 +466,8 @@ const terrestrialFragment = `
   uniform float u_iceCapSize;
   varying vec3 vPosition;
   varying vec3 vNormal;
-  varying vec3 vWorldPosition;
   varying vec3 vWorldNormal;
+  varying vec3 vWorldPosition;
 
   ${noiseLib}
 
@@ -661,12 +662,12 @@ const terrestrialFragment = `
 
     // Lighting with bump normal (land only; ocean is smooth)
     vec3 effectiveNormal = mix(vNormal, bumpNormal, isLand);
-    float diff = max(dot(effectiveNormal, u_sunDirection), 0.0);
+    float diff = max(dot(vWorldNormal, u_sunDirection), 0.0);
     surfaceColor *= (0.08 + 0.92 * diff);
 
     // Specular on ocean
     vec3 viewDir = normalize(-vPosition);
-    vec3 reflectDir = reflect(-u_sunDirection, vNormal);
+    vec3 reflectDir = reflect(-u_sunDirection, vWorldNormal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
     surfaceColor += vec3(0.3) * spec * (1.0 - isLand) * (1.0 - clouds);
 
@@ -690,6 +691,7 @@ const hazyFragment = `
   uniform vec3 color1, color2, color3, color4;
   varying vec3 vPosition;
   varying vec3 vNormal;
+  varying vec3 vWorldNormal;
   varying vec3 vWorldPosition;
 
   ${noiseLib}
@@ -729,7 +731,7 @@ const hazyFragment = `
     float limb = 1.0 - abs(dot(vNormal, normalize(vec3(0.0, 0.0, 1.0))));
     color = mix(color, color4, pow(limb, 3.0) * 0.15);
 
-    float diff = max(dot(vNormal, u_sunDirection), 0.0);
+    float diff = max(dot(vWorldNormal, u_sunDirection), 0.0);
     color *= (0.15 + 0.85 * diff);
     gl_FragColor = vec4(color, 1.0);
   }
@@ -749,6 +751,7 @@ const iceGiantFragment = `
   uniform vec3 color1, color2, color3, color4;
   varying vec3 vPosition;
   varying vec3 vNormal;
+  varying vec3 vWorldNormal;
   varying vec3 vWorldPosition;
 
   ${noiseLib}
@@ -824,7 +827,7 @@ const iceGiantFragment = `
     float limb = max(dot(vNormal, normalize(vec3(0.0, 0.0, 1.0))), 0.0);
     color *= 0.85 + 0.15 * limb;
 
-    float diff = max(dot(vNormal, u_sunDirection), 0.0);
+    float diff = max(dot(vWorldNormal, u_sunDirection), 0.0);
     color *= (0.08 + 0.92 * diff);
     gl_FragColor = vec4(color, 1.0);
   }
