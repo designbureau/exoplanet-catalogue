@@ -125,8 +125,10 @@ const noiseLib = `
   float craterProfile(float d, float size) {
     float r = d / size;
     if (r > 1.2) return 0.0;
-    if (r > 0.8) return 0.3 * (1.0 - smoothstep(0.8, 1.2, r)); // rim
-    return -0.5 * (1.0 - smoothstep(0.0, 0.8, r)); // bowl
+    // Smooth rim + bowl with no sharp transitions
+    float rim = 0.15 * smoothstep(0.6, 0.9, r) * (1.0 - smoothstep(0.9, 1.2, r));
+    float bowl = -0.3 * (1.0 - smoothstep(0.0, 0.7, r));
+    return rim + bowl;
   }
 
   // Sobel-style bump normal from height field (6-sample for better quality)
@@ -374,6 +376,10 @@ const rockyFragment = `
 
     float terrain = base + ridges + soft + detail;
 
+    // Giant impact basins: 3-4 per planet, very wide and shallow
+    vec2 v0 = voronoi(p * 0.18);
+    terrain += craterProfile(v0.x, 3.5) * u_craterDepth * 0.6;
+
     // Craters: large scale always, medium/small only at high LOD
     vec2 v1 = voronoi(p * 0.7 * u_craterScale);
     terrain += craterProfile(v1.x, 2.0) * u_craterDepth;
@@ -395,12 +401,13 @@ const rockyFragment = `
     // Bump normal: only compute at high LOD
     vec3 bumpNormal = vNormal;
     if (u_lod > 0.5) {
-      float eps = 0.002;
+      float eps = 0.01;
       float hx = computeHeight(p + vec3(eps, 0.0, 0.0));
       float hy = computeHeight(p + vec3(0.0, eps, 0.0));
       float hz = computeHeight(p + vec3(0.0, 0.0, eps));
       vec3 bumpGrad = vec3(height - hx, height - hy, height - hz) / eps;
-      bumpNormal = normalize(vNormal + bumpGrad * 0.15);
+      bumpGrad = clamp(bumpGrad, vec3(-2.0), vec3(2.0));
+      bumpNormal = normalize(vNormal + bumpGrad * 0.08);
     }
 
     // Colour based on height
@@ -412,17 +419,16 @@ const rockyFragment = `
     // Fine surface roughness for colour variation
     color *= 0.9 + 0.1 * noise3d(p * 40.0);
 
-    // Emissive (for lava worlds)
+    // Lighting with bump normal — apply before emissive so lava glows in shadow
+    float diff = max(dot(bumpNormal, u_sunDirection), 0.0);
+    color *= (0.06 + 0.94 * diff);
+
+    // Emissive (for lava worlds) — added after lighting so it glows in shadow
     float lavaGlow = smoothstep(0.2, 0.0, h) * emissiveIntensity;
     color += emissiveColor * lavaGlow;
-    // Glow in cracks between craters
     vec2 v1 = voronoi(p * 0.7);
     float cracks = smoothstep(0.02, 0.0, abs(v1.y - v1.x - 0.1)) * emissiveIntensity * 0.5;
     color += emissiveColor * cracks;
-
-    // Lighting with bump normal — use sun direction
-    float diff = max(dot(bumpNormal, u_sunDirection), 0.0);
-    color *= (0.06 + 0.94 * diff);
 
     gl_FragColor = vec4(color, 1.0);
   }
