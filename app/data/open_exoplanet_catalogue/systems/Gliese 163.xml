@@ -1,0 +1,82 @@
+<system>
+	<name>Gliese 163</name>
+	<name>GJ 163</name>
+	<rightascension>04 09 16.01</rightascension>
+	<declination>-53 22 24.96</declination>
+	<distance errorminus="0.4" errorplus="0.4">15.0</distance>
+	<star>
+		<name>GJ 163</name>
+		<magV>11.8</magV>
+		<mass>0.4</mass>
+		<spectraltype>M3.5</spectraltype>
+		<planet>
+			<name>Gliese 163 b</name>
+			<name>GJ 163 b</name>
+			<semimajoraxis errorminus="0.006" errorplus="0.005">0.06</semimajoraxis>
+			<eccentricity errorminus="0.02" errorplus="0.12">0.02</eccentricity>
+			<periastron errorminus="15.7" errorplus="15.7">74.73</periastron>
+			<period errorminus="0.0023" errorplus="0.0023">8.6312</period>
+			<description>The parameters listed here were imported into the Open Exoplanet Catalogue from the exoplanet.eu website.</description>
+			<mass errorminus="0.0072" errorplus="0.0072">0.0311</mass>
+			<discoverymethod>RV</discoverymethod>
+			<discoveryyear>2012</discoveryyear>
+			<list>Confirmed planets</list>
+			<lastupdate>19/06/14</lastupdate>
+		</planet>
+		<planet>
+			<name>Gliese 163 c</name>
+			<name>GJ 163 c</name>
+			<semimajoraxis errorminus="0.013" errorplus="0.01">0.124</semimajoraxis>
+			<eccentricity errorminus="0.03" errorplus="0.18">0.03</eccentricity>
+			<periastron errorminus="80.0" errorplus="80.0">235.4</periastron>
+			<period errorminus="0.042" errorplus="0.042">25.637</period>
+			<description>The parameters listed here were imported into the Open Exoplanet Catalogue from the exoplanet.eu website.</description>
+			<mass errorminus="0.0072" errorplus="0.0091">0.0239</mass>
+			<discoverymethod>RV</discoverymethod>
+			<discoveryyear>2012</discoveryyear>
+			<list>Confirmed planets</list>
+			<lastupdate>19/06/14</lastupdate>
+		</planet>
+		<planet>
+			<name>Gliese 163 d</name>
+			<name>GJ 163 d</name>
+			<semimajoraxis errorminus="0.118" errorplus="0.088">1.021</semimajoraxis>
+			<eccentricity errorminus="0.02" errorplus="0.22">0.02</eccentricity>
+			<periastron errorminus="20.5" errorplus="20.5">126.915</periastron>
+			<period errorminus="24.0" errorplus="29.0">604.0</period>
+			<description>The parameters listed here were imported into the Open Exoplanet Catalogue from the exoplanet.eu website.</description>
+			<mass errorminus="0.0239" errorplus="0.0239">0.0636</mass>
+			<discoverymethod>RV</discoverymethod>
+			<discoveryyear>2013</discoveryyear>
+			<list>Confirmed planets</list>
+			<lastupdate>19/06/14</lastupdate>
+		</planet>
+		<planet>
+			<name>Gliese 163 e</name>
+			<name>GJ 163 e</name>
+			<semimajoraxis errorminus="0.066" errorplus="0.066">0.7</semimajoraxis>
+			<eccentricity errorminus="0.03" errorplus="0.25">0.03</eccentricity>
+			<period errorminus="10.0" errorplus="12.0">349.0</period>
+			<description>The parameters listed here were imported into the Open Exoplanet Catalogue from the exoplanet.eu website.</description>
+			<mass errorminus="0.0205" errorplus="0.0258">0.0428</mass>
+			<discoverymethod>RV</discoverymethod>
+			<discoveryyear>2019</discoveryyear>
+			<list>Confirmed planets</list>
+			<lastupdate>21/04/10</lastupdate>
+		</planet>
+		<planet>
+			<name>Gliese 163 f</name>
+			<name>GJ 163 f</name>
+			<semimajoraxis errorminus="0.034" errorplus="0.027">0.326</semimajoraxis>
+			<eccentricity errorminus="0.04" errorplus="0.23">0.04</eccentricity>
+			<period errorminus="1.4" errorplus="1.6">109.5</period>
+			<description>The parameters listed here were imported into the Open Exoplanet Catalogue from the exoplanet.eu website.</description>
+			<mass errorminus="0.0138" errorplus="0.0138">0.0214</mass>
+			<discoverymethod>RV</discoverymethod>
+			<discoveryyear>2019</discoveryyear>
+			<list>Confirmed planets</list>
+			<lastupdate>21/04/10</lastupdate>
+		</planet>
+	</star>
+	<constellation>Dorado</constellation>
+</system>

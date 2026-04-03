@@ -1,0 +1,39 @@
+<system>
+	<name>HAT-P-36</name>
+	<rightascension>12 33 03.9061</rightascension>
+	<declination>+44 54 55.1970</declination>
+	<distance errorminus="2.27" errorplus="2.27">296.93</distance>
+	<star>
+		<name>HAT-P-36</name>
+		<name>Tuiren</name>
+		<name>Gaia DR2 1541532207133249920</name>
+		<name>TYC 3020-2221-1</name>
+		<radius errorminus="0.01" errorplus="0.01">1.04</radius>
+		<magV errorminus="0.068" errorplus="0.068">12.262</magV>
+		<magJ errorminus="0.027" errorplus="0.027">11.046</magJ>
+		<magH errorminus="0.029" errorplus="0.029">10.723</magH>
+		<magK errorminus="0.021" errorplus="0.021">10.603</magK>
+		<mass errorminus="0.03" errorplus="0.03">1.03</mass>
+		<temperature errorminus="40.00" errorplus="40.00">5620.00</temperature>
+		<spectraltype>G5V</spectraltype>
+		<planet>
+			<name>HAT-P-36 b</name>
+			<name>Tuiren b</name>
+			<name>Gaia DR2 1541532207133249920 b</name>
+			<name>TYC 3020-2221-1 b</name>
+			<semimajoraxis errorminus="0.000470" errorplus="0.000470">0.024100</semimajoraxis>
+			<inclination errorminus="0.130" errorplus="0.004">87.130</inclination>
+			<period errorminus="0.00000048" errorplus="0.00000048">1.32734683</period>
+			<description>This planet was discovered by Bakos et al. 2012. This was a ground based discovery. The parameters listed here are those reported by Chakrabarty &amp; Sengupta 2019 and were imported into the Open Exoplanet Catalogue from the NASA Exoplanet Archive.</description>
+			<mass errorminus="0.08700" errorplus="0.08700">1.84820</mass>
+			<radius errorminus="0.020" errorplus="0.020">1.277</radius>
+			<temperature errorminus="19" errorplus="19">1781</temperature>
+			<discoverymethod>transit</discoverymethod>
+			<istransiting>1</istransiting>
+			<discoveryyear>2011</discoveryyear>
+			<list>Confirmed planets</list>
+			<lastupdate>19/07/11</lastupdate>
+		</planet>
+	</star>
+	<constellation>Canes Venatici</constellation>
+</system>

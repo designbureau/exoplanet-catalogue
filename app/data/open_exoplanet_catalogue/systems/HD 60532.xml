@@ -1,0 +1,57 @@
+<system>
+	<name>HD 60532</name>
+	<rightascension>07 34 03.1802</rightascension>
+	<declination>-22 17 45.8383</declination>
+	<distance>25.7</distance>
+	<star>
+		<mass>1.44</mass>
+		<magV>4.45</magV>
+		<magB>4.94</magB>
+		<magJ errorminus="0.270" errorplus="0.270">3.703</magJ>
+		<magH errorminus="0.240" errorplus="0.240">3.318</magH>
+		<magK errorminus="0.286" errorplus="0.286">3.355</magK>
+		<metallicity>-0.26</metallicity>
+		<spectraltype>F6IV-V</spectraltype>
+		<planet>
+			<name>HD 60532 b</name>
+			<name>Gaia DR2 5619121248264726272 b</name>
+			<name>HIP 36795 b</name>
+			<name>TYC 5991-217-1 b</name>
+			<name>GJ 279 b</name>
+			<list>Confirmed planets</list>
+			<mass>3.15</mass>
+			<period>201.83</period>
+			<semimajoraxis>0.77</semimajoraxis>
+			<eccentricity>0.278</eccentricity>
+			<inclination>20</inclination>
+			<discoverymethod>RV</discoverymethod>
+			<lastupdate>12/01/31</lastupdate>
+			<discoveryyear>2008</discoveryyear>
+			<temperature>497.4</temperature>
+		</planet>
+		<planet>
+			<name>HD 60532 c</name>
+			<name>Gaia DR2 5619121248264726272 c</name>
+			<name>HIP 36795 c</name>
+			<name>TYC 5991-217-1 c</name>
+			<name>GJ 279 c</name>
+			<list>Confirmed planets</list>
+			<mass>7.46</mass>
+			<period>607.06</period>
+			<semimajoraxis>1.58</semimajoraxis>
+			<eccentricity>0.038</eccentricity>
+			<inclination>20</inclination>
+			<discoverymethod>RV</discoverymethod>
+			<lastupdate>12/01/31</lastupdate>
+			<discoveryyear>2008</discoveryyear>
+			<temperature>348.9</temperature>
+		</planet>
+		<name>HD 60532</name>
+		<name>Gaia DR2 5619121248264726272</name>
+		<name>HIP 36795</name>
+		<name>TYC 5991-217-1</name>
+		<name>GJ 279</name>
+		<temperature>6095.0</temperature>
+	</star>
+	<constellation>Puppis</constellation>
+</system>

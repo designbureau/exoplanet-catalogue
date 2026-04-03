@@ -1,0 +1,43 @@
+<system>
+	<name>Gliese 328</name>
+	<name>GJ 328</name>
+	<rightascension>08 55 07.6219</rightascension>
+	<declination>+01 32 47.4164</declination>
+	<distance errorminus="0.8" errorplus="0.8">19.8</distance>
+	<star>
+		<magB errorminus="0.09" errorplus="0.09">11.30</magB>
+		<magV errorminus="0.04" errorplus="0.04">9.98</magV>
+		<magR>9.072</magR>
+		<magI>8.204</magI>
+		<magJ errorminus="0.027" errorplus="0.027">7.191</magJ>
+		<magH errorminus="0.018" errorplus="0.018">6.523</magH>
+		<magK errorminus="0.026" errorplus="0.026">6.352</magK>
+		<name>Gliese 328</name>
+		<name>GJ 328</name>
+		<name>Gaia DR2 577602496345490176</name>
+		<name>HIP 43790</name>
+		<name>TYC 213-177-1</name>
+		<mass errorminus="0.05" errorplus="0.05">0.69</mass>
+		<temperature errorminus="100" errorplus="100">3900</temperature>
+		<metallicity errorminus="0.15" errorplus="0.15">0.00</metallicity>
+		<spectraltype>M1</spectraltype>
+		<planet>
+			<name>Gliese 328 b</name>
+			<name>GJ 328 b</name>
+			<name>Gaia DR2 577602496345490176 b</name>
+			<name>HIP 43790 b</name>
+			<name>TYC 213-177-1 b</name>
+			<list>Confirmed planets</list>
+			<mass errorminus="0.13" errorplus="0.13">2.3</mass>
+			<period errorminus="300" errorplus="300">4100</period>
+			<semimajoraxis errorminus="0.2" errorplus="0.2">4.5</semimajoraxis>
+			<eccentricity errorminus="0.05" errorplus="0.05">0.37</eccentricity>
+			<periastron errorminus="3" errorplus="3">290</periastron>
+			<description>Gliese 328 b is an eccentric two Jupiter-mass planet with an orbital period of eleven years. The discovery is based on ten years' worth of radial velocity data from the Hobby-Eberly and Harlan J. Smith telescopes at McDonald Observatory, and from the Keck Telescope at Mauna Kea. It is currently the most massive, longest-period planet discovered around a low-mass dwarf.</description>
+			<discoverymethod>RV</discoverymethod>
+			<lastupdate>13/07/31</lastupdate>
+			<discoveryyear>2013</discoveryyear>
+		</planet>
+	</star>
+	<constellation>Hydra</constellation>
+</system>

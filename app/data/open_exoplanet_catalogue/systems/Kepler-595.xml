@@ -1,0 +1,39 @@
+<system>
+	<name>Kepler-595</name>
+	<rightascension>19 38 17</rightascension>
+	<declination>+50 40 23</declination>
+	<distance errorminus="31.97" errorplus="45.22">639.00</distance>
+	<star>
+		<name>Kepler-595</name>
+		<radius errorminus="0.24" errorplus="0.24">0.82</radius>
+		<magJ errorminus="0.022" errorplus="0.022">13.335</magJ>
+		<magH errorminus="0.021" errorplus="0.021">12.940</magH>
+		<magK errorminus="0.029" errorplus="0.029">12.862</magK>
+		<mass errorminus="0.06" errorplus="0.06">0.93</mass>
+		<planet>
+			<name>Kepler-595 b</name>
+			<period errorminus="0.00000600" errorplus="0.00000600">25.30290920</period>
+			<description>This planet was discovered by Morton et al. 2016. The discovery was made with a space based telescope (0.95 m Kepler Telescope). The parameters listed here are those reported by Yoffe et al. 2020 and were imported into the Open Exoplanet Catalogue from the NASA Exoplanet Archive.</description>
+			<mass errorminus="0.01196" errorplus="0.02234">0.05475</mass>
+			<radius errorminus="0.001" errorplus="0.001">0.331</radius>
+			<discoverymethod>transit</discoverymethod>
+			<istransiting>1</istransiting>
+			<discoveryyear>2016</discoveryyear>
+			<list>Confirmed planets</list>
+			<lastupdate>20/11/19</lastupdate>
+		</planet>
+		<planet>
+			<name>Kepler-595 c</name>
+			<period errorminus="0.00000500" errorplus="0.00000500">12.38602000</period>
+			<description>This planet was discovered by Yoffe et al. 2020. The discovery was made with a space based telescope (0.95 m Kepler Telescope). The parameters listed here are those reported by Yoffe et al. 2020 and were imported into the Open Exoplanet Catalogue from the NASA Exoplanet Archive.</description>
+			<mass errorminus="0.00315" errorplus="0.00535">0.01038</mass>
+			<radius errorminus="0.002" errorplus="0.002">0.090</radius>
+			<discoverymethod>transit</discoverymethod>
+			<istransiting>1</istransiting>
+			<discoveryyear>2020</discoveryyear>
+			<list>Confirmed planets</list>
+			<lastupdate>20/11/19</lastupdate>
+		</planet>
+	</star>
+	<constellation>Cygnus</constellation>
+</system>

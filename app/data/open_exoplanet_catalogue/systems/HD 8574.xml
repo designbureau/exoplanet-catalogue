@@ -1,0 +1,42 @@
+<system>
+	<name>HD 8574</name>
+	<rightascension>01 25 12.5155</rightascension>
+	<declination>+28 34 00.1015</declination>
+	<distance>44.2</distance>
+	<star>
+		<mass>1.17</mass>
+		<radius>1.37</radius>
+		<magV>7.12</magV>
+		<magB errorminus="0.016" errorplus="0.016">7.684</magB>
+		<magR>6.8</magR>
+		<magI>6.5</magI>
+		<magJ>6.05</magJ>
+		<magH>5.82</magH>
+		<magK>5.78</magK>
+		<metallicity>0.05</metallicity>
+		<spectraltype>F8</spectraltype>
+		<planet>
+			<name>HD 8574 b</name>
+			<name>TYC 1754-192-1 b</name>
+			<name>Belenos b</name>
+			<name>Gaia DR2 297045096447719040 b</name>
+			<name>HIP 6643 b</name>
+			<list>Confirmed planets</list>
+			<mass>2.11</mass>
+			<period>227.55</period>
+			<semimajoraxis>0.77</semimajoraxis>
+			<eccentricity>0.288</eccentricity>
+			<discoverymethod>RV</discoverymethod>
+			<lastupdate>09/10/08</lastupdate>
+			<discoveryyear>2003</discoveryyear>
+			<temperature>355.7</temperature>
+		</planet>
+		<name>HD 8574</name>
+		<name>TYC 1754-192-1</name>
+		<name>Belenos</name>
+		<name>Gaia DR2 297045096447719040</name>
+		<name>HIP 6643</name>
+		<temperature>6080.0</temperature>
+	</star>
+	<constellation>Pisces</constellation>
+</system>

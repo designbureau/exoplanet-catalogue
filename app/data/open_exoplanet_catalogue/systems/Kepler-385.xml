@@ -1,0 +1,52 @@
+<system>
+	<name>Kepler-385</name>
+	<rightascension>19 37 21</rightascension>
+	<declination>+50 20 12</declination>
+	<distance errorminus="49.82" errorplus="49.82">1493.94</distance>
+	<star>
+		<name>Kepler-385</name>
+		<radius errorminus="0.56" errorplus="0.56">1.13</radius>
+		<magJ errorminus="0.027" errorplus="0.027">14.156</magJ>
+		<magH errorminus="0.035" errorplus="0.035">13.851</magH>
+		<magK errorminus="0.056" errorplus="0.056">13.819</magK>
+		<temperature errorminus="250.00" errorplus="250.00">6326.00</temperature>
+		<planet>
+			<name>Kepler-385 b</name>
+			<semimajoraxis>0.097000</semimajoraxis>
+			<period errorminus="0.00012800" errorplus="0.00012800">10.04368600</period>
+			<description>This planet was discovered by Rowe et al. 2014. The discovery was made with a space based telescope (0.95 m Kepler Telescope). The parameters listed here are those reported by Rowe et al. 2014 and were imported into the Open Exoplanet Catalogue from the NASA Exoplanet Archive.</description>
+			<radius errorminus="0.123" errorplus="0.123">0.244</radius>
+			<discoverymethod>transit</discoverymethod>
+			<istransiting>1</istransiting>
+			<discoveryyear>2014</discoveryyear>
+			<list>Confirmed planets</list>
+			<lastupdate>14/05/14</lastupdate>
+			<transittime errorminus="0.005310" errorplus="0.005310">2455186.625030</transittime>
+		</planet>
+		<planet>
+			<name>Kepler-385 c</name>
+			<semimajoraxis>0.127000</semimajoraxis>
+			<period errorminus="0.00026900" errorplus="0.00026900">15.16316100</period>
+			<description>This planet was discovered by Rowe et al. 2014. The discovery was made with a space based telescope (0.95 m Kepler Telescope). The parameters listed here are those reported by Rowe et al. 2014 and were imported into the Open Exoplanet Catalogue from the NASA Exoplanet Archive.</description>
+			<radius errorminus="0.139" errorplus="0.139">0.271</radius>
+			<discoverymethod>transit</discoverymethod>
+			<istransiting>1</istransiting>
+			<discoveryyear>2014</discoveryyear>
+			<list>Confirmed planets</list>
+			<lastupdate>14/05/14</lastupdate>
+			<transittime errorminus="0.010900" errorplus="0.010900">2454977.457410</transittime>
+		</planet>
+		<planet>
+			<name>Kepler-385 d</name>
+			<period>56.41590000</period>
+			<description>This planet was discovered by Armstrong et al. 2020. The discovery was made with a space based telescope (0.95 m Kepler Telescope). The parameters listed here are those reported by Armstrong et al. 2020 and were imported into the Open Exoplanet Catalogue from the NASA Exoplanet Archive.</description>
+			<radius>0.234</radius>
+			<discoverymethod>transit</discoverymethod>
+			<istransiting>1</istransiting>
+			<discoveryyear>2020</discoveryyear>
+			<list>Confirmed planets</list>
+			<lastupdate>20/09/03</lastupdate>
+		</planet>
+	</star>
+	<constellation>Cygnus</constellation>
+</system>

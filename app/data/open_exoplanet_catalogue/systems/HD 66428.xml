@@ -1,0 +1,41 @@
+<system>
+	<name>HD 66428</name>
+	<rightascension>08 03 28.00</rightascension>
+	<declination>-01 09 45.00</declination>
+	<distance errorminus="3.8" errorplus="3.8">55.0</distance>
+	<star>
+		<name>HD 66428</name>
+		<magV>8.25</magV>
+		<mass>1.14552</mass>
+		<temperature>5752.0</temperature>
+		<metallicity>0.31</metallicity>
+		<spectraltype>G5</spectraltype>
+		<planet>
+			<name>HD 66428 b</name>
+			<semimajoraxis errorminus="0.19" errorplus="0.19">3.18</semimajoraxis>
+			<eccentricity errorminus="0.03" errorplus="0.03">0.465</eccentricity>
+			<periastron errorminus="3.9" errorplus="3.9">152.9</periastron>
+			<period errorminus="31.0" errorplus="31.0">1973.0</period>
+			<description>The parameters listed here were imported into the Open Exoplanet Catalogue from the exoplanet.eu website.</description>
+			<mass errorminus="0.027" errorplus="0.027">2.82</mass>
+			<discoverymethod>RV</discoverymethod>
+			<discoveryyear>2006</discoveryyear>
+			<list>Confirmed planets</list>
+			<lastupdate>06/07/14</lastupdate>
+		</planet>
+		<planet>
+			<name>HD 66428 c</name>
+			<semimajoraxis errorminus="7.6" errorplus="19.0">23.0</semimajoraxis>
+			<eccentricity errorminus="0.16" errorplus="0.23">0.32</eccentricity>
+			<periastron errorminus="80.0" errorplus="37.0">28.5</periastron>
+			<period errorminus="18000.0" errorplus="56000.0">39000.0</period>
+			<description>The parameters listed here were imported into the Open Exoplanet Catalogue from the exoplanet.eu website.</description>
+			<mass errorminus="0.053" errorplus="0.069">0.085</mass>
+			<discoverymethod>RV</discoverymethod>
+			<discoveryyear>2021</discoveryyear>
+			<list>Confirmed planets</list>
+			<lastupdate>21/05/31</lastupdate>
+		</planet>
+	</star>
+	<constellation>Monoceros</constellation>
+</system>

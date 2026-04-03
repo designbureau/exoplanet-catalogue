@@ -1,0 +1,72 @@
+<system>
+	<name>GJ 229</name>
+	<rightascension>06 10 34.61533</rightascension>
+	<declination>-21 51 52.7117</declination>
+	<distance errorminus="0.03" errorplus="0.03">5.75</distance>
+	<binary>
+		<name>GJ 229</name>
+		<name>Gliese 229</name>
+		<name>WDS J06106-2152</name>
+		<name>NAJ 1</name>
+		<separation unit="arcsec">6.80</separation>
+		<separation unit="AU">39.1</separation>
+		<positionangle>168</positionangle>
+		<star>
+			<name>GJ 229</name>
+			<name>HD 42581</name>
+			<name>HIP 29295</name>
+			<magV>8.140</magV>
+			<magI>6.135</magI>
+			<magJ errorminus="0.037" errorplus="0.037">5.104</magJ>
+			<magH errorminus="0.254" errorplus="0.254">4.393</magH>
+			<magK errorminus="0.232" errorplus="0.232">4.166</magK>
+			<mass>0.58</mass>
+			<spectraltype>M1/M2V</spectraltype>
+			<planet>
+				<name>GJ 229 b</name>
+				<name>HD 42581 b</name>
+				<name>HIP 29295 b</name>
+				<semimajoraxis errorminus="0.031000" errorplus="0.031000">0.898000</semimajoraxis>
+				<eccentricity errorminus="0.060000" errorplus="0.060000">0.100000</eccentricity>
+				<periastron errorminus="71.0000" errorplus="71.0000">199.0000</periastron>
+				<period errorminus="4.30000000" errorplus="4.30000000">526.11500000</period>
+				<description>This planet was discovered by Tuomi et al. 2014. This was a ground based discovery. The parameters listed here are those reported by Feng et al. 2020 and were imported into the Open Exoplanet Catalogue from the NASA Exoplanet Archive.</description>
+				<mass errorminus="0.00640" errorplus="0.00640">0.02667</mass>
+				<discoverymethod>RV</discoverymethod>
+				<discoveryyear>2014</discoveryyear>
+				<list>Confirmed planets</list>
+				<lastupdate>20/02/13</lastupdate>
+				<list>Planets in binary systems, S-type</list>
+			</planet>
+			<planet>
+				<name>GJ 229 c</name>
+				<name>HD 42581 c</name>
+				<name>HIP 29295 c</name>
+				<semimajoraxis errorminus="0.011000" errorplus="0.011000">0.339000</semimajoraxis>
+				<eccentricity errorminus="0.080000" errorplus="0.080000">0.190000</eccentricity>
+				<periastron errorminus="33.0000" errorplus="33.0000">121.0000</periastron>
+				<period errorminus="0.16100000" errorplus="0.16100000">121.99500000</period>
+				<description>This planet was discovered by Feng et al. 2020. This was a ground based discovery. The parameters listed here are those reported by Feng et al. 2020 and were imported into the Open Exoplanet Catalogue from the NASA Exoplanet Archive.</description>
+				<mass errorminus="0.00395" errorplus="0.00395">0.02287</mass>
+				<discoverymethod>RV</discoverymethod>
+				<discoveryyear>2020</discoveryyear>
+				<list>Confirmed planets</list>
+				<lastupdate>20/02/13</lastupdate>
+				<list>Planets in binary systems, S-type</list>
+			</planet>
+		</star>
+		<star>
+			<name>GJ 229 B</name>
+			<name>Gliese 229 B</name>
+			<name>WDS 06102-2152 B</name>
+			<name>NAJ 1 B</name>
+			<magJ errorminus="0.05" errorplus="0.05">14.01</magJ>
+			<magH errorminus="0.05" errorplus="0.05">14.36</magH>
+			<magK errorminus="0.05" errorplus="0.05">14.36</magK>
+			<spectraltype>T6</spectraltype>
+			<mass lowerlimit="0.04" upperlimit="0.055" />
+			<temperature>1000</temperature>
+		</star>
+	</binary>
+	<constellation>Lepus</constellation>
+</system>

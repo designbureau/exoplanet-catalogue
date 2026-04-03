@@ -1,0 +1,66 @@
+<system>
+	<name>CoRoT-7</name>
+	<rightascension>06 43 49</rightascension>
+	<declination>-01 03 47</declination>
+	<distance errorminus="0.9060000" errorplus="0.9170000">159.9060000</distance>
+	<star>
+		<name>CoRoT-7</name>
+		<radius errorminus="0.04" errorplus="0.04">0.83</radius>
+		<magV errorminus="0.0270000" errorplus="0.0270000">11.7280000</magV>
+		<magJ errorminus="0.0240000" errorplus="0.0240000">10.3010000</magJ>
+		<magH errorminus="0.0220000" errorplus="0.0220000">9.8800000</magH>
+		<magK errorminus="0.0210000" errorplus="0.0210000">9.8060000</magK>
+		<magI>10.9240000</magI>
+		<mass errorminus="0.17" errorplus="0.17">0.82</mass>
+		<temperature errorminus="75.00" errorplus="75.00">5275.00</temperature>
+		<metallicity>0.050</metallicity>
+		<spectraltype>G9V</spectraltype>
+		<planet>
+			<name>CoRoT-7 b</name>
+			<semimajoraxis errorminus="0.000036" errorplus="0.000170">0.017016</semimajoraxis>
+			<eccentricity>0.000000</eccentricity>
+			<periastron errorminus="140.0000" errorplus="140.0000">160.0000</periastron>
+			<inclination errorminus="0.300" errorplus="0.300">80.100</inclination>
+			<period errorminus="0.00000001" errorplus="0.00000001">0.85359163</period>
+			<description>This planet was discovered by Leger et al. 2009. The discovery was made with a space based telescope (0.27 m CoRoT Telescope). The parameters listed here have been imported into the Open Exoplanet Catalogue from the NASA Exoplanet Archive.</description>
+			<mass errorminus="0.00321" errorplus="0.00321">0.01283</mass>
+			<radius errorminus="0.010" errorplus="0.010">0.150</radius>
+			<temperature errorminus="2.70000000000e+01" errorplus="2.70000000000e+01">1.75600000000e+03</temperature>
+			<discoverymethod>transit</discoverymethod>
+			<istransiting>1</istransiting>
+			<discoveryyear>2009</discoveryyear>
+			<list>Confirmed planets</list>
+			<lastupdate>22/09/15</lastupdate>
+			<transittime errorminus="0.000740" errorplus="0.000450">2454398.077560</transittime>
+		</planet>
+		<planet>
+			<name>CoRoT-7 c</name>
+			<semimajoraxis>0.046000</semimajoraxis>
+			<eccentricity>0.000000</eccentricity>
+			<periastron>180.0000</periastron>
+			<inclination>80.000</inclination>
+			<period errorminus="0.00300000" errorplus="0.00300000">3.69800000</period>
+			<description>This planet was discovered by Queloz et al. 2009. The discovery was made with a space based telescope (0.27 m CoRoT Telescope). The parameters listed here have been imported into the Open Exoplanet Catalogue from the NASA Exoplanet Archive.</description>
+			<mass errorminus="0.00283" errorplus="0.00283">0.02643</mass>
+			<radius>0.253</radius>
+			<discoverymethod>RV</discoverymethod>
+			<discoveryyear>2009</discoveryyear>
+			<list>Confirmed planets</list>
+			<lastupdate>22/09/15</lastupdate>
+			<transittime errorminus="0.700000" errorplus="0.700000">2454445.000000</transittime>
+			<istransiting>1</istransiting>
+		</planet>
+		<planet>
+			<name>CoRoT-7 d</name>
+			<period errorminus="1.54600000" errorplus="1.54600000">8.96600000</period>
+			<description>This planet was discovered by John et al. 2022. This was a ground based discovery. The parameters listed here have been imported into the Open Exoplanet Catalogue from the NASA Exoplanet Archive.</description>
+			<mass errorminus="0.00803" errorplus="0.00803">0.05393</mass>
+			<radius>0.384</radius>
+			<discoverymethod>RV</discoverymethod>
+			<discoveryyear>2022</discoveryyear>
+			<list>Confirmed planets</list>
+			<lastupdate>22/09/15</lastupdate>
+		</planet>
+	</star>
+	<constellation>Monoceros</constellation>
+</system>
