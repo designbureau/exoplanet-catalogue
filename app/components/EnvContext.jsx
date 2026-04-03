@@ -14,11 +14,11 @@ export const EnvProvider = ({ children }) => {
   //   1 Jupiter radius ≈ 9.3 / 10.045 ≈ 0.926 scene units
 
   // Visual scale multiplier for body radii (adjustable via UI)
-  const [bodyScale, setBodyScale] = useState(3);
+  const [bodyScale, setBodyScale] = useState(1);
 
   // Distance factors (1.0 = physical scale)
   const [planetDistanceFactor, setPlanetDistanceFactor] = useState(1);
-  const [binaryDistanceFactor, setBinaryDistanceFactor] = useState(0.1);
+  const [binaryDistanceFactor, setBinaryDistanceFactor] = useState(1);
 
   // Toggles
   const [showHabitableZone, setShowHabitableZone] = useState(false);
