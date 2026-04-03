@@ -39,11 +39,24 @@ export interface ShaderParams {
   emissive: THREE.Color;
   emissiveIntensity: number;
   equilibriumTemp: number;
+  stellarFlux: number;      // S_eff relative to Earth (1.0 = Earth flux)
   seed: THREE.Vector3;
   atmosColor: THREE.Color;
   atmosIntensity: number;
   atmosDayColor: THREE.Color;
   atmosTwilightColor: THREE.Color;
+  // Atmosphere layer flags
+  hasAtmosphere: boolean;
+  showRim: boolean;
+  showShell: boolean;
+  showHalo: boolean;
+  hasHzGradient: boolean;
+  // Per-planet terrestrial surface params (HZ gradient)
+  cloudCoverage?: number;
+  cloudOpacity?: number;
+  seaLevel?: number;
+  iceCapSize?: number;
+  continentFreq?: number;
 }
 
 // Deterministic string hash for seeding planet noise
@@ -77,14 +90,32 @@ function estimateEquilibriumTemp(
 ): number {
   let rStar = starRadius;
   if (rStar <= 0 && starMass > 0) {
-    // Main-sequence mass-radius: R ≈ M^0.8 (in solar units)
     rStar = Math.pow(starMass, 0.8);
   }
-  if (rStar <= 0 || semimajorAxisAU <= 0 || starTemp <= 0) return 300; // default
+  if (rStar <= 0 || semimajorAxisAU <= 0 || starTemp <= 0) return 300;
 
-  // R_star in AU: 1 solar radius = 0.00465 AU
   const rStarAU = rStar * 0.00465;
   return starTemp * Math.sqrt(rStarAU / (2 * semimajorAxisAU));
+}
+
+// Compute effective stellar flux relative to Earth (S_eff)
+// S_eff = (T_star/5780)^4 * (R_star)^2 / (a)^2
+// where R_star in solar radii, a in AU
+// Earth = 1.0, Venus ≈ 1.91, Mars ≈ 0.43
+// Based on Kopparapu et al. 2013/2014 and Kane et al. 2014
+function computeStellarFlux(
+  starTemp: number,
+  starMass: number,
+  starRadius: number,
+  semimajorAxisAU: number
+): number {
+  let rStar = starRadius;
+  if (rStar <= 0 && starMass > 0) {
+    rStar = Math.pow(starMass, 0.8);
+  }
+  if (rStar <= 0 || semimajorAxisAU <= 0 || starTemp <= 0) return 1.0;
+
+  return Math.pow(starTemp / 5780, 4) * Math.pow(rStar, 2) / Math.pow(semimajorAxisAU, 2);
 }
 
 // Estimate radius in Earth radii from mass in Jupiter masses
@@ -106,6 +137,7 @@ export interface ClassificationInput {
   starMass: number;          // host star mass in solar masses
   starRadius: number;        // host star radius in solar radii
   name?: string;             // planet name for unique seed generation
+  hzRanges?: HzRanges;       // GUI-driven HZ gradient range overrides
 }
 
 export function classifyPlanet(input: ClassificationInput): ShaderParams {
@@ -126,9 +158,10 @@ export function classifyPlanet(input: ClassificationInput): ShaderParams {
     effectiveMassEarth = Math.pow(radiusEarth, 1 / 0.27);
   }
 
-  // Compute equilibrium temperature
+  // Compute equilibrium temperature and stellar flux
   const rawSMA = semimajorAxisAU > 0 ? semimajorAxisAU : 1;
   const tEq = estimateEquilibriumTemp(starTemp, starMass, starRadius, rawSMA);
+  const sEff = computeStellarFlux(starTemp, starMass, starRadius, rawSMA);
 
   // Bulk density (if both mass and radius available)
   const density = (radiusEarth > 0 && effectiveMassEarth > 0)
@@ -136,10 +169,15 @@ export function classifyPlanet(input: ClassificationInput): ShaderParams {
     : -1;
 
   // Classification decision tree
+  // Rocky planet boundaries use stellar flux (Kopparapu et al. 2013, Kane et al. 2014):
+  //   S_eff > 25    → atmosphere eroded (LAVA_WORLD)
+  //   S_eff > 1.04  → Venus Zone / runaway greenhouse (VENUS_LIKE or HOT_ROCKY)
+  //   S_eff 0.35–1.04 → Habitable Zone (TEMPERATE)
+  //   S_eff < 0.35  → too cold (FROZEN)
   let type: PlanetType;
 
   if (radiusEarth > 6 || (radiusEarth <= 0 && massEarth > 50)) {
-    // Gas giant
+    // Gas giant (still use tEq — flux boundaries are for rocky planets)
     if (tEq > 1400) type = PlanetType.HOT_JUPITER_V;
     else if (tEq > 900) type = PlanetType.HOT_JUPITER_IV;
     else if (tEq > 350) type = PlanetType.WARM_GIANT;
@@ -151,10 +189,11 @@ export function classifyPlanet(input: ClassificationInput): ShaderParams {
     if (density >= 0 && density < 2) type = PlanetType.WATER_WORLD;
     else type = PlanetType.SUB_NEPTUNE;
   } else if (radiusEarth > 0) {
-    if (tEq > 1500) type = PlanetType.LAVA_WORLD;
-    else if (tEq > 400 && radiusEarth > 1.2) type = PlanetType.VENUS_LIKE;
-    else if (tEq > 400) type = PlanetType.HOT_ROCKY;
-    else if (tEq > 180) type = PlanetType.TEMPERATE;
+    // Rocky planets: use stellar flux for Venus/HZ/Frozen boundaries
+    if (sEff > 25) type = PlanetType.LAVA_WORLD;
+    else if (sEff > 1.04 && radiusEarth > 0.5) type = PlanetType.VENUS_LIKE;
+    else if (sEff > 1.04) type = PlanetType.HOT_ROCKY;  // too small to retain atmosphere
+    else if (sEff > 0.35) type = PlanetType.TEMPERATE;
     else type = PlanetType.FROZEN;
   } else {
     // No size data at all - guess from temperature
@@ -163,10 +202,19 @@ export function classifyPlanet(input: ClassificationInput): ShaderParams {
     else type = PlanetType.COLD_GIANT;
   }
 
-  return getShaderParams(type, tEq, input.name || "planet", starTemp || 5500, massJupiter, radiusJupiter);
+  return getShaderParams(type, tEq, input.name || "planet", starTemp || 5500, massJupiter, radiusJupiter, input.hzRanges, sEff);
 }
 
-function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: number, massJup: number = 0, radiusJup: number = 0): ShaderParams {
+export interface HzRanges {
+  atmos?: [number, number];
+  cloudCover?: [number, number];
+  cloudOpacity?: [number, number];
+  seaLevel?: [number, number];
+  iceCap?: [number, number];
+  continentFreq?: [number, number];
+}
+
+function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: number, massJup: number = 0, radiusJup: number = 0, hzRanges?: HzRanges, sEff: number = 1.0): ShaderParams {
   const base: ShaderParams = {
     type,
     color1: new THREE.Color(0.5, 0.5, 0.5),
@@ -180,11 +228,17 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
     emissive: new THREE.Color(0, 0, 0),
     emissiveIntensity: 0,
     equilibriumTemp: tEq,
+    stellarFlux: sEff,
     seed: planetSeed(name),
     atmosColor: new THREE.Color(0, 0, 0),
     atmosIntensity: 0,
     atmosDayColor: new THREE.Color(0x00aaff),
     atmosTwilightColor: new THREE.Color(0xff6600),
+    hasAtmosphere: false,
+    showRim: false,
+    showShell: false,
+    showHalo: false,
+    hasHzGradient: false,
   };
 
   switch (type) {
@@ -199,16 +253,13 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       break;
 
     case PlanetType.COOL_GIANT:
-      // Water-ice clouds: bright white/cream
+      // Water-ice clouds: bright white/cream — no separate atmosphere shell
       base.color1 = new THREE.Color(0.9, 0.9, 0.85);
       base.color2 = new THREE.Color(0.95, 0.95, 0.9);
       base.color3 = new THREE.Color(0.8, 0.82, 0.85);
       base.color4 = new THREE.Color(1.0, 1.0, 0.95);
       base.swirlStrength = 0.15;
       base.warpIntensity = 2.0;
-      base.atmosIntensity = 0.15;
-      base.atmosDayColor = new THREE.Color(0x8899bb);
-      base.atmosTwilightColor = new THREE.Color(0x665544);
       break;
 
     case PlanetType.WARM_GIANT:
@@ -244,7 +295,7 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       break;
 
     case PlanetType.ICE_GIANT:
-      // Methane blue/cyan (Neptune/Uranus)
+      // Methane blue/cyan (Neptune/Uranus) — no separate atmosphere shell
       base.color1 = new THREE.Color(0.15, 0.35, 0.6);
       base.color2 = new THREE.Color(0.2, 0.5, 0.7);
       base.color3 = new THREE.Color(0.1, 0.3, 0.55);
@@ -252,9 +303,6 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.swirlStrength = 0.08;
       base.warpIntensity = 1.5;
       base.noiseScale = 12;
-      base.atmosIntensity = 0.25;
-      base.atmosDayColor = new THREE.Color(0x4488cc);
-      base.atmosTwilightColor = new THREE.Color(0x336688);
       break;
 
     case PlanetType.WATER_WORLD:
@@ -266,6 +314,10 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.swirlStrength = 0.2;
       base.warpIntensity = 2.0;
       base.noiseScale = 8;
+      base.hasAtmosphere = true;
+      base.showRim = true;
+      base.showShell = true;
+      base.showHalo = true;
       break;
 
     case PlanetType.SUB_NEPTUNE:
@@ -276,6 +328,10 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.color4 = new THREE.Color(0.55, 0.6, 0.65);
       base.swirlStrength = 0.1;
       base.warpIntensity = 1.5;
+      base.hasAtmosphere = true;
+      base.showRim = true;
+      base.showShell = true;
+      base.showHalo = true;
       break;
 
     case PlanetType.LAVA_WORLD:
@@ -289,6 +345,10 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.noiseScale = 15;
       base.emissive = new THREE.Color(1.0, 0.4, 0.05);
       base.emissiveIntensity = 0.6;
+      base.hasAtmosphere = true;
+      base.showRim = true;
+      base.showShell = true;
+      base.showHalo = false;
       break;
 
     case PlanetType.HOT_ROCKY:
@@ -314,68 +374,97 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.atmosIntensity = 0.35;
       base.atmosDayColor = new THREE.Color(0xccaa44);
       base.atmosTwilightColor = new THREE.Color(0xaa6622);
+      base.hasAtmosphere = true;
+      base.showRim = true;
+      base.showShell = true;
+      base.showHalo = true;
       break;
 
     case PlanetType.TEMPERATE: {
-      // Dynamic terrestrial colours based on star type, temperature, and seed
+      // Dynamic terrestrial colours based on star type, temperature, seed,
+      // and continuous habitable zone position (Kopparapu et al. 2013)
       const seed = base.seed;
       const seedVar = (seed.x + seed.y + seed.z) / 3; // 0-1
 
-      // Habitable zone position: 0 = warm edge, 1 = cool edge
-      const hzPos = 1.0 - Math.max(0, Math.min(1, (tEq - 180) / (380 - 180)));
+      // --- Continuous HZ position using stellar flux (Kopparapu et al. 2013) ---
+      // S_eff 0.35 (outer/cold edge) → hz=0, S_eff 1.04 (inner/warm edge) → hz=1
+      // Mars ≈ 0.43 → hz≈0.12, Earth ≈ 1.0 → hz≈0.94
+      const hzRaw = Math.max(0, Math.min(1, (sEff - 0.35) / (1.04 - 0.35)));
 
-      // Star colour influence on ocean & vegetation
-      // Cool red dwarfs (<3500K): dark oceans, dark/reddish vegetation (absorb more light)
-      // K-type (3500-5000K): deeper blue-green oceans, olive/dark green vegetation
-      // G-type (5000-6000K): Earth-like blue oceans, green vegetation
-      // F-type (6000-7500K): lighter blue/azure oceans, lighter vegetation
-      // Hot (>7500K): pale/turquoise oceans, sparse yellow-green vegetation
+      // Mass modifier: low mass → Mars-like (cooler), high mass → Venus-like (warmer)
+      const massE = massJup > 0 ? massJup * 317.8 : 1.0;
+      const massEffect = Math.log2(Math.max(0.1, massE)) * 0.08;
+      const hz = Math.max(0, Math.min(1, hzRaw + massEffect));
 
-      // Multiple rich palettes per star type, selected by seed
-      // Inspired by NASA concept art and real planetary photography
-      // Each palette: [ocean, lowland, highland, peak]
+      // Helper: lerp a number
+      const lerpN = (a: number, b: number, t: number) => a + (b - a) * t;
+
+      // --- Surface parameters driven by HZ gradient ---
+      // Range values: [cold edge (hz=0), warm edge (hz=1)]
+      // These can be overridden via hzRanges parameter from EnvContext GUI
+      const r = hzRanges || {};
+      const atR = r.atmos || [0.05, 0.6];
+      const ccR = r.cloudCover || [0.35, 0.55];
+      const coR = r.cloudOpacity || [0.45, 0.85];
+      const slR = r.seaLevel || [0.30, 0.35];
+      const icR = r.iceCap || [0.98, 0.97];
+      const cfR = r.continentFreq || [0.12, 0.19];
+
+      base.atmosIntensity = lerpN(atR[0], atR[1], hz);
+
+      // Atmosphere colour: pale grey-blue (cold) → cyan (mid) → amber (warm)
+      const coldDay = new THREE.Color(0.45, 0.5, 0.6);
+      const midDay = new THREE.Color(0x00aaff);
+      const warmDay = new THREE.Color(0xddaa44);
+      const coldTwi = new THREE.Color(0x556677);
+      const midTwi = new THREE.Color(0xff6600);
+      const warmTwi = new THREE.Color(0xcc4400);
+      if (hz < 0.5) {
+        const t2 = hz * 2;
+        base.atmosDayColor = coldDay.clone().lerp(midDay, t2);
+        base.atmosTwilightColor = coldTwi.clone().lerp(midTwi, t2);
+      } else {
+        const t2 = (hz - 0.5) * 2;
+        base.atmosDayColor = midDay.clone().lerp(warmDay, t2);
+        base.atmosTwilightColor = midTwi.clone().lerp(warmTwi, t2);
+      }
+      base.atmosColor = base.atmosDayColor.clone().multiplyScalar(0.5);
+
+      base.cloudCoverage = lerpN(ccR[0], ccR[1], hz);
+      base.cloudOpacity = lerpN(coR[0], coR[1], hz);
+      base.seaLevel = lerpN(slR[0], slR[1], hz);
+      base.iceCapSize = lerpN(icR[0], icR[1], hz);
+      base.continentFreq = lerpN(cfR[0], cfR[1], hz);
+
+      // --- Star-type colour palettes (unchanged) ---
       type CPalette = [THREE.Color, THREE.Color, THREE.Color, THREE.Color];
 
       const redDwarfPalettes: CPalette[] = [
-        // Twilight world: ink oceans, burgundy lowlands, dark slate highlands
         [new THREE.Color(0.04, 0.045, 0.09), new THREE.Color(0.16, 0.06, 0.05), new THREE.Color(0.1, 0.1, 0.1), new THREE.Color(0.22, 0.18, 0.16)],
-        // Warm red dwarf: dark teal seas, copper/rust vegetation, ash rock
         [new THREE.Color(0.04, 0.08, 0.1), new THREE.Color(0.18, 0.1, 0.05), new THREE.Color(0.12, 0.1, 0.08), new THREE.Color(0.25, 0.2, 0.18)],
-        // Exotic: near-black seas, deep plum lowlands, charcoal
         [new THREE.Color(0.03, 0.035, 0.07), new THREE.Color(0.13, 0.05, 0.1), new THREE.Color(0.08, 0.07, 0.09), new THREE.Color(0.18, 0.15, 0.17)],
       ];
 
       const kDwarfPalettes: CPalette[] = [
-        // Deep slate seas, dark olive-green lowlands, sienna rock, grey stone
         [new THREE.Color(0.05, 0.09, 0.16), new THREE.Color(0.1, 0.16, 0.07), new THREE.Color(0.22, 0.16, 0.1), new THREE.Color(0.36, 0.33, 0.3)],
-        // Grey-blue oceans, sage green, warm brown, pale sandstone
         [new THREE.Color(0.06, 0.1, 0.18), new THREE.Color(0.13, 0.18, 0.1), new THREE.Color(0.25, 0.19, 0.12), new THREE.Color(0.4, 0.37, 0.33)],
-        // Dark teal seas, moss green, chocolate brown, grey
         [new THREE.Color(0.04, 0.1, 0.13), new THREE.Color(0.1, 0.17, 0.08), new THREE.Color(0.2, 0.15, 0.1), new THREE.Color(0.34, 0.31, 0.28)],
       ];
 
       const gTypePalettes: CPalette[] = [
-        // Deep ocean, dark muted forest lowlands, dark sienna, pale stone
         [new THREE.Color(0.04, 0.08, 0.22), new THREE.Color(0.08, 0.12, 0.065), new THREE.Color(0.22, 0.15, 0.08), new THREE.Color(0.5, 0.47, 0.43)],
-        // Teal seas, deep olive, dark rust-brown, warm grey
         [new THREE.Color(0.05, 0.12, 0.2), new THREE.Color(0.065, 0.11, 0.06), new THREE.Color(0.2, 0.14, 0.08), new THREE.Color(0.46, 0.43, 0.4)],
-        // Slate ocean, muted sage lowlands, dark terracotta, cream
         [new THREE.Color(0.05, 0.09, 0.2), new THREE.Color(0.09, 0.13, 0.07), new THREE.Color(0.25, 0.17, 0.09), new THREE.Color(0.52, 0.48, 0.44)],
-        // Deep blue, dark muted green, dark warm brown, neutral rock
         [new THREE.Color(0.04, 0.07, 0.24), new THREE.Color(0.07, 0.12, 0.07), new THREE.Color(0.2, 0.15, 0.09), new THREE.Color(0.44, 0.42, 0.4)],
       ];
 
       const fTypePalettes: CPalette[] = [
-        // Azure-steel seas, golden-olive lowlands, sandy brown, pale stone
         [new THREE.Color(0.08, 0.13, 0.24), new THREE.Color(0.18, 0.2, 0.1), new THREE.Color(0.3, 0.25, 0.16), new THREE.Color(0.55, 0.52, 0.48)],
-        // Blue-grey seas, straw-gold lowlands, warm taupe, cream
         [new THREE.Color(0.09, 0.14, 0.22), new THREE.Color(0.24, 0.22, 0.12), new THREE.Color(0.34, 0.28, 0.18), new THREE.Color(0.58, 0.55, 0.5)],
       ];
 
       const hotStarPalettes: CPalette[] = [
-        // Pale grey-blue seas, bleached tan, warm sand, cream rock
         [new THREE.Color(0.12, 0.16, 0.22), new THREE.Color(0.28, 0.25, 0.18), new THREE.Color(0.38, 0.33, 0.24), new THREE.Color(0.58, 0.56, 0.52)],
-        // Steel seas, dusty olive, khaki, pale grey
         [new THREE.Color(0.1, 0.14, 0.2), new THREE.Color(0.22, 0.22, 0.15), new THREE.Color(0.35, 0.3, 0.22), new THREE.Color(0.55, 0.53, 0.5)],
       ];
 
@@ -386,40 +475,46 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       else if (starTemp < 7500) palettes = fTypePalettes;
       else palettes = hotStarPalettes;
 
-      // Select palette using seed, with slight colour jitter for uniqueness
       const palIdx = Math.floor(((seed.x * 1000) % palettes.length + palettes.length) % palettes.length);
       const [ocean, lowVeg, highland, peak] = palettes[palIdx].map(c => c.clone()) as CPalette;
 
-      // Subtle per-planet jitter: shift hue/brightness slightly
+      // Subtle per-planet jitter
       const jitter = (seedVar - 0.5) * 0.06;
       ocean.offsetHSL(jitter * 0.3, jitter * 0.1, jitter * 0.05);
       lowVeg.offsetHSL(jitter * 0.5, jitter * 0.15, jitter * 0.08);
       highland.offsetHSL(jitter * 0.3, jitter * 0.1, jitter * 0.06);
 
-      // Temperature within habitable zone shifts towards arid or icy
-      if (tEq > 320) {
-        const warmShift = Math.min(1, (tEq - 320) / 60);
-        lowVeg.lerp(new THREE.Color(0.24, 0.22, 0.17), warmShift * 0.5);
-        highland.lerp(new THREE.Color(0.3, 0.27, 0.22), warmShift * 0.4);
+      // --- HZ-driven colour shifts ---
+      // Warm edge (hz > 0.55): desert/arid — vegetation dries out, sandy highlands
+      if (hz > 0.55) {
+        const warmShift = (hz - 0.55) / 0.45; // 0–1
+        lowVeg.lerp(new THREE.Color(0.30, 0.24, 0.14), warmShift * 0.8);
+        highland.lerp(new THREE.Color(0.38, 0.32, 0.20), warmShift * 0.7);
+        ocean.lerp(new THREE.Color(0.05, 0.06, 0.12), warmShift * 0.5);
+        peak.lerp(new THREE.Color(0.55, 0.50, 0.42), warmShift * 0.4);
       }
-      if (tEq < 230) {
-        const coolShift = Math.min(1, (230 - tEq) / 50);
-        lowVeg.lerp(new THREE.Color(0.16, 0.17, 0.15), coolShift * 0.5);
-        highland.lerp(new THREE.Color(0.25, 0.25, 0.24), coolShift * 0.4);
-        ocean.lerp(new THREE.Color(0.05, 0.07, 0.12), coolShift * 0.3);
+      // Cool edge (hz < 0.35): Mars-like — iron oxide, barren, dusty, no liquid water
+      if (hz < 0.35) {
+        const coolShift = (0.35 - hz) / 0.35; // 0–1, maxes at hz=0
+        // At full coolShift, completely replace palette with Mars tones
+        ocean.lerp(new THREE.Color(0.18, 0.12, 0.08), coolShift);           // dry basin / dust
+        lowVeg.lerp(new THREE.Color(0.28, 0.16, 0.08), coolShift);          // rust / iron oxide
+        highland.lerp(new THREE.Color(0.22, 0.15, 0.10), coolShift);        // dark basalt
+        peak.lerp(new THREE.Color(0.75, 0.72, 0.68), coolShift * 0.7);      // dusty frost/regolith
       }
 
       base.color1 = ocean;
       base.color2 = lowVeg;
       base.color3 = highland;
       base.color4 = peak;
-      base.swirlStrength = 0.15;
+      base.swirlStrength = lerpN(0.05, 0.2, hz); // less convection when cold
       base.warpIntensity = 3.0;
       base.noiseScale = 12;
-      base.atmosColor = new THREE.Color(0.3, 0.5, 1.0);
-      base.atmosIntensity = 0.3;
-      base.atmosDayColor = new THREE.Color(0x00aaff);
-      base.atmosTwilightColor = new THREE.Color(0xff6600);
+      base.hasAtmosphere = true;
+      base.showRim = true;
+      base.showShell = true;
+      base.showHalo = true;
+      base.hasHzGradient = true;
       break;
     }
 
@@ -432,6 +527,10 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.swirlStrength = 0.0;
       base.warpIntensity = 2.0;
       base.noiseScale = 15;
+      base.hasAtmosphere = true;
+      base.showRim = true;
+      base.showShell = true;
+      base.showHalo = false;
       break;
 
     default:
