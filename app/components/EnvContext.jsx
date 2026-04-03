@@ -66,6 +66,17 @@ export const EnvProvider = ({ children }) => {
   const [terrWarpStrength, setTerrWarpStrength] = useState(0.5);
   const [terrIceCapSize, setTerrIceCapSize] = useState(0.92);
 
+  // Per-type atmosphere layer overrides: { TEMPERATE: { rim: true, shell: true, halo: false }, ... }
+  const [layerOverrides, setLayerOverrides] = useState({});
+
+  // HZ gradient range: [cold edge (hz=0), warm edge (hz=1)]
+  const [hzAtmosRange, setHzAtmosRange] = useState([0.05, 0.6]);
+  const [hzCloudCoverRange, setHzCloudCoverRange] = useState([0.35, 0.55]);
+  const [hzCloudOpacityRange, setHzCloudOpacityRange] = useState([0.45, 0.85]);
+  const [hzSeaLevelRange, setHzSeaLevelRange] = useState([0.30, 0.35]);
+  const [hzIceCapRange, setHzIceCapRange] = useState([0.98, 0.97]);
+  const [hzContinentFreqRange, setHzContinentFreqRange] = useState([0.12, 0.19]);
+
   // Rocky controls
   const [rockyCraterScale, setRockyCraterScale] = useState(1.0);
   const [rockyRidgeStrength, setRockyRidgeStrength] = useState(0.35);
@@ -144,7 +155,14 @@ export const EnvProvider = ({ children }) => {
       rockyCraterDepth, setRockyCraterDepth,
       typeColorOverrides, setTypeColorOverrides,
       activePlanetInfo, setActivePlanetInfo,
-  }), [Constants, planetDistanceFactor, binaryDistanceFactor, bodyScale, showHabitableZone, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, activePlanetInfo]);
+      layerOverrides, setLayerOverrides,
+      hzAtmosRange, setHzAtmosRange,
+      hzCloudCoverRange, setHzCloudCoverRange,
+      hzCloudOpacityRange, setHzCloudOpacityRange,
+      hzSeaLevelRange, setHzSeaLevelRange,
+      hzIceCapRange, setHzIceCapRange,
+      hzContinentFreqRange, setHzContinentFreqRange,
+  }), [Constants, planetDistanceFactor, binaryDistanceFactor, bodyScale, showHabitableZone, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, activePlanetInfo, layerOverrides, hzAtmosRange, hzCloudCoverRange, hzCloudOpacityRange, hzSeaLevelRange, hzIceCapRange, hzContinentFreqRange]);
 
   return (
     <EnvContext.Provider value={contextValue}>

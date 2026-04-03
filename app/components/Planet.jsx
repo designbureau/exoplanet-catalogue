@@ -76,6 +76,7 @@ import {
 import { classifyPlanet, PlanetType } from "../utils/planetClassification";
 import { createPlanetMaterial } from "../shaders/planetShader";
 import { getAtmosphereParams } from "../shaders/atmosphereShader";
+import { getScatteringPreset, createScatteringMaterial } from "../shaders/scatteringShader";
 
 const Planet = ({ data, starData }) => {
   const ref = useRef();
@@ -84,7 +85,7 @@ const Planet = ({ data, starData }) => {
   const ringRef = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, spriteGlowIntensity, spriteGlowScale, spriteGlowFalloff, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, spriteGlowIntensity, spriteGlowScale, spriteGlowFalloff, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, layerOverrides, hzAtmosRange, hzCloudCoverRange, hzCloudOpacityRange, hzSeaLevelRange, hzIceCapRange, hzContinentFreqRange } = useContext(EnvContext);
 
   const softGlowTexture = getSoftGlowTexture(spriteGlowFalloff, spriteGlowInner);
 
@@ -112,7 +113,7 @@ const Planet = ({ data, starData }) => {
   })();
 
   // Classify planet and create shader material + atmosphere ring
-  const { shaderMaterial, atmosParams, atmosMat, planetType, ringData } = useMemo(() => {
+  const { shaderMaterial, atmosParams, atmosMat, atmosScale, planetType, hasAtmosphere, defaultShowRim, defaultShowShell, defaultShowHalo, hasHzGradient, ringData } = useMemo(() => {
     const params = classifyPlanet({
       massJupiter: mass,
       radiusJupiter: radius,
@@ -121,20 +122,46 @@ const Planet = ({ data, starData }) => {
       starMass: starData?.mass || 1,
       starRadius: starData?.radius || 1,
       name,
+      hzRanges: {
+        atmos: hzAtmosRange,
+        cloudCover: hzCloudCoverRange,
+        cloudOpacity: hzCloudOpacityRange,
+        seaLevel: hzSeaLevelRange,
+        iceCap: hzIceCapRange,
+        continentFreq: hzContinentFreqRange,
+      },
     });
     const shader = createPlanetMaterial(params);
+    // Atmosphere: use HZ-gradient params from classifier when available, fall back to type defaults
     const ap = getAtmosphereParams(params.type, starData?.temperature || 5500);
+    const atmosDayCol = params.atmosDayColor || ap?.dayColor || new THREE.Color(0x00aaff);
+    const atmosTwiCol = params.atmosTwilightColor || ap?.twilightColor || new THREE.Color(0xff6600);
+    // Use classifier's atmosIntensity if set (even 0 means "no atmosphere");
+    // only fall back to type defaults when classifier didn't set it (undefined)
+    const hasHzAtmos = params.cloudCoverage !== undefined; // HZ gradient was applied
+    const atmosInt = hasHzAtmos ? params.atmosIntensity : (params.atmosIntensity > 0 ? params.atmosIntensity : (ap?.intensity || 0));
 
     // Ring system
     const nameSeed = [...name].reduce((a, c) => a + c.charCodeAt(0), 0);
     const ringSeed = ((nameSeed * 9301 + 49297) % 233280) / 233280;
     const ringParams = getRingParams(params.type, ringSeed, name);
     const ringMat = ringParams ? createRingMaterial(ringParams, ringSeed) : null;
-    // console.log(`[Planet] ${name} → type=${params.type}`);
 
-    // Atmosphere glow — BackSide sphere (dual-layer technique from 38-earth-shaders-final)
+    // Atmosphere — ray marching scattering with LOD fallback
+    // Compute HZ position for scattering preset interpolation
+    const hzRaw = params.stellarFlux > 0 ? Math.max(0, Math.min(1, (params.stellarFlux - 0.35) / (1.04 - 0.35))) : 0.5;
+    const scatterPreset = getScatteringPreset(params.type, hzRaw);
     let atmosMat = null;
-    if (ap && ap.intensity > 0) {
+    if (scatterPreset && (atmosInt > 0 || params.type !== PlanetType.TEMPERATE)) {
+      atmosMat = createScatteringMaterial(
+        scatterPreset,
+        atmosDayCol,
+        atmosTwiCol,
+        atmosInt,
+        1.0, // planet radius in local units (scale applied via mesh)
+      );
+    } else if (atmosInt > 0) {
+      // Non-scattering fallback for types without presets
       atmosMat = new THREE.ShaderMaterial({
         vertexShader: `
           varying vec3 vNormal;
@@ -152,27 +179,16 @@ const Planet = ({ data, starData }) => {
           uniform vec3 uSunDirection;
           uniform vec3 uAtmosDayColor;
           uniform vec3 uAtmosTwilightColor;
-          uniform float uIntensity;
+          uniform float uFallbackIntensity;
           void main() {
             vec3 viewDirection = normalize(vWorldPosition - cameraPosition);
             vec3 normal = normalize(vNormal);
-            vec3 color = vec3(0.0);
-
-            // Sun orientation
             float sunOrientation = dot(uSunDirection, normal);
-
-            // Atmosphere colour
             float atmosphereDayMix = smoothstep(-0.5, 1.0, sunOrientation);
-            vec3 atmosphereColor = mix(uAtmosTwilightColor, uAtmosDayColor, atmosphereDayMix);
-            color += atmosphereColor;
-
-            // Alpha
-            float edgeAlpha = dot(viewDirection, normal);
-            edgeAlpha = smoothstep(0.0, 0.5, edgeAlpha);
-
+            vec3 color = mix(uAtmosTwilightColor, uAtmosDayColor, atmosphereDayMix);
+            float edgeAlpha = smoothstep(0.0, 0.5, dot(viewDirection, normal));
             float dayAlpha = smoothstep(-0.5, 0.0, sunOrientation);
-            float alpha = edgeAlpha * dayAlpha * uIntensity;
-
+            float alpha = edgeAlpha * dayAlpha * uFallbackIntensity;
             gl_FragColor = vec4(color, alpha);
           }
         `,
@@ -181,9 +197,9 @@ const Planet = ({ data, starData }) => {
         side: THREE.BackSide,
         uniforms: {
           uSunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
-          uAtmosDayColor: { value: ap.dayColor || new THREE.Color(0x00aaff) },
-          uAtmosTwilightColor: { value: ap.twilightColor || new THREE.Color(0xff6600) },
-          uIntensity: { value: ap.intensity || 0.8 },
+          uAtmosDayColor: { value: atmosDayCol },
+          uAtmosTwilightColor: { value: atmosTwiCol },
+          uFallbackIntensity: { value: atmosInt },
         },
       });
     }
@@ -192,10 +208,22 @@ const Planet = ({ data, starData }) => {
       shaderMaterial: shader,
       atmosParams: ap,
       atmosMat,
+      atmosScale: scatterPreset?.atmosphereScale || (1.0 + 0.04),
       planetType: params.type,
+      hasAtmosphere: params.hasAtmosphere,
+      defaultShowRim: params.showRim,
+      defaultShowShell: params.showShell,
+      defaultShowHalo: params.showHalo,
+      hasHzGradient: params.hasHzGradient,
       ringData: ringParams ? { params: ringParams, material: ringMat } : null,
     };
-  }, [mass, radius, rawSMA, starData?.temperature, starData?.mass, starData?.radius, name]);
+  }, [mass, radius, rawSMA, starData?.temperature, starData?.mass, starData?.radius, name, hzAtmosRange, hzCloudCoverRange, hzCloudOpacityRange, hzSeaLevelRange, hzIceCapRange, hzContinentFreqRange]);
+
+  // Effective layer visibility: classification defaults + per-type GUI overrides
+  const lo = layerOverrides[planetType] || {};
+  const effectiveRim = defaultShowRim && (lo.rim ?? true);
+  const effectiveShell = defaultShowShell && (lo.shell ?? true);
+  const effectiveHalo = defaultShowHalo && (lo.halo ?? true);
 
   useEffect(() => {
     addRef(name, "planet", ref);
@@ -232,6 +260,30 @@ const Planet = ({ data, starData }) => {
         ],
       });
     }
+    // Log current settings as JSON for tuning
+    const u = shaderMaterial.uniforms;
+    console.log(JSON.stringify({
+      planet: name,
+      type: planetType,
+      atmosphere: {
+        rim: { intensity: parseFloat(atmosIntensity.toFixed(2)), falloff: parseFloat(atmosFalloff.toFixed(2)) },
+        shell: { intensity: parseFloat(glowIntensity.toFixed(2)), scale: parseFloat(glowScale.toFixed(2)), falloff: parseFloat(glowFalloff.toFixed(2)), inner: parseFloat(glowInner.toFixed(2)), hue: parseFloat(glowHueShift.toFixed(2)), sat: parseFloat(glowSaturation.toFixed(2)) },
+        halo: { intensity: parseFloat(spriteGlowIntensity.toFixed(2)), scale: parseFloat(spriteGlowScale.toFixed(2)), falloff: parseFloat(spriteGlowFalloff.toFixed(2)), inner: parseFloat(spriteGlowInner.toFixed(2)) },
+      },
+      clouds: { cover: parseFloat(cloudCoverage.toFixed(2)), opacity: parseFloat(cloudOpacity.toFixed(2)) },
+      terrestrial: {
+        seaLevel: parseFloat(terrSeaLevel.toFixed(2)),
+        continentFreq: parseFloat(terrContinentFreq.toFixed(2)),
+        warp: parseFloat(terrWarpStrength.toFixed(2)),
+        iceCap: parseFloat(terrIceCapSize.toFixed(2)),
+      },
+      colors: u.color1 ? {
+        ocean: '#' + u.color1.value.getHexString(),
+        lowland: '#' + u.color2.value.getHexString(),
+        highland: '#' + u.color3.value.getHexString(),
+        peak: '#' + u.color4.value.getHexString(),
+      } : null,
+    }, null, 2));
   };
 
   /* Mass-radius relation: R ∝ M^0.55 for small planets (<124 M⊕), R ∝ M^0.01 for large */
@@ -258,10 +310,13 @@ const Planet = ({ data, starData }) => {
   // Slider-driven uniforms — only update when values change, not every frame
   useEffect(() => {
     const u = shaderMaterial.uniforms;
-    if (u.u_atmosIntensity) u.u_atmosIntensity.value = atmosIntensity;
+    if (u.u_atmosIntensity) u.u_atmosIntensity.value = effectiveRim ? atmosIntensity : 0;
     if (u.u_atmosFalloff) u.u_atmosFalloff.value = atmosFalloff;
-    if (u.u_cloudCoverage) u.u_cloudCoverage.value = cloudCoverage;
-    if (u.u_cloudOpacity) u.u_cloudOpacity.value = cloudOpacity;
+    // Clouds: only override from global sliders when HZ gradient is not active
+    if (u.u_cloudCoverage && !hasHzGradient) {
+      u.u_cloudCoverage.value = cloudCoverage;
+      u.u_cloudOpacity.value = cloudOpacity;
+    }
     if (u.u_gasWarp) {
       const isIce = planetType === "ICE_GIANT" || planetType === "VENUS_LIKE" || planetType === "WATER_WORLD" || planetType === "SUB_NEPTUNE";
       u.swirl_strength.value = gasSwirl;
@@ -271,7 +326,8 @@ const Planet = ({ data, starData }) => {
       u.u_gasBands.value = isIce ? iceBands : gasBands;
       u.u_gasEdgeNoise.value = isIce ? iceEdgeNoise : gasEdgeNoise;
     }
-    if (u.u_seaLevel) {
+    // Terrestrial: only override from global sliders when HZ gradient is not active
+    if (u.u_seaLevel && !hasHzGradient) {
       u.u_seaLevel.value = terrSeaLevel;
       u.u_continentFreq.value = terrContinentFreq;
       u.u_terrWarp.value = terrWarpStrength;
@@ -289,7 +345,8 @@ const Planet = ({ data, starData }) => {
       if (u.color3) u.color3.value.set(typeColors[2]);
       if (u.color4) u.color4.value.set(typeColors[3]);
     }
-    if (atmosMat) atmosMat.uniforms.uIntensity.value = glowIntensity;
+    if (atmosMat?.uniforms.uFallbackIntensity) atmosMat.uniforms.uFallbackIntensity.value = glowIntensity;
+    if (atmosMat?.uniforms.uSunIntensity) atmosMat.uniforms.uSunIntensity.value = glowIntensity * 24.0;
   }, [atmosIntensity, atmosFalloff, cloudCoverage, cloudOpacity,
       gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise,
       iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise,
@@ -326,13 +383,21 @@ const Planet = ({ data, starData }) => {
       shaderMaterial.uniforms.u_lod.value = isActive ? 1.0 : 0.0;
     }
 
-    // Sun direction (depends on planet position which changes per-frame)
+    // Sun direction + scattering LOD (depends on planet position which changes per-frame)
     if (atmosMat && ref.current) {
       ref.current.getWorldPosition(_camUp);
       const sunDir = _camRight.set(0, 0, 0).sub(_camUp).normalize();
       atmosMat.uniforms.uSunDirection.value.copy(sunDir.negate());
       if (shaderMaterial.uniforms.u_sunDirection) {
         shaderMaterial.uniforms.u_sunDirection.value.copy(atmosMat.uniforms.uSunDirection.value);
+      }
+      // Scattering-specific uniforms (only present on scattering materials)
+      if (atmosMat.uniforms.uPlanetCenter) {
+        atmosMat.uniforms.uPlanetCenter.value.copy(_camUp); // planet world position
+        atmosMat.uniforms.uPlanetRadius.value = scale;
+        atmosMat.uniforms.uAtmosRadius.value = scale * atmosScale;
+        // LOD: full scatter on active planet, reduced on visible, fallback on tiny
+        atmosMat.uniforms.uSteps.value = isActive ? 16 : 8;
       }
     }
 
@@ -385,17 +450,18 @@ const Planet = ({ data, starData }) => {
           <ringGeometry args={[scale * ringData.params.innerRadius, scale * ringData.params.outerRadius, 128, 1]} />
         </mesh>
       )}
-      {atmosMat && glowIntensity > 0 && (
-        <>
-          {/* BackSide atmosphere sphere — crisp day/twilight structure */}
+      {effectiveShell && atmosMat && glowIntensity > 0 && (
+          /* BackSide atmosphere sphere — crisp day/twilight structure */
           <mesh
             ref={glowRef}
             material={atmosMat}
             frustumCulled={false}
           >
-            <sphereGeometry args={[scale * (1.0 + glowScale * 0.04), 48, 48]} />
+            <sphereGeometry args={[scale * atmosScale, 48, 48]} />
           </mesh>
-          {/* Soft outer glow — annular ring billboard */}
+      )}
+      {/* Soft outer glow — annular ring billboard */}
+      {effectiveHalo && spriteGlowIntensity > 0 && shaderMaterial.uniforms.u_atmosDayColor && (
           <mesh
             ref={softGlowRef}
             geometry={getSoftGlowRingGeo()}
@@ -411,7 +477,7 @@ const Planet = ({ data, starData }) => {
               side={THREE.DoubleSide}
               uniforms={{
                 uRadius: { value: spriteGlowScale * 0.3 },
-                uColor: { value: atmosMat.uniforms.uAtmosDayColor.value },
+                uColor: { value: shaderMaterial.uniforms.u_atmosDayColor.value.clone().lerp(new THREE.Color(1, 1, 1), 0.35) },
                 uIntensity: { value: spriteGlowIntensity },
                 uFalloff: { value: spriteGlowFalloff },
               }}
@@ -445,7 +511,6 @@ const Planet = ({ data, starData }) => {
               `}
             />
           </mesh>
-        </>
       )}
     </group>
   );
