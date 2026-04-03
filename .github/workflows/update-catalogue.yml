@@ -20,51 +20,31 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/OpenExoplanetCatalogue/open_exoplanet_catalogue.git /tmp/oec
 
-      - name: Compare and update systems
+      - name: Sync systems with rsync
         id: sync
         run: |
-          SRC="/tmp/oec/systems"
-          DEST="app/data/open_exoplanet_catalogue/systems"
+          SRC="/tmp/oec/systems/"
+          DEST="app/data/open_exoplanet_catalogue/systems/"
 
-          # Count changes
-          ADDED=0
-          UPDATED=0
-          REMOVED=0
+          BEFORE=$(find "$DEST" -maxdepth 1 -name '*.xml' | wc -l)
 
-          # Copy new and updated files
-          for f in "$SRC"/*.xml; do
-            name=$(basename "$f")
-            if [ ! -f "$DEST/$name" ]; then
-              cp "$f" "$DEST/$name"
-              ADDED=$((ADDED + 1))
-            elif ! diff -q "$f" "$DEST/$name" > /dev/null 2>&1; then
-              cp "$f" "$DEST/$name"
-              UPDATED=$((UPDATED + 1))
-            fi
-          done
+          # Sync: copy new/updated, delete removed (--delete)
+          # --itemize-changes outputs a line per change for counting
+          CHANGES=$(rsync -a --delete --itemize-changes "$SRC" "$DEST" | grep '\.xml$' || true)
 
-          # Remove systems no longer in upstream
-          for f in "$DEST"/*.xml; do
-            name=$(basename "$f")
-            if [ ! -f "$SRC/$name" ]; then
-              rm "$f"
-              REMOVED=$((REMOVED + 1))
-            fi
-          done
+          AFTER=$(find "$DEST" -maxdepth 1 -name '*.xml' | wc -l)
+          COUNT=$(echo "$CHANGES" | grep -c '[^ ]' || echo 0)
 
-          TOTAL_BEFORE=$(ls "$DEST"/*.xml 2>/dev/null | wc -l)
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "total=$AFTER" >> "$GITHUB_OUTPUT"
 
-          echo "added=$ADDED" >> "$GITHUB_OUTPUT"
-          echo "updated=$UPDATED" >> "$GITHUB_OUTPUT"
-          echo "removed=$REMOVED" >> "$GITHUB_OUTPUT"
-          echo "total=$TOTAL_BEFORE" >> "$GITHUB_OUTPUT"
-
-          if [ $ADDED -eq 0 ] && [ $UPDATED -eq 0 ] && [ $REMOVED -eq 0 ]; then
+          if [ "$COUNT" -eq 0 ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "No changes detected."
+            echo "No changes detected. ($AFTER systems)"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "Changes: +$ADDED new, ~$UPDATED updated, -$REMOVED removed ($TOTAL_BEFORE total)"
+            echo "$COUNT files changed ($BEFORE → $AFTER systems)"
+            echo "$CHANGES" | head -20
           fi
 
       - name: Commit and push changes
@@ -73,5 +53,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add app/data/open_exoplanet_catalogue/systems/
-          git commit -m "Update exoplanet catalogue: +${{ steps.sync.outputs.added }} new, ~${{ steps.sync.outputs.updated }} updated, -${{ steps.sync.outputs.removed }} removed (${{ steps.sync.outputs.total }} total)"
+          git commit -m "Update exoplanet catalogue: ${{ steps.sync.outputs.count }} files changed (${{ steps.sync.outputs.total }} systems)"
           git push
