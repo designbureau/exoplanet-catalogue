@@ -13,45 +13,43 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repository with submodules
         uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
 
-      - name: Clone latest Open Exoplanet Catalogue
+      - name: Sync fork with upstream
         run: |
-          git clone --depth 1 https://github.com/OpenExoplanetCatalogue/open_exoplanet_catalogue.git /tmp/oec
+          cd app/data/open_exoplanet_catalogue
+          git remote add upstream https://github.com/OpenExoplanetCatalogue/open_exoplanet_catalogue.git 2>/dev/null || true
+          git fetch upstream
+          BEFORE=$(git rev-parse HEAD)
+          git checkout master || git checkout main
+          git merge upstream/master --no-edit || git merge upstream/main --no-edit
+          AFTER=$(git rev-parse HEAD)
 
-      - name: Sync systems with rsync
-        id: sync
-        run: |
-          SRC="/tmp/oec/systems/"
-          DEST="app/data/open_exoplanet_catalogue/systems/"
-
-          BEFORE=$(find "$DEST" -maxdepth 1 -name '*.xml' | wc -l)
-
-          # Sync: copy new/updated, delete removed (--delete)
-          # --itemize-changes outputs a line per change for counting
-          CHANGES=$(rsync -a --delete --itemize-changes "$SRC" "$DEST" | grep '\.xml$' || true)
-
-          AFTER=$(find "$DEST" -maxdepth 1 -name '*.xml' | wc -l)
-          COUNT=$(echo "$CHANGES" | grep -c '[^ ]' || echo 0)
-
-          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
-          echo "total=$AFTER" >> "$GITHUB_OUTPUT"
-
-          if [ "$COUNT" -eq 0 ]; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "No changes detected. ($AFTER systems)"
+          if [ "$BEFORE" = "$AFTER" ]; then
+            echo "No upstream changes."
+            echo "changed=false" >> "$GITHUB_ENV"
           else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "$COUNT files changed ($BEFORE → $AFTER systems)"
-            echo "$CHANGES" | head -20
+            COMMITS=$(git log --oneline "$BEFORE".."$AFTER" | wc -l)
+            echo "$COMMITS new commits from upstream"
+            echo "changed=true" >> "$GITHUB_ENV"
+            echo "commits=$COMMITS" >> "$GITHUB_ENV"
           fi
 
-      - name: Commit and push changes
-        if: steps.sync.outputs.changed == 'true'
+      - name: Push updated fork
+        if: env.changed == 'true'
+        run: |
+          cd app/data/open_exoplanet_catalogue
+          git push origin HEAD
+
+      - name: Update submodule reference
+        if: env.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add app/data/open_exoplanet_catalogue/systems/
-          git commit -m "Update exoplanet catalogue: ${{ steps.sync.outputs.count }} files changed (${{ steps.sync.outputs.total }} systems)"
+          git add app/data/open_exoplanet_catalogue
+          git commit -m "Update exoplanet catalogue submodule (${{ env.commits }} upstream commits)"
           git push
