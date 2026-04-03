@@ -22,6 +22,7 @@ export const EnvProvider = ({ children }) => {
 
   // Toggles
   const [showHabitableZone, setShowHabitableZone] = useState(false);
+  const [showOrbits, setShowOrbits] = useState(true);
 
   // Atmosphere controls
   const [atmosIntensity, setAtmosIntensity] = useState(0.3);
@@ -111,6 +112,8 @@ export const EnvProvider = ({ children }) => {
       setBodyScale,
       showHabitableZone,
       setShowHabitableZone,
+      showOrbits,
+      setShowOrbits,
       atmosIntensity,
       setAtmosIntensity,
       atmosFalloff,
@@ -162,7 +165,7 @@ export const EnvProvider = ({ children }) => {
       hzSeaLevelRange, setHzSeaLevelRange,
       hzIceCapRange, setHzIceCapRange,
       hzContinentFreqRange, setHzContinentFreqRange,
-  }), [Constants, planetDistanceFactor, binaryDistanceFactor, bodyScale, showHabitableZone, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, activePlanetInfo, layerOverrides, hzAtmosRange, hzCloudCoverRange, hzCloudOpacityRange, hzSeaLevelRange, hzIceCapRange, hzContinentFreqRange]);
+  }), [Constants, planetDistanceFactor, binaryDistanceFactor, bodyScale, showHabitableZone, showOrbits, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, activePlanetInfo, layerOverrides, hzAtmosRange, hzCloudCoverRange, hzCloudOpacityRange, hzSeaLevelRange, hzIceCapRange, hzContinentFreqRange]);
 
   return (
     <EnvContext.Provider value={contextValue}>
