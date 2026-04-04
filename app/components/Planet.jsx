@@ -1,5 +1,21 @@
 import * as THREE from "three";
 
+// Cached LOD sphere geometries — keyed by "radius:segments"
+const _lodSphereCache = {};
+function getLodSphereGeo(radius, segments) {
+  const key = `${radius.toFixed(6)}:${segments}`;
+  if (_lodSphereCache[key]) return _lodSphereCache[key];
+  const geo = new THREE.SphereGeometry(radius, segments, segments);
+  _lodSphereCache[key] = geo;
+  return geo;
+}
+// LOD tiers: [maxDistance, planetSegs, atmosSegs]
+const LOD_TIERS = [
+  [80,   128, 96],   // close-up: full detail
+  [400,  64,  48],   // mid-range
+  [Infinity, 32, 24] // far away
+];
+
 // Shared annular ring geometry for soft glow — 128 segments, inner=0 outer=1
 let _softGlowRingGeo = null;
 function getSoftGlowRingGeo() {
@@ -403,6 +419,23 @@ const Planet = ({ data, starData, starRef }) => {
       shaderMaterial.uniforms.u_lod.value = isActive ? 1.0 : 0.0;
     }
 
+    // Geometry LOD — swap sphere resolution based on camera distance
+    if (ref.current) {
+      ref.current.getWorldPosition(_camUp);
+      const camDist = state.camera.position.distanceTo(_camUp);
+      for (const [maxDist, pSegs, aSegs] of LOD_TIERS) {
+        if (camDist < maxDist || maxDist === Infinity) {
+          const newGeo = getLodSphereGeo(scale, pSegs);
+          if (ref.current.geometry !== newGeo) ref.current.geometry = newGeo;
+          if (glowRef.current) {
+            const newAtmosGeo = getLodSphereGeo(scale * atmosScale, aSegs);
+            if (glowRef.current.geometry !== newAtmosGeo) glowRef.current.geometry = newAtmosGeo;
+          }
+          break;
+        }
+      }
+    }
+
     // Sun direction — pass world-space, shader transforms to match normalMatrix space
     if (ref.current) {
       ref.current.getWorldPosition(_camUp); // planet world pos
@@ -514,9 +547,8 @@ const Planet = ({ data, starData, starRef }) => {
       {showOrbits && (
         <line geometry={orbitGeo} material={orbitMat} />
       )}
-      <mesh ref={ref} name={name} onClick={handleClick} material={shaderMaterial}>
-        <sphereGeometry args={[scale, 128, 128]} />
-      </mesh>
+      <mesh ref={ref} name={name} onClick={handleClick} material={shaderMaterial}
+        geometry={getLodSphereGeo(scale, 32)} />
       {ringData && (
         <mesh
           ref={ringRef}
@@ -534,7 +566,7 @@ const Planet = ({ data, starData, starRef }) => {
             material={atmosMat}
             frustumCulled={false}
           >
-            <sphereGeometry args={[scale * atmosScale, 96, 96]} />
+            <sphereGeometry args={[scale * atmosScale, 24, 24]} />
           </mesh>
       )}
       {/* Soft outer glow — annular ring billboard */}
