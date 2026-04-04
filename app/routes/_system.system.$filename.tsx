@@ -373,6 +373,9 @@ const App = ({ data }: any) => {
   const [ambientIntensity, setAmbientIntensity] = useState(0.05);
   const [ambientColor, setAmbientColor] = useState(() => starTempToAmbientHex(getPrimaryStarTemp(data)));
 
+  // Force EffectComposer rebuild
+  const [fxKey, setFxKey] = useState(0);
+
   // Post-processing — single config object, all neutral defaults
   const [fx, setFx] = useState({
     smaa:          { on: true },
@@ -444,7 +447,10 @@ const App = ({ data }: any) => {
       )}
       {showPostFxGui && (
         <div className="fixed top-2 left-2 z-10 flex flex-col gap-1 rounded-md bg-black/60 px-4 py-3 backdrop-blur-sm max-h-[80vh] overflow-y-auto text-[10px] text-muted-foreground w-72" style={{ scrollbarWidth: 'thin' }}>
-          <div className="text-xs font-medium text-purple-300 mb-1">Post FX</div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-medium text-purple-300">Post FX</span>
+            <button onClick={() => setFxKey(k => k + 1)} className="text-[9px] px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 hover:bg-purple-900/70">Rebuild</button>
+          </div>
 
           <div className="text-[9px] text-muted-foreground/60 mb-0.5">Antialiasing</div>
           <Toggle label="SMAA" checked={fx.smaa.on} onChange={(v: boolean) => updateFx('smaa', {on: v})} />
@@ -639,7 +645,7 @@ const App = ({ data }: any) => {
           {showNebula && <Nebula seed={data?.name?.[0] ?? "system"} density={nebulaDensity} brightness={nebulaBrightness} starTemp={getPrimaryStarTemp(data)} />}
           <Binary data={data} />
           <Controls follow={follow} />
-          <EffectComposer>
+          <EffectComposer key={fxKey}>
             {/* 0. Antialiasing */}
             {fx.smaa.on && <SMAA preset={SMAAPreset.MEDIUM} edgeDetectionMode={EdgeDetectionMode.LUMA} />}
             {/* 1. HDR: Depth of Field */}
