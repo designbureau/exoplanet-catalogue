@@ -376,6 +376,9 @@ const App = ({ data }: any) => {
   // Force EffectComposer rebuild
   const [fxKey, setFxKey] = useState(0);
 
+  // Stable Vector2 for ChromaticAberration (mutated in place)
+  const [chromaOffset] = useState(() => new THREE.Vector2(0, 0));
+
   // Post-processing — single config object, all neutral defaults
   const [fx, setFx] = useState({
     smaa:          { on: true },
@@ -670,7 +673,7 @@ const App = ({ data }: any) => {
               contrast={fx.brightContrast.on ? fx.brightContrast.contrast : 0}
             />
             {/* 5. Lens effects */}
-            <ChromaticAberration offset={new THREE.Vector2(fx.chroma.on ? fx.chroma.offset : 0, fx.chroma.on ? fx.chroma.offset : 0)} />
+            <ChromaticAberration offset={chromaOffset.set(fx.chroma.on ? fx.chroma.offset : 0, fx.chroma.on ? fx.chroma.offset : 0)} />
             <Vignette offset={fx.vignette.offset} darkness={fx.vignette.on ? fx.vignette.darkness : 0} />
             {/* 6. Film (last) */}
             <Noise opacity={fx.noise.on ? fx.noise.opacity : 0} blendFunction={BlendFunction.SOFT_LIGHT} />
