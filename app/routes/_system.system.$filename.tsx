@@ -549,42 +549,41 @@ const App = ({ data }: any) => {
           <button onClick={applySoftGlow} className="mt-1 rounded bg-cyan-900/50 px-2 py-0.5 text-[9px] text-cyan-400 hover:bg-cyan-900/80">Apply</button>
         </Accordion>
 
-        <Accordion title="Clouds" defaultOpen={false}>
-          <Slider label="Cover" min={0.1} max={0.7} step={0.01} value={cloudCoverage} onChange={setCloudCoverage} />
-          <Slider label="Opacity" min={0} max={1} step={0.05} value={cloudOpacity} onChange={setCloudOpacity} />
-        </Accordion>
-
         <Accordion title="Terrestrial" defaultOpen={false}>
-          <Slider label="Sea Lvl" min={0.3} max={0.7} step={0.01} value={terrSeaLevel} onChange={setTerrSeaLevel} />
-          <Slider label="Cont Freq" min={0.05} max={0.5} step={0.01} value={terrContinentFreq} onChange={setTerrContinentFreq} />
-          <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={terrWarpStrength} onChange={setTerrWarpStrength} />
-          <Slider label="Ice Cap" min={0.6} max={0.98} step={0.01} value={terrIceCapSize} onChange={setTerrIceCapSize} />
-        </Accordion>
-
-        <Accordion title="Terrestrial Presets" defaultOpen={false}>
-          <Accordion title="Mars-like (cold)" defaultOpen={false}>
+          <Accordion title="Mars-like (cold HZ)" defaultOpen={false}>
             <Slider label="Atmos" min={0} max={1} step={0.01} value={hzPresets.mars.atmos} onChange={(v: number) => updatePreset('mars', 'atmos', v)} />
             <Slider label="Clouds" min={0} max={1} step={0.01} value={hzPresets.mars.cloudCover} onChange={(v: number) => updatePreset('mars', 'cloudCover', v)} />
             <Slider label="Opacity" min={0} max={1} step={0.01} value={hzPresets.mars.cloudOpacity} onChange={(v: number) => updatePreset('mars', 'cloudOpacity', v)} />
             <Slider label="Sea Lvl" min={0} max={0.8} step={0.01} value={hzPresets.mars.seaLevel} onChange={(v: number) => updatePreset('mars', 'seaLevel', v)} />
             <Slider label="Ice Cap" min={0.5} max={1} step={0.01} value={hzPresets.mars.iceCap} onChange={(v: number) => updatePreset('mars', 'iceCap', v)} />
             <Slider label="Land" min={0.05} max={0.4} step={0.01} value={hzPresets.mars.continentFreq} onChange={(v: number) => updatePreset('mars', 'continentFreq', v)} />
+            <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={hzPresets.mars.warp} onChange={(v: number) => updatePreset('mars', 'warp', v)} />
           </Accordion>
-          <Accordion title="Earth-like (temperate)" defaultOpen={false}>
+          <Accordion title="Earth-like (mid HZ)" defaultOpen={false}>
             <Slider label="Atmos" min={0} max={1} step={0.01} value={hzPresets.earth.atmos} onChange={(v: number) => updatePreset('earth', 'atmos', v)} />
             <Slider label="Clouds" min={0} max={1} step={0.01} value={hzPresets.earth.cloudCover} onChange={(v: number) => updatePreset('earth', 'cloudCover', v)} />
             <Slider label="Opacity" min={0} max={1} step={0.01} value={hzPresets.earth.cloudOpacity} onChange={(v: number) => updatePreset('earth', 'cloudOpacity', v)} />
             <Slider label="Sea Lvl" min={0} max={0.8} step={0.01} value={hzPresets.earth.seaLevel} onChange={(v: number) => updatePreset('earth', 'seaLevel', v)} />
             <Slider label="Ice Cap" min={0.5} max={1} step={0.01} value={hzPresets.earth.iceCap} onChange={(v: number) => updatePreset('earth', 'iceCap', v)} />
             <Slider label="Land" min={0.05} max={0.4} step={0.01} value={hzPresets.earth.continentFreq} onChange={(v: number) => updatePreset('earth', 'continentFreq', v)} />
+            <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={hzPresets.earth.warp} onChange={(v: number) => updatePreset('earth', 'warp', v)} />
           </Accordion>
-          <Accordion title="Venus-like (warm)" defaultOpen={false}>
+          <Accordion title="Venus-like (warm HZ)" defaultOpen={false}>
             <Slider label="Atmos" min={0} max={1} step={0.01} value={hzPresets.venus.atmos} onChange={(v: number) => updatePreset('venus', 'atmos', v)} />
             <Slider label="Clouds" min={0} max={1} step={0.01} value={hzPresets.venus.cloudCover} onChange={(v: number) => updatePreset('venus', 'cloudCover', v)} />
             <Slider label="Opacity" min={0} max={1} step={0.01} value={hzPresets.venus.cloudOpacity} onChange={(v: number) => updatePreset('venus', 'cloudOpacity', v)} />
             <Slider label="Sea Lvl" min={0} max={0.8} step={0.01} value={hzPresets.venus.seaLevel} onChange={(v: number) => updatePreset('venus', 'seaLevel', v)} />
             <Slider label="Ice Cap" min={0.5} max={1} step={0.01} value={hzPresets.venus.iceCap} onChange={(v: number) => updatePreset('venus', 'iceCap', v)} />
             <Slider label="Land" min={0.05} max={0.4} step={0.01} value={hzPresets.venus.continentFreq} onChange={(v: number) => updatePreset('venus', 'continentFreq', v)} />
+            <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={hzPresets.venus.warp} onChange={(v: number) => updatePreset('venus', 'warp', v)} />
+          </Accordion>
+          <Accordion title="Global (non-HZ)" defaultOpen={false}>
+            <Slider label="Clouds" min={0.1} max={0.7} step={0.01} value={cloudCoverage} onChange={setCloudCoverage} />
+            <Slider label="Opacity" min={0} max={1} step={0.05} value={cloudOpacity} onChange={setCloudOpacity} />
+            <Slider label="Sea Lvl" min={0.3} max={0.7} step={0.01} value={terrSeaLevel} onChange={setTerrSeaLevel} />
+            <Slider label="Cont Freq" min={0.05} max={0.5} step={0.01} value={terrContinentFreq} onChange={setTerrContinentFreq} />
+            <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={terrWarpStrength} onChange={setTerrWarpStrength} />
+            <Slider label="Ice Cap" min={0.6} max={0.98} step={0.01} value={terrIceCapSize} onChange={setTerrIceCapSize} />
           </Accordion>
         </Accordion>
 

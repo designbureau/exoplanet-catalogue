@@ -513,7 +513,7 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.color3 = highland;
       base.color4 = peak;
       base.swirlStrength = lerpN(0.05, 0.2, hz); // less convection when cold
-      base.warpIntensity = 3.0;
+      base.warpIntensity = lerpPreset('warp') * 6.0; // scale preset 0-1 to shader range
       base.noiseScale = 12;
       base.hasAtmosphere = true;
       base.showRim = true;
