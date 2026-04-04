@@ -61,12 +61,16 @@ function starTempToAmbientHex(temp: number): string {
 }
 
 // Sync renderer tone mapping with React state
-function RendererSync({ toneMapping, exposure }: { toneMapping: number; exposure: number }) {
+function RendererSync({ toneMapping, exposure, postFxEnabled }: { toneMapping: number; exposure: number; postFxEnabled: boolean }) {
   const { gl } = useThree();
   useEffect(() => {
-    gl.toneMapping = toneMapping;
+    // When EffectComposer is active it forces NoToneMapping on the renderer.
+    // When it's off, we restore the renderer's own tone mapping.
+    if (!postFxEnabled) {
+      gl.toneMapping = toneMapping;
+    }
     gl.toneMappingExposure = exposure;
-  }, [gl, toneMapping, exposure]);
+  }, [gl, toneMapping, exposure, postFxEnabled]);
   return null;
 }
 
@@ -650,7 +654,7 @@ const App = ({ data }: any) => {
       </div>}
       <div id="canvas-container">
         <Canvas dpr={[1, 2]} camera={{ far: 10000000, near: 0.01, fov: 50 }}>
-          <RendererSync toneMapping={rendererToneMapping} exposure={rendererExposure} />
+          <RendererSync toneMapping={rendererToneMapping} exposure={rendererExposure} postFxEnabled={fx.enabled} />
           {showSkybox && <MilkyWaySkybox brightness={skyBrightness} contrast={skyContrast} />}
           <ambientLight intensity={ambientIntensity} color={ambientColor} />
           {showNebula && <Nebula seed={data?.name?.[0] ?? "system"} density={nebulaDensity} brightness={nebulaBrightness} starTemp={getPrimaryStarTemp(data)} />}
@@ -667,7 +671,7 @@ const App = ({ data }: any) => {
                 bokehScale={fx.dof.on ? fx.dof.bokehScale : 0}
               />
               {/* 2. Tone mapping: HDR → LDR */}
-              <ToneMapping mode={fx.toneMap.on ? fx.toneMap.mode : ToneMappingMode.LINEAR} />
+              <ToneMapping mode={fx.toneMap.on ? fx.toneMap.mode : ToneMappingMode.ACES_FILMIC} />
               {/* 3. Colour grading (LDR) */}
               <Cinematic
                 temperature={fx.colorGrade.on ? fx.colorGrade.temperature : 0}
