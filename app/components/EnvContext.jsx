@@ -24,6 +24,10 @@ export const EnvProvider = ({ children }) => {
   const [showHabitableZone, setShowHabitableZone] = useState(false);
   const [showOrbits, setShowOrbits] = useState(true);
 
+  // Shader lighting
+  const [shaderAmbient, setShaderAmbient] = useState(0.0);
+  const [lavaAmbient, setLavaAmbient] = useState(0.08);
+
   // Atmosphere controls
   const [atmosIntensity, setAtmosIntensity] = useState(0.3);
   const [atmosFalloff, setAtmosFalloff] = useState(1.0);
@@ -85,6 +89,10 @@ export const EnvProvider = ({ children }) => {
   const [lavaFlowScale, setLavaFlowScale] = useState(1.5);
 
   // Rocky controls
+  // Wrap lighting controls
+  const [wrapRange, setWrapRange] = useState(0.45);
+  const [wrapPower, setWrapPower] = useState(3.9);
+
   const [rockyCraterScale, setRockyCraterScale] = useState(1.0);
   const [rockyRidgeStrength, setRockyRidgeStrength] = useState(0.35);
   const [rockyCraterDepth, setRockyCraterDepth] = useState(0.7);
@@ -120,6 +128,8 @@ export const EnvProvider = ({ children }) => {
       setShowHabitableZone,
       showOrbits,
       setShowOrbits,
+      shaderAmbient, setShaderAmbient,
+      lavaAmbient, setLavaAmbient,
       atmosIntensity,
       setAtmosIntensity,
       atmosFalloff,
@@ -163,6 +173,8 @@ export const EnvProvider = ({ children }) => {
       lavaGlow, setLavaGlow,
       lavaHeightOffset, setLavaHeightOffset,
       lavaFlowScale, setLavaFlowScale,
+      wrapRange, setWrapRange,
+      wrapPower, setWrapPower,
       rockyCraterScale, setRockyCraterScale,
       rockyRidgeStrength, setRockyRidgeStrength,
       rockyCraterDepth, setRockyCraterDepth,
@@ -175,7 +187,7 @@ export const EnvProvider = ({ children }) => {
       hzSeaLevelRange, setHzSeaLevelRange,
       hzIceCapRange, setHzIceCapRange,
       hzContinentFreqRange, setHzContinentFreqRange,
-  }), [Constants, planetDistanceFactor, binaryDistanceFactor, bodyScale, showHabitableZone, showOrbits, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, activePlanetInfo, layerOverrides, hzAtmosRange, hzCloudCoverRange, hzCloudOpacityRange, hzSeaLevelRange, hzIceCapRange, hzContinentFreqRange]);
+  }), [Constants, planetDistanceFactor, binaryDistanceFactor, bodyScale, showHabitableZone, showOrbits, shaderAmbient, lavaAmbient, wrapRange, wrapPower, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, activePlanetInfo, layerOverrides, hzAtmosRange, hzCloudCoverRange, hzCloudOpacityRange, hzSeaLevelRange, hzIceCapRange, hzContinentFreqRange]);
 
   return (
     <EnvContext.Provider value={contextValue}>

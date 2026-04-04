@@ -9,7 +9,66 @@ import { Canvas, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import Controls from "~/components/Controls";
 import { getTemperature } from "~/utils/helperFunctions";
-// import { EffectComposer } from "@react-three/postprocessing";
+import { EffectComposer, Vignette, Noise, ChromaticAberration, HueSaturation, BrightnessContrast, ToneMapping, DepthOfField, SMAA } from "@react-three/postprocessing";
+import { BlendFunction, ToneMappingMode, SMAAPreset, EdgeDetectionMode } from "postprocessing";
+import { Cinematic } from "~/shaders/CinematicEffectComponent";
+
+// Collect all star temperatures in a system (traverses binaries)
+function getAllStarTemps(data: any): number[] {
+  const temps: number[] = [];
+  if (data?.star) {
+    const stars = Array.isArray(data.star) ? data.star : [data.star];
+    for (const star of stars) {
+      const t = getTemperature({ data: star });
+      if (t > 0) temps.push(t);
+    }
+  }
+  if (data?.binary) {
+    const binaries = Array.isArray(data.binary) ? data.binary : [data.binary];
+    for (const binary of binaries) {
+      temps.push(...getAllStarTemps(binary));
+    }
+  }
+  return temps;
+}
+
+// Blend multiple star temperatures into one ambient colour
+function systemAmbientHex(data: any): string {
+  const temps = getAllStarTemps(data);
+  if (temps.length === 0) return "#ffe699"; // default Sun-like
+  // Luminosity-weighted average: hotter stars are brighter, contribute more
+  let totalWeight = 0;
+  let weightedTemp = 0;
+  for (const t of temps) {
+    const lum = Math.pow(t / 5780, 3.5); // rough main-sequence L ∝ T^3.5
+    weightedTemp += t * lum;
+    totalWeight += lum;
+  }
+  const avgTemp = totalWeight > 0 ? weightedTemp / totalWeight : 5500;
+  return starTempToAmbientHex(avgTemp);
+}
+
+// Star temperature to ambient colour (matches stellar spectral type)
+function starTempToAmbientHex(temp: number): string {
+  if (temp > 30000) return "#99b3ff"; // O-type: blue
+  if (temp > 10000) return "#b3ccff"; // B-type: blue-white
+  if (temp > 7500) return "#e6e6ff";  // A-type: white-blue
+  if (temp > 6000) return "#fff2d9";  // F-type: warm white
+  if (temp > 5200) return "#ffe699";  // G-type: yellow (Sun)
+  if (temp > 3700) return "#ffa64d";  // K-type: orange
+  if (temp > 2400) return "#ff6626";  // M-type: red-orange
+  return "#e64019";                    // L/T-type: deep red
+}
+
+// Sync renderer tone mapping with React state
+function RendererSync({ toneMapping, exposure }: { toneMapping: number; exposure: number }) {
+  const { gl } = useThree();
+  useEffect(() => {
+    gl.toneMapping = toneMapping;
+    gl.toneMappingExposure = exposure;
+  }, [gl, toneMapping, exposure]);
+  return null;
+}
 
 // Extract primary star temperature from system data (traverses binaries)
 function getPrimaryStarTemp(data: any): number {
@@ -30,8 +89,8 @@ function Slider({ label, min, max, step, value, onChange, suffix = "" }: { label
       <label className="w-14 shrink-0">{label}</label>
       <input type="range" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-28 accent-cyan-400" />
-      <span className="w-10 tabular-nums text-right">{typeof value === 'number' ? (Number.isInteger(step) ? value : value.toFixed(2)) : value}{suffix}</span>
+        className="flex-1 min-w-0 accent-cyan-400" />
+      <span className="w-10 tabular-nums text-right shrink-0">{typeof value === 'number' ? (Number.isInteger(step) ? value : value.toFixed(Math.max(2, -Math.floor(Math.log10(step))))) : value}{suffix}</span>
     </div>
   );
 }
@@ -242,7 +301,7 @@ const App = ({ data }: any) => {
 
   const [follow, setFollow] = useState(true);
   const [nebulaDensity, setNebulaDensity] = useState(1.0);
-  const [nebulaBrightness, setNebulaBrightness] = useState(0.6);
+  const [nebulaBrightness, setNebulaBrightness] = useState(1.0);
   const [showNebula, setShowNebula] = useState(true);
   const [showSkybox, setShowSkybox] = useState(true);
   const [skyBrightness, setSkyBrightness] = useState(1.0);
@@ -271,6 +330,10 @@ const App = ({ data }: any) => {
     lavaGlow, setLavaGlow,
     lavaHeightOffset, setLavaHeightOffset,
     lavaFlowScale, setLavaFlowScale,
+    shaderAmbient, setShaderAmbient,
+    lavaAmbient, setLavaAmbient,
+    wrapRange, setWrapRange,
+    wrapPower, setWrapPower,
     rockyCraterScale, setRockyCraterScale,
     rockyRidgeStrength, setRockyRidgeStrength,
     rockyCraterDepth, setRockyCraterDepth,
@@ -303,6 +366,32 @@ const App = ({ data }: any) => {
   }, [data, resetRefs]);
 
   const [showControls, setShowControls] = useState(false);
+  const [showPostFxGui, setShowPostFxGui] = useState(false);
+  const [showLightsGui, setShowLightsGui] = useState(false);
+
+  // Lights
+  const [ambientIntensity, setAmbientIntensity] = useState(0.05);
+  const [ambientColor, setAmbientColor] = useState(() => starTempToAmbientHex(getPrimaryStarTemp(data)));
+
+  // Force EffectComposer rebuild
+  const [fxKey, setFxKey] = useState(0);
+
+  // Stable Vector2 for ChromaticAberration (mutated in place)
+  const [chromaOffset] = useState(() => new THREE.Vector2(0, 0));
+
+  // Post-processing — single config object, all neutral defaults
+  const [fx, setFx] = useState({
+    smaa:          { on: true },
+    dof:           { on: false, focusDistance: 0.01, focalLength: 0.05, bokehScale: 3 },
+    toneMap:       { on: true, mode: ToneMappingMode.ACES_FILMIC },
+    colorGrade:    { on: false, temperature: 0, tint: 0, shadows: 0, highlights: 0 },
+    hueSat:        { on: false, saturation: 0 },
+    brightContrast:{ on: false, brightness: 0, contrast: 0 },
+    chroma:        { on: false, offset: 0 },
+    vignette:      { on: false, offset: 0.3, darkness: 0.5 },
+    noise:         { on: false, opacity: 0 },
+  });
+  const updateFx = (key: string, values: any) => setFx(prev => ({ ...prev, [key]: { ...prev[key as keyof typeof prev], ...values } }));
 
   return (
     <>
@@ -322,7 +411,114 @@ const App = ({ data }: any) => {
         >
           {showControls ? "Hide GUI" : "Show GUI"}
         </button>
+        <button
+          className={`px-3 py-1.5 text-xs rounded-md backdrop-blur-sm transition-colors ${
+            showPostFxGui ? "bg-purple-400/20 text-purple-300" : "bg-black/60 text-muted-foreground hover:text-white"
+          }`}
+          onClick={() => setShowPostFxGui(!showPostFxGui)}
+        >
+          Post FX
+        </button>
+        <button
+          className={`px-3 py-1.5 text-xs rounded-md backdrop-blur-sm transition-colors ${
+            showLightsGui ? "bg-yellow-400/20 text-yellow-300" : "bg-black/60 text-muted-foreground hover:text-white"
+          }`}
+          onClick={() => setShowLightsGui(!showLightsGui)}
+        >
+          Lights
+        </button>
       </div>
+      {showLightsGui && (
+        <div className="fixed bottom-12 left-2 z-10 flex flex-col gap-1 rounded-md bg-black/60 px-4 py-3 backdrop-blur-sm text-[10px] text-muted-foreground w-64" style={{ scrollbarWidth: 'thin' }}>
+          <div className="text-xs font-medium text-yellow-300 mb-1">Lights</div>
+          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Scene Ambient</div>
+          <Slider label="Intensity" min={0} max={1} step={0.01} value={ambientIntensity} onChange={setAmbientIntensity} />
+          <div className="flex items-center gap-1">
+            <label className="w-14 shrink-0">Colour</label>
+            <input type="color" value={ambientColor} onChange={(e) => setAmbientColor(e.target.value)} className="w-6 h-5 cursor-pointer border-0 p-0 bg-transparent" />
+            <span className="text-[9px] text-muted-foreground/50">{ambientColor}</span>
+          </div>
+          <div className="border-t border-white/10 my-1" />
+          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Shader Ambient (fresnel rim on dark side)</div>
+          <Slider label="Planets" min={0} max={0.5} step={0.005} value={shaderAmbient} onChange={setShaderAmbient} />
+          <Slider label="Lava" min={0} max={0.5} step={0.005} value={lavaAmbient} onChange={setLavaAmbient} />
+          <div className="border-t border-white/10 my-1" />
+          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Terminator (day/night boundary)</div>
+          <Slider label="Wrap" min={0.1} max={0.5} step={0.01} value={wrapRange} onChange={setWrapRange} />
+          <Slider label="Power" min={1} max={6} step={0.1} value={wrapPower} onChange={setWrapPower} />
+        </div>
+      )}
+      {showPostFxGui && (
+        <div className="fixed top-2 left-2 z-10 flex flex-col gap-1 rounded-md bg-black/60 px-4 py-3 backdrop-blur-sm max-h-[80vh] overflow-y-auto text-[10px] text-muted-foreground w-72" style={{ scrollbarWidth: 'thin' }}>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-medium text-purple-300">Post FX</span>
+            <button onClick={() => setFxKey(k => k + 1)} className="text-[9px] px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 hover:bg-purple-900/70">Rebuild</button>
+          </div>
+
+          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Antialiasing</div>
+          <Toggle label="SMAA" checked={fx.smaa.on} onChange={(v: boolean) => updateFx('smaa', {on: v})} />
+
+          <div className="border-t border-white/10 my-1" />
+          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Depth of Field</div>
+          <Toggle label="DoF" checked={fx.dof.on} onChange={(v: boolean) => updateFx('dof', {on: v})} />
+          {fx.dof.on && <>
+            <Slider label="Focus Dist" min={0.001} max={0.1} step={0.001} value={fx.dof.focusDistance} onChange={(v: number) => updateFx('dof', {focusDistance: v})} />
+            <Slider label="Focal Len" min={0.01} max={0.2} step={0.005} value={fx.dof.focalLength} onChange={(v: number) => updateFx('dof', {focalLength: v})} />
+            <Slider label="Bokeh" min={0} max={10} step={0.5} value={fx.dof.bokehScale} onChange={(v: number) => updateFx('dof', {bokehScale: v})} />
+          </>}
+
+          <div className="border-t border-white/10 my-1" />
+          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Tone Mapping</div>
+          <Toggle label="Tone Map" checked={fx.toneMap.on} onChange={(v: boolean) => updateFx('toneMap', {on: v})} />
+          {fx.toneMap.on && <div className="flex items-center gap-1">
+            <label className="w-14 shrink-0">Mode</label>
+            <select value={fx.toneMap.mode} onChange={(e) => updateFx('toneMap', {mode: Number(e.target.value)})} className="flex-1 bg-black/50 text-[9px] rounded px-1 py-0.5 border border-white/10">
+              <option value={ToneMappingMode.ACES_FILMIC}>ACES Filmic</option>
+              <option value={ToneMappingMode.AGX}>AgX</option>
+              <option value={ToneMappingMode.REINHARD}>Reinhard</option>
+              <option value={ToneMappingMode.REINHARD2}>Reinhard 2</option>
+              <option value={ToneMappingMode.UNCHARTED2}>Uncharted 2</option>
+              <option value={ToneMappingMode.NEUTRAL}>Neutral</option>
+              <option value={ToneMappingMode.LINEAR}>Linear</option>
+            </select>
+          </div>}
+
+          <div className="border-t border-white/10 my-1" />
+          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Colour Grade</div>
+          <Toggle label="Grade" checked={fx.colorGrade.on} onChange={(v: boolean) => updateFx('colorGrade', {on: v})} />
+          {fx.colorGrade.on && <>
+            <Slider label="Temp" min={-1} max={1} step={0.05} value={fx.colorGrade.temperature} onChange={(v: number) => updateFx('colorGrade', {temperature: v})} />
+            <Slider label="Tint" min={-1} max={1} step={0.05} value={fx.colorGrade.tint} onChange={(v: number) => updateFx('colorGrade', {tint: v})} />
+            <Slider label="Shadows" min={-1} max={1} step={0.05} value={fx.colorGrade.shadows} onChange={(v: number) => updateFx('colorGrade', {shadows: v})} />
+            <Slider label="Highlights" min={-1} max={1} step={0.05} value={fx.colorGrade.highlights} onChange={(v: number) => updateFx('colorGrade', {highlights: v})} />
+          </>}
+
+          <div className="border-t border-white/10 my-1" />
+          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Adjustments</div>
+          <Toggle label="Hue/Sat" checked={fx.hueSat.on} onChange={(v: boolean) => updateFx('hueSat', {on: v})} />
+          {fx.hueSat.on && <Slider label="Saturation" min={-0.5} max={0.5} step={0.01} value={fx.hueSat.saturation} onChange={(v: number) => updateFx('hueSat', {saturation: v})} />}
+          <Toggle label="Bright/Con" checked={fx.brightContrast.on} onChange={(v: boolean) => updateFx('brightContrast', {on: v})} />
+          {fx.brightContrast.on && <>
+            <Slider label="Bright" min={-0.5} max={0.5} step={0.01} value={fx.brightContrast.brightness} onChange={(v: number) => updateFx('brightContrast', {brightness: v})} />
+            <Slider label="Contrast" min={-0.5} max={0.5} step={0.01} value={fx.brightContrast.contrast} onChange={(v: number) => updateFx('brightContrast', {contrast: v})} />
+          </>}
+
+          <div className="border-t border-white/10 my-1" />
+          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Lens</div>
+          <Toggle label="Chroma Ab." checked={fx.chroma.on} onChange={(v: boolean) => updateFx('chroma', {on: v})} />
+          {fx.chroma.on && <Slider label="Offset" min={0} max={0.005} step={0.0001} value={fx.chroma.offset} onChange={(v: number) => updateFx('chroma', {offset: v})} />}
+          <Toggle label="Vignette" checked={fx.vignette.on} onChange={(v: boolean) => updateFx('vignette', {on: v})} />
+          {fx.vignette.on && <>
+            <Slider label="Offset" min={0} max={1} step={0.05} value={fx.vignette.offset} onChange={(v: number) => updateFx('vignette', {offset: v})} />
+            <Slider label="Darkness" min={0} max={1.5} step={0.05} value={fx.vignette.darkness} onChange={(v: number) => updateFx('vignette', {darkness: v})} />
+          </>}
+
+          <div className="border-t border-white/10 my-1" />
+          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Film</div>
+          <Toggle label="Grain" checked={fx.noise.on} onChange={(v: boolean) => updateFx('noise', {on: v})} />
+          {fx.noise.on && <Slider label="Opacity" min={0} max={0.5} step={0.01} value={fx.noise.opacity} onChange={(v: number) => updateFx('noise', {opacity: v})} />}
+        </div>
+      )}
       {showControls && <div className="fixed top-2 right-2 z-10 flex flex-col gap-0.5 rounded-md bg-black/60 px-3 py-2 backdrop-blur-sm max-h-[90vh] overflow-y-auto text-[10px] text-muted-foreground" style={{ scrollbarWidth: 'thin' }}>
         {/* Scale controls — always visible */}
         <Slider label="Orbit" min={0.01} max={2} step={0.01} value={planetDistanceFactor} onChange={setPlanetDistanceFactor} />
@@ -446,12 +642,42 @@ const App = ({ data }: any) => {
       </div>}
       <div id="canvas-container">
         <Canvas dpr={[1, 2]} camera={{ far: 10000000, near: 0.01, fov: 50 }}>
+          <RendererSync toneMapping={THREE.ACESFilmicToneMapping} exposure={1.0} />
           {showSkybox && <MilkyWaySkybox brightness={skyBrightness} contrast={skyContrast} />}
-          <ambientLight intensity={0.05} />
+          <ambientLight intensity={ambientIntensity} color={ambientColor} />
           {showNebula && <Nebula seed={data?.name?.[0] ?? "system"} density={nebulaDensity} brightness={nebulaBrightness} starTemp={getPrimaryStarTemp(data)} />}
           <Binary data={data} />
           <Controls follow={follow} />
-          {/* Post-processing removed */}
+          <EffectComposer key={fxKey}>
+            {/* 0. Antialiasing */}
+            {fx.smaa.on && <SMAA preset={SMAAPreset.MEDIUM} edgeDetectionMode={EdgeDetectionMode.LUMA} />}
+            {/* 1. HDR: Depth of Field */}
+            <DepthOfField
+              focusDistance={fx.dof.on ? fx.dof.focusDistance : 0}
+              focalLength={fx.dof.on ? fx.dof.focalLength : 0}
+              bokehScale={fx.dof.on ? fx.dof.bokehScale : 0}
+            />
+            {/* 2. Tone mapping: HDR → LDR (always ACES Filmic baseline) */}
+            <ToneMapping mode={fx.toneMap.on ? fx.toneMap.mode : ToneMappingMode.ACES_FILMIC} />
+            {/* 3. Colour grading (LDR) */}
+            <Cinematic
+              temperature={fx.colorGrade.on ? fx.colorGrade.temperature : 0}
+              tint={fx.colorGrade.on ? fx.colorGrade.tint : 0}
+              shadows={fx.colorGrade.on ? fx.colorGrade.shadows : 0}
+              highlights={fx.colorGrade.on ? fx.colorGrade.highlights : 0}
+            />
+            {/* 4. Adjustments (LDR) */}
+            <HueSaturation saturation={fx.hueSat.on ? fx.hueSat.saturation : 0} />
+            <BrightnessContrast
+              brightness={fx.brightContrast.on ? fx.brightContrast.brightness : 0}
+              contrast={fx.brightContrast.on ? fx.brightContrast.contrast : 0}
+            />
+            {/* 5. Lens effects */}
+            <ChromaticAberration offset={chromaOffset.set(fx.chroma.on ? fx.chroma.offset : 0, fx.chroma.on ? fx.chroma.offset : 0)} />
+            <Vignette offset={fx.vignette.offset} darkness={fx.vignette.on ? fx.vignette.darkness : 0} />
+            {/* 6. Film (last) */}
+            <Noise opacity={fx.noise.on ? fx.noise.opacity : 0} blendFunction={BlendFunction.SOFT_LIGHT} />
+          </EffectComposer>
         </Canvas>
       </div>
     </>
