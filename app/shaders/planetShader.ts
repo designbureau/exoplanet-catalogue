@@ -153,6 +153,8 @@ const noiseLib = `
 
   // Atmosphere fresnel helper
   uniform vec3 u_sunDirection;
+  uniform float u_ambient;
+  uniform float u_lavaAmbient;
   uniform vec3 u_atmosDayColor;
   uniform vec3 u_atmosTwilightColor;
   uniform float u_atmosIntensity;
@@ -329,7 +331,7 @@ const gasGiantFragment = `
     color *= 1.0 - latitude * 0.2;
 
     float diff = max(dot(vWorldNormal, u_sunDirection), 0.0);
-    color *= (0.08 + 0.92 * diff);
+    color *= (u_ambient + (1.0 - u_ambient) * diff);
 
     gl_FragColor = vec4(color, 1.0);
   }
@@ -435,7 +437,7 @@ const rockyFragment = `
 
     // Lighting — lava worlds have higher ambient (self-radiant heat)
     float diff = max(dot(vWorldNormal, u_sunDirection), 0.0);
-    float ambient = emissiveIntensity > 0.01 ? 0.08 : 0.06;
+    float ambient = emissiveIntensity > 0.01 ? u_lavaAmbient : u_ambient;
     color *= (ambient + (1.0 - ambient) * diff);
 
     // Emissive (for lava worlds) — added after lighting so it glows in shadow
@@ -663,7 +665,7 @@ const terrestrialFragment = `
     // Lighting with bump normal (land only; ocean is smooth)
     vec3 effectiveNormal = mix(vNormal, bumpNormal, isLand);
     float diff = max(dot(vWorldNormal, u_sunDirection), 0.0);
-    surfaceColor *= (0.08 + 0.92 * diff);
+    surfaceColor *= (u_ambient + (1.0 - u_ambient) * diff);
 
     // Specular on ocean
     vec3 viewDir = normalize(-vPosition);
@@ -732,7 +734,7 @@ const hazyFragment = `
     color = mix(color, color4, pow(limb, 3.0) * 0.15);
 
     float diff = max(dot(vWorldNormal, u_sunDirection), 0.0);
-    color *= (0.15 + 0.85 * diff);
+    color *= (u_ambient + (1.0 - u_ambient) * diff);
     gl_FragColor = vec4(color, 1.0);
   }
 `;
@@ -828,7 +830,7 @@ const iceGiantFragment = `
     color *= 0.85 + 0.15 * limb;
 
     float diff = max(dot(vWorldNormal, u_sunDirection), 0.0);
-    color *= (0.08 + 0.92 * diff);
+    color *= (u_ambient + (1.0 - u_ambient) * diff);
     gl_FragColor = vec4(color, 1.0);
   }
 `;
@@ -902,6 +904,8 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_lavaGlow: { value: 0.6 },
       u_lavaHeightOffset: { value: -0.3 },
       u_lavaFlowScale: { value: 1.5 },
+      u_ambient: { value: 0.06 },
+      u_lavaAmbient: { value: 0.08 },
       u_sunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
       u_atmosDayColor: { value: params.atmosDayColor || new THREE.Color(0x00aaff) },
       u_atmosTwilightColor: { value: params.atmosTwilightColor || new THREE.Color(0xff6600) },
