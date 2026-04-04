@@ -159,7 +159,7 @@ const Star = ({ data, position, distance }) => {
       })()}
 
       <mesh ref={ref} name={name} onClick={handleClick}>
-        <sphereGeometry args={[scale, 64, 64]} />
+        <sphereGeometry args={[scale, 128, 128]} />
         <primitive object={starMaterial} attach="material" />
       </mesh>
 

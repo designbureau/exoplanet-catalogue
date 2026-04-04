@@ -515,7 +515,7 @@ const Planet = ({ data, starData, starRef }) => {
         <line geometry={orbitGeo} material={orbitMat} />
       )}
       <mesh ref={ref} name={name} onClick={handleClick} material={shaderMaterial}>
-        <sphereGeometry args={[scale, 64, 64]} />
+        <sphereGeometry args={[scale, 128, 128]} />
       </mesh>
       {ringData && (
         <mesh
@@ -534,7 +534,7 @@ const Planet = ({ data, starData, starRef }) => {
             material={atmosMat}
             frustumCulled={false}
           >
-            <sphereGeometry args={[scale * atmosScale, 48, 48]} />
+            <sphereGeometry args={[scale * atmosScale, 96, 96]} />
           </mesh>
       )}
       {/* Soft outer glow — annular ring billboard */}
