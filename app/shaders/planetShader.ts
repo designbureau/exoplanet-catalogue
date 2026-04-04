@@ -160,6 +160,24 @@ const noiseLib = `
   uniform float u_atmosIntensity;
   uniform float u_atmosFalloff;
 
+  // Wrap lighting + fresnel ambient for realistic dark-side falloff
+  float wrapDiffuse(vec3 N, vec3 L) {
+    float wrap = dot(N, L) * 0.5 + 0.5;
+    return wrap * wrap;
+  }
+
+  float fresnelAmbient(vec3 N, vec3 V) {
+    float f = 1.0 - abs(dot(N, V));
+    return f * f;
+  }
+
+  vec3 planetLighting(vec3 color, vec3 N, vec3 L, vec3 V, float ambient) {
+    float diff = wrapDiffuse(N, L);
+    float rim = fresnelAmbient(N, V);
+    float light = diff + ambient * rim * (1.0 - diff);
+    return color * light;
+  }
+
   vec3 applyAtmosphere(vec3 color, vec3 normal, vec3 worldPos) {
     vec3 viewDir = normalize(cameraPosition - worldPos);
     float fresnel = dot(viewDir, normal) + 1.0;
@@ -330,8 +348,8 @@ const gasGiantFragment = `
     // Polar darkening
     color *= 1.0 - latitude * 0.2;
 
-    float diff = max(dot(vWorldNormal, u_sunDirection), 0.0);
-    color *= (u_ambient + (1.0 - u_ambient) * diff);
+    vec3 V = normalize(cameraPosition - vWorldPosition);
+    color = planetLighting(color, vWorldNormal, u_sunDirection, V, u_ambient);
 
     gl_FragColor = vec4(color, 1.0);
   }
@@ -436,9 +454,9 @@ const rockyFragment = `
     color *= 0.9 + 0.1 * noise3d(p * 40.0);
 
     // Lighting — lava worlds have higher ambient (self-radiant heat)
-    float diff = max(dot(vWorldNormal, u_sunDirection), 0.0);
     float ambient = emissiveIntensity > 0.01 ? u_lavaAmbient : u_ambient;
-    color *= (ambient + (1.0 - ambient) * diff);
+    vec3 V = normalize(cameraPosition - vWorldPosition);
+    color = planetLighting(color, vWorldNormal, u_sunDirection, V, ambient);
 
     // Emissive (for lava worlds) — added after lighting so it glows in shadow
     // Lava emissive — glow in low areas + voronoi cracks
@@ -664,8 +682,8 @@ const terrestrialFragment = `
 
     // Lighting with bump normal (land only; ocean is smooth)
     vec3 effectiveNormal = mix(vNormal, bumpNormal, isLand);
-    float diff = max(dot(vWorldNormal, u_sunDirection), 0.0);
-    surfaceColor *= (u_ambient + (1.0 - u_ambient) * diff);
+    vec3 V = normalize(cameraPosition - vWorldPosition);
+    surfaceColor = planetLighting(surfaceColor, vWorldNormal, u_sunDirection, V, u_ambient);
 
     // Specular on ocean
     vec3 viewDir = normalize(-vPosition);
@@ -733,8 +751,8 @@ const hazyFragment = `
     float limb = 1.0 - abs(dot(vNormal, normalize(vec3(0.0, 0.0, 1.0))));
     color = mix(color, color4, pow(limb, 3.0) * 0.15);
 
-    float diff = max(dot(vWorldNormal, u_sunDirection), 0.0);
-    color *= (u_ambient + (1.0 - u_ambient) * diff);
+    vec3 V = normalize(cameraPosition - vWorldPosition);
+    color = planetLighting(color, vWorldNormal, u_sunDirection, V, u_ambient);
     gl_FragColor = vec4(color, 1.0);
   }
 `;
@@ -829,8 +847,8 @@ const iceGiantFragment = `
     float limb = max(dot(vNormal, normalize(vec3(0.0, 0.0, 1.0))), 0.0);
     color *= 0.85 + 0.15 * limb;
 
-    float diff = max(dot(vWorldNormal, u_sunDirection), 0.0);
-    color *= (u_ambient + (1.0 - u_ambient) * diff);
+    vec3 V = normalize(cameraPosition - vWorldPosition);
+    color = planetLighting(color, vWorldNormal, u_sunDirection, V, u_ambient);
     gl_FragColor = vec4(color, 1.0);
   }
 `;
