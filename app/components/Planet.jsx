@@ -103,7 +103,7 @@ const Planet = ({ data, starData, starRef }) => {
   const ringRef = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, spriteGlowIntensity, spriteGlowScale, spriteGlowFalloff, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, layerOverrides, showOrbits, hzAtmosRange, hzCloudCoverRange, hzCloudOpacityRange, hzSeaLevelRange, hzIceCapRange, hzContinentFreqRange } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, spriteGlowIntensity, spriteGlowScale, spriteGlowFalloff, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, wrapRange, wrapPower, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, layerOverrides, showOrbits, hzAtmosRange, hzCloudCoverRange, hzCloudOpacityRange, hzSeaLevelRange, hzIceCapRange, hzContinentFreqRange } = useContext(EnvContext);
 
   const softGlowTexture = getSoftGlowTexture(spriteGlowFalloff, spriteGlowInner);
 
@@ -365,6 +365,8 @@ const Planet = ({ data, starData, starRef }) => {
     if (u.u_ambient) {
       u.u_ambient.value = shaderAmbient;
       u.u_lavaAmbient.value = lavaAmbient;
+      u.u_wrapRange.value = wrapRange;
+      u.u_wrapPower.value = wrapPower;
     }
     const typeColors = typeColorOverrides[planetType];
     if (typeColors) {
@@ -381,7 +383,7 @@ const Planet = ({ data, starData, starRef }) => {
       terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize,
       rockyCraterScale, rockyRidgeStrength, rockyCraterDepth,
       lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale,
-      shaderAmbient, lavaAmbient,
+      shaderAmbient, lavaAmbient, wrapRange, wrapPower,
       typeColorOverrides, glowIntensity, shaderMaterial, atmosMat, planetType]);
 
   // Soft glow uniforms — only when those sliders change
