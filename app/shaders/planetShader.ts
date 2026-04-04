@@ -155,6 +155,8 @@ const noiseLib = `
   uniform vec3 u_sunDirection;
   uniform float u_ambient;
   uniform float u_lavaAmbient;
+  uniform float u_wrapRange;
+  uniform float u_wrapPower;
   uniform vec3 u_atmosDayColor;
   uniform vec3 u_atmosTwilightColor;
   uniform float u_atmosIntensity;
@@ -162,8 +164,8 @@ const noiseLib = `
 
   // Wrap lighting + fresnel ambient for realistic dark-side falloff
   float wrapDiffuse(vec3 N, vec3 L) {
-    float wrap = dot(N, L) * 0.35 + 0.35;
-    return clamp(wrap * wrap * wrap, 0.0, 1.0);
+    float wrap = dot(N, L) * u_wrapRange + u_wrapRange;
+    return clamp(pow(wrap, u_wrapPower), 0.0, 1.0);
   }
 
   float fresnelAmbient(vec3 N, vec3 V) {
@@ -924,6 +926,8 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_lavaFlowScale: { value: 1.5 },
       u_ambient: { value: 0.06 },
       u_lavaAmbient: { value: 0.08 },
+      u_wrapRange: { value: 0.35 },
+      u_wrapPower: { value: 3.0 },
       u_sunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
       u_atmosDayColor: { value: params.atmosDayColor || new THREE.Color(0x00aaff) },
       u_atmosTwilightColor: { value: params.atmosTwilightColor || new THREE.Color(0xff6600) },

@@ -332,6 +332,8 @@ const App = ({ data }: any) => {
     lavaFlowScale, setLavaFlowScale,
     shaderAmbient, setShaderAmbient,
     lavaAmbient, setLavaAmbient,
+    wrapRange, setWrapRange,
+    wrapPower, setWrapPower,
     rockyCraterScale, setRockyCraterScale,
     rockyRidgeStrength, setRockyRidgeStrength,
     rockyCraterDepth, setRockyCraterDepth,
@@ -431,9 +433,13 @@ const App = ({ data }: any) => {
             <span className="text-[9px] text-muted-foreground/50">{ambientColor}</span>
           </div>
           <div className="border-t border-white/10 my-1" />
-          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Shader Ambient (min light on dark side)</div>
-          <Slider label="Planets" min={0} max={0.3} step={0.005} value={shaderAmbient} onChange={setShaderAmbient} />
-          <Slider label="Lava" min={0} max={0.3} step={0.005} value={lavaAmbient} onChange={setLavaAmbient} />
+          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Shader Ambient (fresnel rim on dark side)</div>
+          <Slider label="Planets" min={0} max={0.5} step={0.005} value={shaderAmbient} onChange={setShaderAmbient} />
+          <Slider label="Lava" min={0} max={0.5} step={0.005} value={lavaAmbient} onChange={setLavaAmbient} />
+          <div className="border-t border-white/10 my-1" />
+          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Terminator (day/night boundary)</div>
+          <Slider label="Wrap" min={0.1} max={0.5} step={0.01} value={wrapRange} onChange={setWrapRange} />
+          <Slider label="Power" min={1} max={6} step={0.1} value={wrapPower} onChange={setWrapPower} />
         </div>
       )}
       {showPostFxGui && (
