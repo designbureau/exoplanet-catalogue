@@ -87,7 +87,7 @@ const Planet = ({ data, starData, starRef }) => {
   const ringRef = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, spriteGlowIntensity, spriteGlowScale, spriteGlowFalloff, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, layerOverrides, showOrbits, hzAtmosRange, hzCloudCoverRange, hzCloudOpacityRange, hzSeaLevelRange, hzIceCapRange, hzContinentFreqRange } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, spriteGlowIntensity, spriteGlowScale, spriteGlowFalloff, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, layerOverrides, showOrbits, hzAtmosRange, hzCloudCoverRange, hzCloudOpacityRange, hzSeaLevelRange, hzIceCapRange, hzContinentFreqRange } = useContext(EnvContext);
 
   const softGlowTexture = getSoftGlowTexture(spriteGlowFalloff, spriteGlowInner);
 
@@ -346,6 +346,10 @@ const Planet = ({ data, starData, starRef }) => {
       u.u_lavaHeightOffset.value = lavaHeightOffset;
       u.u_lavaFlowScale.value = lavaFlowScale;
     }
+    if (u.u_ambient) {
+      u.u_ambient.value = shaderAmbient;
+      u.u_lavaAmbient.value = lavaAmbient;
+    }
     const typeColors = typeColorOverrides[planetType];
     if (typeColors) {
       if (u.color1) u.color1.value.set(typeColors[0]);
@@ -361,6 +365,7 @@ const Planet = ({ data, starData, starRef }) => {
       terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize,
       rockyCraterScale, rockyRidgeStrength, rockyCraterDepth,
       lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale,
+      shaderAmbient, lavaAmbient,
       typeColorOverrides, glowIntensity, shaderMaterial, atmosMat, planetType]);
 
   // Soft glow uniforms — only when those sliders change
@@ -414,6 +419,18 @@ const Planet = ({ data, starData, starRef }) => {
       // Atmosphere uses world-space (negated convention)
       if (atmosMat) {
         atmosMat.uniforms.uSunDirection.value.copy(sunDirWorld).negate();
+      }
+      // Distance-based ambient: closer to star = more reflected light
+      if (shaderMaterial.uniforms.u_ambient) {
+        const dist = _camUp.distanceTo(_starWorldPos);
+        // Inverse square falloff, clamped. Inner planets ~2x base ambient, outer planets ~0.5x
+        const distFactor = Math.min(2.0, 1000.0 / Math.max(dist, 100));
+        const isLava = shaderMaterial.uniforms.emissiveIntensity?.value > 0.01;
+        const baseAmbient = isLava ? lavaAmbient : shaderAmbient;
+        shaderMaterial.uniforms.u_ambient.value = baseAmbient * distFactor;
+        if (shaderMaterial.uniforms.u_lavaAmbient) {
+          shaderMaterial.uniforms.u_lavaAmbient.value = lavaAmbient * distFactor;
+        }
       }
       // Scattering-specific uniforms (only present on scattering materials)
       if (atmosMat && atmosMat.uniforms.uPlanetCenter) {
