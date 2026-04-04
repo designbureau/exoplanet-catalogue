@@ -103,7 +103,7 @@ const Planet = ({ data, starData, starRef }) => {
   const ringRef = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, spriteGlowIntensity, spriteGlowScale, spriteGlowFalloff, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, wrapRange, wrapPower, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, layerOverrides, showOrbits, hzAtmosRange, hzCloudCoverRange, hzCloudOpacityRange, hzSeaLevelRange, hzIceCapRange, hzContinentFreqRange } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, spriteGlowIntensity, spriteGlowScale, spriteGlowFalloff, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, wrapRange, wrapPower, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, layerOverrides, showOrbits, hzPresets } = useContext(EnvContext);
 
   const softGlowTexture = getSoftGlowTexture(spriteGlowFalloff, spriteGlowInner);
 
@@ -140,14 +140,7 @@ const Planet = ({ data, starData, starRef }) => {
       starMass: starData?.mass || 1,
       starRadius: starData?.radius || 1,
       name,
-      hzRanges: {
-        atmos: hzAtmosRange,
-        cloudCover: hzCloudCoverRange,
-        cloudOpacity: hzCloudOpacityRange,
-        seaLevel: hzSeaLevelRange,
-        iceCap: hzIceCapRange,
-        continentFreq: hzContinentFreqRange,
-      },
+      hzRanges: hzPresets,
     });
     const shader = createPlanetMaterial(params);
     // Atmosphere: use HZ-gradient params from classifier when available, fall back to type defaults
@@ -235,7 +228,7 @@ const Planet = ({ data, starData, starRef }) => {
       hasHzGradient: params.hasHzGradient,
       ringData: ringParams ? { params: ringParams, material: ringMat } : null,
     };
-  }, [mass, radius, rawSMA, starData?.temperature, starData?.mass, starData?.radius, name, hzAtmosRange, hzCloudCoverRange, hzCloudOpacityRange, hzSeaLevelRange, hzIceCapRange, hzContinentFreqRange]);
+  }, [mass, radius, rawSMA, starData?.temperature, starData?.mass, starData?.radius, name, hzPresets]);
 
   // Effective layer visibility: classification defaults + per-type GUI overrides
   const lo = layerOverrides[planetType] || {};

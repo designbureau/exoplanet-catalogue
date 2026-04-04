@@ -400,17 +400,22 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       const lerpN = (a: number, b: number, t: number) => a + (b - a) * t;
 
       // --- Surface parameters driven by HZ gradient ---
-      // Range values: [cold edge (hz=0), warm edge (hz=1)]
-      // These can be overridden via hzRanges parameter from EnvContext GUI
-      const r = hzRanges || {};
-      const atR = r.atmos || [0.05, 0.6];
-      const ccR = r.cloudCover || [0.35, 0.55];
-      const coR = r.cloudOpacity || [0.45, 0.85];
-      const slR = r.seaLevel || [0.30, 0.35];
-      const icR = r.iceCap || [0.98, 0.97];
-      const cfR = r.continentFreq || [0.12, 0.19];
+      // 3-category presets: Mars (cold) → Earth (mid) → Venus (warm)
+      // Piecewise linear interpolation through 3 anchor points
+      const p = hzRanges || {};
+      const mars  = p.mars  || { atmos: 0.05, cloudCover: 0.15, cloudOpacity: 0.2,  seaLevel: 0.15, iceCap: 0.98, continentFreq: 0.10 };
+      const earth = p.earth || { atmos: 0.35, cloudCover: 0.45, cloudOpacity: 0.7,  seaLevel: 0.38, iceCap: 0.96, continentFreq: 0.16 };
+      const venus = p.venus || { atmos: 0.60, cloudCover: 0.60, cloudOpacity: 0.90, seaLevel: 0.10, iceCap: 0.99, continentFreq: 0.22 };
 
-      base.atmosIntensity = lerpN(atR[0], atR[1], hz);
+      // hz=0→0.4: Mars→Earth, hz=0.4→0.7: Earth→Venus, hz>0.7: Venus
+      const lerpPreset = (key: string) => {
+        const m = (mars as any)[key], e = (earth as any)[key], v = (venus as any)[key];
+        if (hz < 0.4) return lerpN(m, e, hz / 0.4);
+        if (hz < 0.7) return lerpN(e, v, (hz - 0.4) / 0.3);
+        return v;
+      };
+
+      base.atmosIntensity = lerpPreset('atmos');
 
       // Atmosphere colour: pale grey-blue (cold) → cyan (mid) → amber (warm)
       const coldDay = new THREE.Color(0.45, 0.5, 0.6);
@@ -430,11 +435,11 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       }
       base.atmosColor = base.atmosDayColor.clone().multiplyScalar(0.5);
 
-      base.cloudCoverage = lerpN(ccR[0], ccR[1], hz);
-      base.cloudOpacity = lerpN(coR[0], coR[1], hz);
-      base.seaLevel = lerpN(slR[0], slR[1], hz);
-      base.iceCapSize = lerpN(icR[0], icR[1], hz);
-      base.continentFreq = lerpN(cfR[0], cfR[1], hz);
+      base.cloudCoverage = lerpPreset('cloudCover');
+      base.cloudOpacity = lerpPreset('cloudOpacity');
+      base.seaLevel = lerpPreset('seaLevel');
+      base.iceCapSize = lerpPreset('iceCap');
+      base.continentFreq = lerpPreset('continentFreq');
 
       // --- Star-type colour palettes (unchanged) ---
       type CPalette = [THREE.Color, THREE.Color, THREE.Color, THREE.Color];

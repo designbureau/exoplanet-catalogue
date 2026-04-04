@@ -74,13 +74,13 @@ export const EnvProvider = ({ children }) => {
   // Per-type atmosphere layer overrides: { TEMPERATE: { rim: true, shell: true, halo: false }, ... }
   const [layerOverrides, setLayerOverrides] = useState({});
 
-  // HZ gradient range: [cold edge (hz=0), warm edge (hz=1)]
-  const [hzAtmosRange, setHzAtmosRange] = useState([0.05, 0.6]);
-  const [hzCloudCoverRange, setHzCloudCoverRange] = useState([0.35, 0.55]);
-  const [hzCloudOpacityRange, setHzCloudOpacityRange] = useState([0.45, 0.85]);
-  const [hzSeaLevelRange, setHzSeaLevelRange] = useState([0.30, 0.35]);
-  const [hzIceCapRange, setHzIceCapRange] = useState([0.98, 0.97]);
-  const [hzContinentFreqRange, setHzContinentFreqRange] = useState([0.12, 0.19]);
+  // HZ terrestrial presets: 3 categories interpolated by hz position
+  const [hzPresets, setHzPresets] = useState({
+    mars:  { atmos: 0.05, cloudCover: 0.15, cloudOpacity: 0.2,  seaLevel: 0.15, iceCap: 0.98, continentFreq: 0.10 },
+    earth: { atmos: 0.35, cloudCover: 0.45, cloudOpacity: 0.7,  seaLevel: 0.38, iceCap: 0.96, continentFreq: 0.16 },
+    venus: { atmos: 0.60, cloudCover: 0.60, cloudOpacity: 0.90, seaLevel: 0.10, iceCap: 0.99, continentFreq: 0.22 },
+  });
+  const updatePreset = (cat, key, value) => setHzPresets(prev => ({ ...prev, [cat]: { ...prev[cat], [key]: value } }));
 
   // Lava controls
   const [lavaWarp, setLavaWarp] = useState(0.2);
@@ -181,13 +181,8 @@ export const EnvProvider = ({ children }) => {
       typeColorOverrides, setTypeColorOverrides,
       activePlanetInfo, setActivePlanetInfo,
       layerOverrides, setLayerOverrides,
-      hzAtmosRange, setHzAtmosRange,
-      hzCloudCoverRange, setHzCloudCoverRange,
-      hzCloudOpacityRange, setHzCloudOpacityRange,
-      hzSeaLevelRange, setHzSeaLevelRange,
-      hzIceCapRange, setHzIceCapRange,
-      hzContinentFreqRange, setHzContinentFreqRange,
-  }), [Constants, planetDistanceFactor, binaryDistanceFactor, bodyScale, showHabitableZone, showOrbits, shaderAmbient, lavaAmbient, wrapRange, wrapPower, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, activePlanetInfo, layerOverrides, hzAtmosRange, hzCloudCoverRange, hzCloudOpacityRange, hzSeaLevelRange, hzIceCapRange, hzContinentFreqRange]);
+      hzPresets, updatePreset,
+  }), [Constants, planetDistanceFactor, binaryDistanceFactor, bodyScale, showHabitableZone, showOrbits, shaderAmbient, lavaAmbient, wrapRange, wrapPower, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, activePlanetInfo, layerOverrides, hzPresets]);
 
   return (
     <EnvContext.Provider value={contextValue}>

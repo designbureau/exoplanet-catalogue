@@ -95,27 +95,6 @@ function Slider({ label, min, max, step, value, onChange, suffix = "" }: { label
   );
 }
 
-function RangeSlider({ label, min, max, step, value, onChange }: { label: string; min: number; max: number; step: number; value: [number, number]; onChange: (v: [number, number]) => void }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <label className="text-[9px] text-muted-foreground/70">{label}</label>
-      <div className="flex items-center gap-1">
-        <span className="text-[8px] text-cyan-400/60 w-6">cold</span>
-        <input type="range" min={min} max={max} step={step} value={value[0]}
-          onChange={(e) => onChange([parseFloat(e.target.value), value[1]])}
-          className="w-20 accent-cyan-400" />
-        <span className="w-8 tabular-nums text-right text-[9px]">{value[0].toFixed(2)}</span>
-      </div>
-      <div className="flex items-center gap-1">
-        <span className="text-[8px] text-orange-400/60 w-6">warm</span>
-        <input type="range" min={min} max={max} step={step} value={value[1]}
-          onChange={(e) => onChange([value[0], parseFloat(e.target.value)])}
-          className="w-20 accent-orange-400" />
-        <span className="w-8 tabular-nums text-right text-[9px]">{value[1].toFixed(2)}</span>
-      </div>
-    </div>
-  );
-}
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -279,12 +258,7 @@ const App = ({ data }: any) => {
     spriteGlowInner, setSpriteGlowInner,
     cloudCoverage: ctxCloudCoverage, setCloudCoverage: ctxSetCloudCoverage,
     cloudOpacity: ctxCloudOpacity, setCloudOpacity: ctxSetCloudOpacity,
-    hzAtmosRange, setHzAtmosRange,
-    hzCloudCoverRange, setHzCloudCoverRange,
-    hzCloudOpacityRange, setHzCloudOpacityRange,
-    hzSeaLevelRange, setHzSeaLevelRange,
-    hzIceCapRange, setHzIceCapRange,
-    hzContinentFreqRange, setHzContinentFreqRange,
+    hzPresets, updatePreset,
     layerOverrides, setLayerOverrides,
   } = useContext(EnvContext);
   // Local soft glow sliders — move instantly, apply on button press
@@ -587,13 +561,31 @@ const App = ({ data }: any) => {
           <Slider label="Ice Cap" min={0.6} max={0.98} step={0.01} value={terrIceCapSize} onChange={setTerrIceCapSize} />
         </Accordion>
 
-        <Accordion title="HZ Gradient" defaultOpen={false}>
-          <RangeSlider label="Atmosphere" min={0} max={1} step={0.01} value={hzAtmosRange} onChange={setHzAtmosRange} />
-          <RangeSlider label="Cloud Cover" min={0} max={1} step={0.01} value={hzCloudCoverRange} onChange={setHzCloudCoverRange} />
-          <RangeSlider label="Cloud Opacity" min={0} max={1} step={0.01} value={hzCloudOpacityRange} onChange={setHzCloudOpacityRange} />
-          <RangeSlider label="Sea Level" min={0} max={0.8} step={0.01} value={hzSeaLevelRange} onChange={setHzSeaLevelRange} />
-          <RangeSlider label="Ice Cap" min={0.5} max={1} step={0.01} value={hzIceCapRange} onChange={setHzIceCapRange} />
-          <RangeSlider label="Continent Freq" min={0.05} max={0.4} step={0.01} value={hzContinentFreqRange} onChange={setHzContinentFreqRange} />
+        <Accordion title="Terrestrial Presets" defaultOpen={false}>
+          <Accordion title="Mars-like (cold)" defaultOpen={false}>
+            <Slider label="Atmos" min={0} max={1} step={0.01} value={hzPresets.mars.atmos} onChange={(v: number) => updatePreset('mars', 'atmos', v)} />
+            <Slider label="Clouds" min={0} max={1} step={0.01} value={hzPresets.mars.cloudCover} onChange={(v: number) => updatePreset('mars', 'cloudCover', v)} />
+            <Slider label="Opacity" min={0} max={1} step={0.01} value={hzPresets.mars.cloudOpacity} onChange={(v: number) => updatePreset('mars', 'cloudOpacity', v)} />
+            <Slider label="Sea Lvl" min={0} max={0.8} step={0.01} value={hzPresets.mars.seaLevel} onChange={(v: number) => updatePreset('mars', 'seaLevel', v)} />
+            <Slider label="Ice Cap" min={0.5} max={1} step={0.01} value={hzPresets.mars.iceCap} onChange={(v: number) => updatePreset('mars', 'iceCap', v)} />
+            <Slider label="Land" min={0.05} max={0.4} step={0.01} value={hzPresets.mars.continentFreq} onChange={(v: number) => updatePreset('mars', 'continentFreq', v)} />
+          </Accordion>
+          <Accordion title="Earth-like (temperate)" defaultOpen={false}>
+            <Slider label="Atmos" min={0} max={1} step={0.01} value={hzPresets.earth.atmos} onChange={(v: number) => updatePreset('earth', 'atmos', v)} />
+            <Slider label="Clouds" min={0} max={1} step={0.01} value={hzPresets.earth.cloudCover} onChange={(v: number) => updatePreset('earth', 'cloudCover', v)} />
+            <Slider label="Opacity" min={0} max={1} step={0.01} value={hzPresets.earth.cloudOpacity} onChange={(v: number) => updatePreset('earth', 'cloudOpacity', v)} />
+            <Slider label="Sea Lvl" min={0} max={0.8} step={0.01} value={hzPresets.earth.seaLevel} onChange={(v: number) => updatePreset('earth', 'seaLevel', v)} />
+            <Slider label="Ice Cap" min={0.5} max={1} step={0.01} value={hzPresets.earth.iceCap} onChange={(v: number) => updatePreset('earth', 'iceCap', v)} />
+            <Slider label="Land" min={0.05} max={0.4} step={0.01} value={hzPresets.earth.continentFreq} onChange={(v: number) => updatePreset('earth', 'continentFreq', v)} />
+          </Accordion>
+          <Accordion title="Venus-like (warm)" defaultOpen={false}>
+            <Slider label="Atmos" min={0} max={1} step={0.01} value={hzPresets.venus.atmos} onChange={(v: number) => updatePreset('venus', 'atmos', v)} />
+            <Slider label="Clouds" min={0} max={1} step={0.01} value={hzPresets.venus.cloudCover} onChange={(v: number) => updatePreset('venus', 'cloudCover', v)} />
+            <Slider label="Opacity" min={0} max={1} step={0.01} value={hzPresets.venus.cloudOpacity} onChange={(v: number) => updatePreset('venus', 'cloudOpacity', v)} />
+            <Slider label="Sea Lvl" min={0} max={0.8} step={0.01} value={hzPresets.venus.seaLevel} onChange={(v: number) => updatePreset('venus', 'seaLevel', v)} />
+            <Slider label="Ice Cap" min={0.5} max={1} step={0.01} value={hzPresets.venus.iceCap} onChange={(v: number) => updatePreset('venus', 'iceCap', v)} />
+            <Slider label="Land" min={0.05} max={0.4} step={0.01} value={hzPresets.venus.continentFreq} onChange={(v: number) => updatePreset('venus', 'continentFreq', v)} />
+          </Accordion>
         </Accordion>
 
         <Accordion title="Lava" defaultOpen={false}>
