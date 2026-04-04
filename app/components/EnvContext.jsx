@@ -25,7 +25,7 @@ export const EnvProvider = ({ children }) => {
   const [showOrbits, setShowOrbits] = useState(true);
 
   // Shader lighting
-  const [shaderAmbient, setShaderAmbient] = useState(0.06);
+  const [shaderAmbient, setShaderAmbient] = useState(0.0);
   const [lavaAmbient, setLavaAmbient] = useState(0.08);
 
   // Atmosphere controls
@@ -90,8 +90,8 @@ export const EnvProvider = ({ children }) => {
 
   // Rocky controls
   // Wrap lighting controls
-  const [wrapRange, setWrapRange] = useState(0.35);
-  const [wrapPower, setWrapPower] = useState(3.0);
+  const [wrapRange, setWrapRange] = useState(0.45);
+  const [wrapPower, setWrapPower] = useState(3.9);
 
   const [rockyCraterScale, setRockyCraterScale] = useState(1.0);
   const [rockyRidgeStrength, setRockyRidgeStrength] = useState(0.35);
