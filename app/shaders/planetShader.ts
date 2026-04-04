@@ -162,8 +162,8 @@ const noiseLib = `
 
   // Wrap lighting + fresnel ambient for realistic dark-side falloff
   float wrapDiffuse(vec3 N, vec3 L) {
-    float wrap = dot(N, L) * 0.5 + 0.5;
-    return wrap * wrap;
+    float wrap = dot(N, L) * 0.35 + 0.35;
+    return clamp(wrap * wrap * wrap, 0.0, 1.0);
   }
 
   float fresnelAmbient(vec3 N, vec3 V) {
