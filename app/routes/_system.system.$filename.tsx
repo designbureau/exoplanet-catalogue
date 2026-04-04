@@ -9,8 +9,8 @@ import { Canvas, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import Controls from "~/components/Controls";
 import { getTemperature } from "~/utils/helperFunctions";
-import { EffectComposer, Vignette, Noise, ChromaticAberration, HueSaturation, BrightnessContrast, ToneMapping, DepthOfField } from "@react-three/postprocessing";
-import { BlendFunction, ToneMappingMode } from "postprocessing";
+import { EffectComposer, Vignette, Noise, ChromaticAberration, HueSaturation, BrightnessContrast, ToneMapping, DepthOfField, SMAA } from "@react-three/postprocessing";
+import { BlendFunction, ToneMappingMode, SMAAPreset, EdgeDetectionMode } from "postprocessing";
 import { Cinematic } from "~/shaders/CinematicEffectComponent";
 
 // Collect all star temperatures in a system (traverses binaries)
@@ -378,6 +378,7 @@ const App = ({ data }: any) => {
   // Post-processing — single config object, all neutral defaults
   const [fx, setFx] = useState({
     enabled: true,
+    smaa:          { on: true },
     dof:           { on: false, focusDistance: 0.01, focalLength: 0.05, bokehScale: 3 },
     toneMap:       { on: true, mode: ToneMappingMode.ACES_FILMIC },
     colorGrade:    { on: false, temperature: 0, tint: 0, shadows: 0, highlights: 0 },
@@ -460,6 +461,10 @@ const App = ({ data }: any) => {
 
           <div className="border-t border-white/10 my-1" />
           <Toggle label="Enable Effects" checked={fx.enabled} onChange={(v: boolean) => setFx(prev => ({...prev, enabled: v}))} />
+
+          <div className="border-t border-white/10 my-1" />
+          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Antialiasing</div>
+          <Toggle label="SMAA" checked={fx.smaa.on} onChange={(v: boolean) => updateFx('smaa', {on: v})} />
 
           <div className="border-t border-white/10 my-1" />
           <div className="text-[9px] text-muted-foreground/60 mb-0.5">Depth of Field</div>
@@ -653,6 +658,8 @@ const App = ({ data }: any) => {
           <Controls follow={follow} />
           {fx.enabled && (
             <EffectComposer>
+              {/* 0. Antialiasing */}
+              {fx.smaa.on && <SMAA preset={SMAAPreset.MEDIUM} edgeDetectionMode={EdgeDetectionMode.LUMA} />}
               {/* 1. HDR: Depth of Field */}
               <DepthOfField
                 focusDistance={fx.dof.on ? fx.dof.focusDistance : 0}
