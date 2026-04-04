@@ -64,8 +64,6 @@ function starTempToAmbientHex(temp: number): string {
 function RendererSync({ toneMapping, exposure }: { toneMapping: number; exposure: number }) {
   const { gl } = useThree();
   useEffect(() => {
-    // EffectComposer is always mounted and overrides renderer tone mapping.
-    // These settings only matter if EffectComposer is ever removed.
     gl.toneMapping = toneMapping;
     gl.toneMappingExposure = exposure;
   }, [gl, toneMapping, exposure]);
@@ -373,13 +371,8 @@ const App = ({ data }: any) => {
   const [ambientIntensity, setAmbientIntensity] = useState(0.05);
   const [ambientColor, setAmbientColor] = useState(() => starTempToAmbientHex(getPrimaryStarTemp(data)));
 
-  // Renderer (active when post-FX off)
-  const [rendererToneMapping, setRendererToneMapping] = useState(THREE.ACESFilmicToneMapping);
-  const [rendererExposure, setRendererExposure] = useState(1.0);
-
   // Post-processing — single config object, all neutral defaults
   const [fx, setFx] = useState({
-    enabled: true,
     smaa:          { on: true },
     dof:           { on: false, focusDistance: 0.01, focalLength: 0.05, bokehScale: 3 },
     toneMap:       { on: true, mode: ToneMappingMode.ACES_FILMIC },
@@ -447,24 +440,6 @@ const App = ({ data }: any) => {
         <div className="fixed top-2 left-2 z-10 flex flex-col gap-1 rounded-md bg-black/60 px-4 py-3 backdrop-blur-sm max-h-[80vh] overflow-y-auto text-[10px] text-muted-foreground w-72" style={{ scrollbarWidth: 'thin' }}>
           <div className="text-xs font-medium text-purple-300 mb-1">Post FX</div>
 
-          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Renderer {fx.enabled ? <span className="text-yellow-400/60">(bypassed)</span> : ''}</div>
-          <div className="flex items-center gap-1">
-            <label className="w-14 shrink-0">Tone Map</label>
-            <select value={rendererToneMapping} onChange={(e) => setRendererToneMapping(Number(e.target.value))} className="flex-1 bg-black/50 text-[9px] rounded px-1 py-0.5 border border-white/10">
-              <option value={THREE.NoToneMapping}>None</option>
-              <option value={THREE.ACESFilmicToneMapping}>ACES Filmic</option>
-              <option value={THREE.AgXToneMapping}>AgX</option>
-              <option value={THREE.NeutralToneMapping}>Neutral</option>
-              <option value={THREE.ReinhardToneMapping}>Reinhard</option>
-              <option value={THREE.CineonToneMapping}>Cineon</option>
-            </select>
-          </div>
-          <Slider label="Exposure" min={0.1} max={3.0} step={0.05} value={rendererExposure} onChange={setRendererExposure} />
-
-          <div className="border-t border-white/10 my-1" />
-          <Toggle label="Enable Effects" checked={fx.enabled} onChange={(v: boolean) => setFx(prev => ({...prev, enabled: v}))} />
-
-          <div className="border-t border-white/10 my-1" />
           <div className="text-[9px] text-muted-foreground/60 mb-0.5">Antialiasing</div>
           <Toggle label="SMAA" checked={fx.smaa.on} onChange={(v: boolean) => updateFx('smaa', {on: v})} />
 
@@ -652,7 +627,7 @@ const App = ({ data }: any) => {
       </div>}
       <div id="canvas-container">
         <Canvas dpr={[1, 2]} camera={{ far: 10000000, near: 0.01, fov: 50 }}>
-          <RendererSync toneMapping={rendererToneMapping} exposure={rendererExposure} />
+          <RendererSync toneMapping={THREE.ACESFilmicToneMapping} exposure={1.0} />
           {showSkybox && <MilkyWaySkybox brightness={skyBrightness} contrast={skyContrast} />}
           <ambientLight intensity={ambientIntensity} color={ambientColor} />
           {showNebula && <Nebula seed={data?.name?.[0] ?? "system"} density={nebulaDensity} brightness={nebulaBrightness} starTemp={getPrimaryStarTemp(data)} />}
@@ -660,33 +635,33 @@ const App = ({ data }: any) => {
           <Controls follow={follow} />
           <EffectComposer>
             {/* 0. Antialiasing */}
-            {(fx.enabled && fx.smaa.on) && <SMAA preset={SMAAPreset.MEDIUM} edgeDetectionMode={EdgeDetectionMode.LUMA} />}
+            {fx.smaa.on && <SMAA preset={SMAAPreset.MEDIUM} edgeDetectionMode={EdgeDetectionMode.LUMA} />}
             {/* 1. HDR: Depth of Field */}
             <DepthOfField
-              focusDistance={(fx.enabled && fx.dof.on) ? fx.dof.focusDistance : 0}
-              focalLength={(fx.enabled && fx.dof.on) ? fx.dof.focalLength : 0}
-              bokehScale={(fx.enabled && fx.dof.on) ? fx.dof.bokehScale : 0}
+              focusDistance={fx.dof.on ? fx.dof.focusDistance : 0}
+              focalLength={fx.dof.on ? fx.dof.focalLength : 0}
+              bokehScale={fx.dof.on ? fx.dof.bokehScale : 0}
             />
-            {/* 2. Tone mapping: HDR → LDR (always active — matches renderer default) */}
-            <ToneMapping mode={(fx.enabled && fx.toneMap.on) ? fx.toneMap.mode : ToneMappingMode.ACES_FILMIC} />
+            {/* 2. Tone mapping: HDR → LDR (always ACES Filmic baseline) */}
+            <ToneMapping mode={fx.toneMap.on ? fx.toneMap.mode : ToneMappingMode.ACES_FILMIC} />
             {/* 3. Colour grading (LDR) */}
             <Cinematic
-              temperature={(fx.enabled && fx.colorGrade.on) ? fx.colorGrade.temperature : 0}
-              tint={(fx.enabled && fx.colorGrade.on) ? fx.colorGrade.tint : 0}
-              shadows={(fx.enabled && fx.colorGrade.on) ? fx.colorGrade.shadows : 0}
-              highlights={(fx.enabled && fx.colorGrade.on) ? fx.colorGrade.highlights : 0}
+              temperature={fx.colorGrade.on ? fx.colorGrade.temperature : 0}
+              tint={fx.colorGrade.on ? fx.colorGrade.tint : 0}
+              shadows={fx.colorGrade.on ? fx.colorGrade.shadows : 0}
+              highlights={fx.colorGrade.on ? fx.colorGrade.highlights : 0}
             />
             {/* 4. Adjustments (LDR) */}
-            <HueSaturation saturation={(fx.enabled && fx.hueSat.on) ? fx.hueSat.saturation : 0} />
+            <HueSaturation saturation={fx.hueSat.on ? fx.hueSat.saturation : 0} />
             <BrightnessContrast
-              brightness={(fx.enabled && fx.brightContrast.on) ? fx.brightContrast.brightness : 0}
-              contrast={(fx.enabled && fx.brightContrast.on) ? fx.brightContrast.contrast : 0}
+              brightness={fx.brightContrast.on ? fx.brightContrast.brightness : 0}
+              contrast={fx.brightContrast.on ? fx.brightContrast.contrast : 0}
             />
             {/* 5. Lens effects */}
-            <ChromaticAberration offset={new THREE.Vector2((fx.enabled && fx.chroma.on) ? fx.chroma.offset : 0, (fx.enabled && fx.chroma.on) ? fx.chroma.offset : 0)} />
-            <Vignette offset={fx.vignette.offset} darkness={(fx.enabled && fx.vignette.on) ? fx.vignette.darkness : 0} />
+            <ChromaticAberration offset={new THREE.Vector2(fx.chroma.on ? fx.chroma.offset : 0, fx.chroma.on ? fx.chroma.offset : 0)} />
+            <Vignette offset={fx.vignette.offset} darkness={fx.vignette.on ? fx.vignette.darkness : 0} />
             {/* 6. Film (last) */}
-            <Noise opacity={(fx.enabled && fx.noise.on) ? fx.noise.opacity : 0} blendFunction={BlendFunction.SOFT_LIGHT} />
+            <Noise opacity={fx.noise.on ? fx.noise.opacity : 0} blendFunction={BlendFunction.SOFT_LIGHT} />
           </EffectComposer>
         </Canvas>
       </div>
