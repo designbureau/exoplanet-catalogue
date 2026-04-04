@@ -90,7 +90,7 @@ function Slider({ label, min, max, step, value, onChange, suffix = "" }: { label
       <input type="range" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
         className="flex-1 min-w-0 accent-cyan-400" />
-      <span className="w-10 tabular-nums text-right shrink-0">{typeof value === 'number' ? (Number.isInteger(step) ? value : value.toFixed(2)) : value}{suffix}</span>
+      <span className="w-10 tabular-nums text-right shrink-0">{typeof value === 'number' ? (Number.isInteger(step) ? value : value.toFixed(Math.max(2, -Math.floor(Math.log10(step))))) : value}{suffix}</span>
     </div>
   );
 }
