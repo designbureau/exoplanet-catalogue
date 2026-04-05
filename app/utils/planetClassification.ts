@@ -426,12 +426,16 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       const earth = p.earth || { atmos: 0.35, cloudCover: 0.45, cloudOpacity: 0.7,  seaLevel: 0.38, iceCap: 0.96, continentFreq: 0.16 };
       const venus = p.venus || { atmos: 0.60, cloudCover: 0.60, cloudOpacity: 0.90, seaLevel: 0.10, iceCap: 0.99, continentFreq: 0.22 };
 
-      // hz=0→0.4: Mars→Earth, hz=0.4→0.7: Earth→Venus, hz>0.7: Venus
+      // Real S_eff mapping: Mars≈0.43→hz≈0.12, Earth≈1.0→hz≈0.94, Venus→classified as VENUS_LIKE
+      // Anchor points: Mars at hz=0.15, Earth at hz=0.85, Venus at hz=1.0
+      // hz 0→0.15: pure Mars
+      // hz 0.15→0.85: Mars→Earth (main habitable gradient)
+      // hz 0.85→1.0: Earth→Venus (inner edge transition)
       const lerpPreset = (key: string) => {
         const m = (mars as any)[key], e = (earth as any)[key], v = (venus as any)[key];
-        if (hz < 0.4) return lerpN(m, e, hz / 0.4);
-        if (hz < 0.7) return lerpN(e, v, (hz - 0.4) / 0.3);
-        return v;
+        if (hz < 0.15) return m;
+        if (hz < 0.85) return lerpN(m, e, (hz - 0.15) / 0.7);
+        return lerpN(e, v, (hz - 0.85) / 0.15);
       };
 
       base.atmosIntensity = lerpPreset('atmos');
