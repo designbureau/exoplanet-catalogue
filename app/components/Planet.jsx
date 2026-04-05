@@ -200,11 +200,11 @@ const Planet = ({ data, starData, starRef }) => {
             float sunOrientation = dot(uSunDirection, normal);
             float atmosphereDayMix = smoothstep(-0.5, 1.0, sunOrientation);
             vec3 color = mix(uAtmosTwilightColor, uAtmosDayColor, atmosphereDayMix);
+            // BackSide sphere: dot(view, normal) is high at centre, 0 at limb — invert for edge glow
             float edge = dot(viewDirection, normal);
-            float edgeAlpha = pow(smoothstep(0.0, 0.5, edge), uShellFalloff);
-            float innerFade = smoothstep(uShellInner, uShellInner + 0.15, edge);
+            float edgeAlpha = pow(1.0 - smoothstep(0.0, 0.5, edge), uShellFalloff);
             float dayAlpha = smoothstep(-0.5, 0.0, sunOrientation);
-            float alpha = edgeAlpha * innerFade * dayAlpha * uFallbackIntensity;
+            float alpha = edgeAlpha * dayAlpha * uFallbackIntensity;
             gl_FragColor = vec4(color, alpha);
           }
         `,
