@@ -191,15 +191,19 @@ const Planet = ({ data, starData, starRef }) => {
           uniform vec3 uAtmosDayColor;
           uniform vec3 uAtmosTwilightColor;
           uniform float uFallbackIntensity;
+          uniform float uShellFalloff;
+          uniform float uShellInner;
           void main() {
             vec3 viewDirection = normalize(vWorldPosition - cameraPosition);
             vec3 normal = normalize(vNormal);
             float sunOrientation = dot(uSunDirection, normal);
             float atmosphereDayMix = smoothstep(-0.5, 1.0, sunOrientation);
             vec3 color = mix(uAtmosTwilightColor, uAtmosDayColor, atmosphereDayMix);
-            float edgeAlpha = smoothstep(0.0, 0.5, dot(viewDirection, normal));
+            float edge = dot(viewDirection, normal);
+            float edgeAlpha = pow(smoothstep(0.0, 0.5, edge), uShellFalloff);
+            float innerFade = smoothstep(uShellInner, uShellInner + 0.15, edge);
             float dayAlpha = smoothstep(-0.5, 0.0, sunOrientation);
-            float alpha = edgeAlpha * dayAlpha * uFallbackIntensity;
+            float alpha = edgeAlpha * innerFade * dayAlpha * uFallbackIntensity;
             gl_FragColor = vec4(color, alpha);
           }
         `,
@@ -211,6 +215,8 @@ const Planet = ({ data, starData, starRef }) => {
           uAtmosDayColor: { value: atmosDayCol },
           uAtmosTwilightColor: { value: atmosTwiCol },
           uFallbackIntensity: { value: atmosInt },
+          uShellFalloff: { value: 1.25 },
+          uShellInner: { value: 0.0 },
         },
       });
     }
@@ -372,7 +378,9 @@ const Planet = ({ data, starData, starRef }) => {
     }
     if (atmosMat?.uniforms.uFallbackIntensity) atmosMat.uniforms.uFallbackIntensity.value = shellIntensity;
     if (atmosMat?.uniforms.uSunIntensity) atmosMat.uniforms.uSunIntensity.value = shellIntensity * 24.0;
-  }, [rimIntensity, atmosFalloff, cloudCoverage, cloudOpacity,
+    if (atmosMat?.uniforms.uShellFalloff) atmosMat.uniforms.uShellFalloff.value = glowFalloff;
+    if (atmosMat?.uniforms.uShellInner) atmosMat.uniforms.uShellInner.value = glowInner;
+  }, [rimIntensity, atmosFalloff, glowFalloff, glowInner, cloudCoverage, cloudOpacity,
       gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise,
       iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise,
       terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize,
@@ -381,15 +389,20 @@ const Planet = ({ data, starData, starRef }) => {
       shaderAmbient, lavaAmbient, wrapRange, wrapPower,
       typeColorOverrides, shellIntensity, haloIntensity, shaderMaterial, atmosMat, planetType]);
 
-  // Soft glow uniforms — only when those sliders change
+  // Halo uniforms — update when sliders or per-planet intensity changes
   useEffect(() => {
     if (softGlowRef.current?.material?.uniforms) {
       const sgU = softGlowRef.current.material.uniforms;
       sgU.uRadius.value = spriteGlowScale * 0.3;
       sgU.uIntensity.value = haloIntensity;
       sgU.uFalloff.value = spriteGlowFalloff;
+      if (sgU.uInner) sgU.uInner.value = spriteGlowInner;
+      // Update halo colour from current atmosphere day colour
+      if (sgU.uColor && shaderMaterial.uniforms.u_atmosDayColor) {
+        sgU.uColor.value.copy(shaderMaterial.uniforms.u_atmosDayColor.value).lerp(new THREE.Color(1, 1, 1), 0.35);
+      }
     }
-  }, [spriteGlowScale, haloIntensity, spriteGlowFalloff]);
+  }, [spriteGlowScale, haloIntensity, spriteGlowFalloff, spriteGlowInner, glowHueShift, glowSaturation, shaderMaterial]);
 
   // Per-frame: only orbital motion, time, LOD, sun direction, position sync
   useFrame((state) => {
@@ -586,6 +599,7 @@ const Planet = ({ data, starData, starRef }) => {
                 uColor: { value: shaderMaterial.uniforms.u_atmosDayColor.value.clone().lerp(new THREE.Color(1, 1, 1), 0.35) },
                 uIntensity: { value: haloIntensity },
                 uFalloff: { value: spriteGlowFalloff },
+                uInner: { value: spriteGlowInner },
               }}
               vertexShader={`
                 attribute vec3 aPos;
@@ -609,8 +623,10 @@ const Planet = ({ data, starData, starRef }) => {
                 uniform vec3 uColor;
                 uniform float uIntensity;
                 uniform float uFalloff;
+                uniform float uInner;
                 void main() {
                   float alpha = pow(1.0 - vRadial, uFalloff);
+                  alpha *= smoothstep(0.0, uInner + 0.01, vRadial); // inner fade
                   alpha *= uIntensity;
                   gl_FragColor = vec4(uColor * alpha, alpha);
                 }

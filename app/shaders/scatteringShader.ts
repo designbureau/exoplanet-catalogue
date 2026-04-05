@@ -167,6 +167,8 @@ const scatteringFragment = `
   uniform vec3 uAtmosDayColor;
   uniform vec3 uAtmosTwilightColor;
   uniform float uFallbackIntensity;
+  uniform float uShellFalloff;
+  uniform float uShellInner;
 
   // Ray-sphere intersection (sphere at origin)
   vec2 rsi(vec3 r0, vec3 rd, float sr) {
@@ -186,9 +188,11 @@ const scatteringFragment = `
     float sunOrientation = dot(uSunDirection, normal);
     float atmosphereDayMix = smoothstep(-0.5, 1.0, sunOrientation);
     vec3 color = mix(uAtmosTwilightColor, uAtmosDayColor, atmosphereDayMix);
-    float edgeAlpha = smoothstep(0.0, 0.5, dot(viewDirection, normal));
+    float edge = dot(viewDirection, normal);
+    float edgeAlpha = pow(smoothstep(0.0, 0.5, edge), uShellFalloff);
+    float innerFade = smoothstep(uShellInner, uShellInner + 0.15, edge);
     float dayAlpha = smoothstep(-0.5, 0.0, sunOrientation);
-    float alpha = edgeAlpha * dayAlpha * uFallbackIntensity;
+    float alpha = edgeAlpha * innerFade * dayAlpha * uFallbackIntensity;
     return vec4(color, alpha);
   }
 
@@ -304,6 +308,8 @@ export function createScatteringMaterial(
       uAtmosDayColor: { value: fallbackDayColor },
       uAtmosTwilightColor: { value: fallbackTwilightColor },
       uFallbackIntensity: { value: fallbackIntensity },
+      uShellFalloff: { value: 1.25 },
+      uShellInner: { value: 0.0 },
     },
   });
 }
