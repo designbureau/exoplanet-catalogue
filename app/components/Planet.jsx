@@ -485,8 +485,8 @@ const Planet = ({ data, starData, starRef }) => {
         atmosMat.uniforms.uPlanetCenter.value.copy(_camUp); // planet world position
         atmosMat.uniforms.uPlanetRadius.value = scale;
         atmosMat.uniforms.uAtmosRadius.value = scale * atmosScale;
-        // LOD: full scatter on active planet, reduced on visible, fallback on tiny
-        atmosMat.uniforms.uSteps.value = isActive ? 16 : 8;
+        // Use sharp day/twilight fallback (uSteps=0) — ray march is too subtle for thin atmospheres
+        atmosMat.uniforms.uSteps.value = 0;
       }
     }
 
