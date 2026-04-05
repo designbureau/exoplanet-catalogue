@@ -11,9 +11,9 @@ function getLodSphereGeo(radius, segments) {
 }
 // LOD tiers: [maxDistance, planetSegs, atmosSegs]
 const LOD_TIERS = [
-  [80,   128, 96],   // close-up: full detail
+  [80,   128, 64],   // close-up: full detail
   [400,  64,  48],   // mid-range
-  [Infinity, 32, 24] // far away
+  [Infinity, 32, 48] // far away: atmos needs more segments to avoid banding
 ];
 
 // Shared annular ring geometry for soft glow — 128 segments, inner=0 outer=1
@@ -171,6 +171,7 @@ const Planet = ({ data, starData, starRef }) => {
         atmosInt,
         1.0, // planet radius in local units (scale applied via mesh)
       );
+      atmosMat._baseSunIntensity = scatterPreset.sunIntensity; // preserve for slider scaling
     } else if (atmosInt > 0) {
       // Non-scattering fallback for types without presets
       atmosMat = new THREE.ShaderMaterial({
@@ -244,10 +245,6 @@ const Planet = ({ data, starData, starRef }) => {
   const effectiveShell = defaultShowShell && shellIntensity > 0;
   const effectiveHalo = defaultShowHalo && haloIntensity > 0;
 
-  // DEBUG: shell visibility
-  if (hasAtmosphere) {
-    console.log(`[ATMOS] ${name}: type=${planetType} showShell=${defaultShowShell} shellInt=${shellIntensity} effectiveShell=${effectiveShell} atmosMat=${!!atmosMat}`);
-  }
 
   useEffect(() => {
     addRef(name, "planet", ref);
@@ -382,7 +379,10 @@ const Planet = ({ data, starData, starRef }) => {
       if (u.color4) u.color4.value.set(typeColors[3]);
     }
     if (atmosMat?.uniforms.uFallbackIntensity) atmosMat.uniforms.uFallbackIntensity.value = shellIntensity;
-    if (atmosMat?.uniforms.uSunIntensity) atmosMat.uniforms.uSunIntensity.value = shellIntensity * 24.0;
+    // Scale sun intensity: shellIntensity acts as a multiplier on the preset's base value
+    if (atmosMat?.uniforms.uSunIntensity && atmosMat._baseSunIntensity != null) {
+      atmosMat.uniforms.uSunIntensity.value = atmosMat._baseSunIntensity * shellIntensity;
+    }
     if (atmosMat?.uniforms.uShellFalloff) atmosMat.uniforms.uShellFalloff.value = glowFalloff;
     if (atmosMat?.uniforms.uShellInner) atmosMat.uniforms.uShellInner.value = glowInner;
   }, [rimIntensity, atmosFalloff, glowFalloff, glowInner, cloudCoverage, cloudOpacity,
@@ -581,7 +581,7 @@ const Planet = ({ data, starData, starRef }) => {
             material={atmosMat}
             frustumCulled={false}
           >
-            <sphereGeometry args={[scale * atmosScale, 24, 24]} />
+            <sphereGeometry args={[scale * atmosScale, 48, 48]} />
           </mesh>
       )}
       {/* Soft outer glow — annular ring billboard */}
