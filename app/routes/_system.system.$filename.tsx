@@ -249,8 +249,6 @@ const App = ({ data }: any) => {
     glowInner, setGlowInner,
     glowHueShift, setGlowHueShift,
     glowSaturation, setGlowSaturation,
-    spriteGlowScale, setSpriteGlowScale,
-    spriteGlowFalloff, setSpriteGlowFalloff,
     spriteGlowInner, setSpriteGlowInner,
     cloudCoverage: ctxCloudCoverage, setCloudCoverage: ctxSetCloudCoverage,
     cloudOpacity: ctxCloudOpacity, setCloudOpacity: ctxSetCloudOpacity,
@@ -500,9 +498,7 @@ const App = ({ data }: any) => {
           <Slider label="Inner" min={0} max={0.9} step={0.01} value={glowInner} onChange={setGlowInner} />
           <Slider label="Hue" min={0} max={1} step={0.01} value={glowHueShift} onChange={setGlowHueShift} />
           <Slider label="Sat" min={0} max={3} step={0.05} value={glowSaturation} onChange={setGlowSaturation} />
-          <div className="text-[9px] text-muted-foreground/60 mt-1 mb-0.5">Halo (outer glow)</div>
-          <Slider label="Scale" min={1} max={10} step={0.1} value={spriteGlowScale} onChange={setSpriteGlowScale} />
-          <Slider label="Falloff" min={0.1} max={5} step={0.05} value={spriteGlowFalloff} onChange={setSpriteGlowFalloff} />
+          <div className="text-[9px] text-muted-foreground/60 mt-1 mb-0.5">Halo (global)</div>
           <Slider label="Inner" min={0} max={0.9} step={0.01} value={spriteGlowInner} onChange={setSpriteGlowInner} />
         </Accordion>
 
@@ -520,6 +516,8 @@ const App = ({ data }: any) => {
             <Slider label="Rim Fall" min={0.3} max={3} step={0.1} value={hzPresets.mars.rimFalloff} onChange={(v: number) => updatePreset('mars', 'rimFalloff', v)} />
             <Slider label="Shell" min={0} max={2} step={0.05} value={hzPresets.mars.shell} onChange={(v: number) => updatePreset('mars', 'shell', v)} />
             <Slider label="Halo" min={0} max={1} step={0.05} value={hzPresets.mars.halo} onChange={(v: number) => updatePreset('mars', 'halo', v)} />
+            <Slider label="H Scale" min={0.5} max={5} step={0.1} value={hzPresets.mars.haloScale} onChange={(v: number) => updatePreset('mars', 'haloScale', v)} />
+            <Slider label="H Fall" min={0.3} max={4} step={0.1} value={hzPresets.mars.haloFalloff} onChange={(v: number) => updatePreset('mars', 'haloFalloff', v)} />
           </Accordion>
           <Accordion title="Earth-like (mid HZ)" defaultOpen={false}>
             <Slider label="Atmos" min={0} max={1} step={0.01} value={hzPresets.earth.atmos} onChange={(v: number) => updatePreset('earth', 'atmos', v)} />
@@ -534,6 +532,8 @@ const App = ({ data }: any) => {
             <Slider label="Rim Fall" min={0.3} max={3} step={0.1} value={hzPresets.earth.rimFalloff} onChange={(v: number) => updatePreset('earth', 'rimFalloff', v)} />
             <Slider label="Shell" min={0} max={2} step={0.05} value={hzPresets.earth.shell} onChange={(v: number) => updatePreset('earth', 'shell', v)} />
             <Slider label="Halo" min={0} max={1} step={0.05} value={hzPresets.earth.halo} onChange={(v: number) => updatePreset('earth', 'halo', v)} />
+            <Slider label="H Scale" min={0.5} max={5} step={0.1} value={hzPresets.earth.haloScale} onChange={(v: number) => updatePreset('earth', 'haloScale', v)} />
+            <Slider label="H Fall" min={0.3} max={4} step={0.1} value={hzPresets.earth.haloFalloff} onChange={(v: number) => updatePreset('earth', 'haloFalloff', v)} />
           </Accordion>
           <Accordion title="Venus-like (warm HZ)" defaultOpen={false}>
             <Slider label="Atmos" min={0} max={1} step={0.01} value={hzPresets.venus.atmos} onChange={(v: number) => updatePreset('venus', 'atmos', v)} />
@@ -548,6 +548,8 @@ const App = ({ data }: any) => {
             <Slider label="Rim Fall" min={0.3} max={3} step={0.1} value={hzPresets.venus.rimFalloff} onChange={(v: number) => updatePreset('venus', 'rimFalloff', v)} />
             <Slider label="Shell" min={0} max={2} step={0.05} value={hzPresets.venus.shell} onChange={(v: number) => updatePreset('venus', 'shell', v)} />
             <Slider label="Halo" min={0} max={1} step={0.05} value={hzPresets.venus.halo} onChange={(v: number) => updatePreset('venus', 'halo', v)} />
+            <Slider label="H Scale" min={0.5} max={5} step={0.1} value={hzPresets.venus.haloScale} onChange={(v: number) => updatePreset('venus', 'haloScale', v)} />
+            <Slider label="H Fall" min={0.3} max={4} step={0.1} value={hzPresets.venus.haloFalloff} onChange={(v: number) => updatePreset('venus', 'haloFalloff', v)} />
           </Accordion>
           <Accordion title="Global (non-HZ)" defaultOpen={false}>
             <Slider label="Clouds" min={0.1} max={0.7} step={0.01} value={cloudCoverage} onChange={setCloudCoverage} />

@@ -103,9 +103,7 @@ const Planet = ({ data, starData, starRef }) => {
   const ringRef = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, spriteGlowScale, spriteGlowFalloff, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, wrapRange, wrapPower, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, showOrbits, hzPresets } = useContext(EnvContext);
-
-  const softGlowTexture = getSoftGlowTexture(spriteGlowFalloff, spriteGlowInner);
+  const { Constants, planetDistanceFactor, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, wrapRange, wrapPower, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, showOrbits, hzPresets } = useContext(EnvContext);
 
   // Pre-allocated vectors for per-frame camera updates
   const _camRight = useMemo(() => new THREE.Vector3(), []);
@@ -131,7 +129,7 @@ const Planet = ({ data, starData, starRef }) => {
   })();
 
   // Classify planet and create shader material + atmosphere ring
-  const { shaderMaterial, atmosParams, atmosMat, atmosScale, planetType, hasAtmosphere, defaultShowRim, defaultShowShell, defaultShowHalo, rimIntensity, rimFalloff, shellIntensity, haloIntensity, hasHzGradient, ringData } = useMemo(() => {
+  const { shaderMaterial, atmosParams, atmosMat, atmosScale, haloMat, planetType, hasAtmosphere, defaultShowRim, defaultShowShell, defaultShowHalo, rimIntensity, rimFalloff, shellIntensity, haloIntensity, haloScale, haloFalloff, hasHzGradient, ringData } = useMemo(() => {
     const params = classifyPlanet({
       massJupiter: mass,
       radiusJupiter: radius,
@@ -222,11 +220,56 @@ const Planet = ({ data, starData, starRef }) => {
       });
     }
 
+    // Stable halo material — uniforms updated via useEffect
+    const haloColor = params.atmosDayColor ? params.atmosDayColor.clone().lerp(new THREE.Color(1, 1, 1), 0.35) : new THREE.Color(0.5, 0.7, 1.0);
+    const hMat = new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      depthTest: true,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      uniforms: {
+        uRadius: { value: params.haloScale * 0.3 },
+        uColor: { value: haloColor },
+        uIntensity: { value: params.haloIntensity },
+        uFalloff: { value: params.haloFalloff },
+        uInner: { value: 0.0 },
+      },
+      vertexShader: `
+        attribute vec3 aPos;
+        varying float vRadial;
+        uniform float uRadius;
+        void main() {
+          vRadial = aPos.z;
+          vec4 mvCenter = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+          float s = length(vec3(modelMatrix[0][0], modelMatrix[1][0], modelMatrix[2][0]));
+          float r = (1.0 + aPos.z * uRadius) * s;
+          vec3 viewPos = mvCenter.xyz + vec3(aPos.x * r, aPos.y * r, 0.0);
+          gl_Position = projectionMatrix * vec4(viewPos, 1.0);
+        }
+      `,
+      fragmentShader: `
+        precision highp float;
+        varying float vRadial;
+        uniform vec3 uColor;
+        uniform float uIntensity;
+        uniform float uFalloff;
+        uniform float uInner;
+        void main() {
+          float alpha = pow(1.0 - vRadial, uFalloff);
+          if (uInner > 0.001) alpha *= smoothstep(0.0, uInner, vRadial);
+          alpha *= uIntensity;
+          gl_FragColor = vec4(uColor * alpha, alpha);
+        }
+      `,
+    });
+
     return {
       shaderMaterial: shader,
       atmosParams: ap,
       atmosMat,
       atmosScale: scatterPreset?.atmosphereScale || (1.0 + 0.04),
+      haloMat: hMat,
       planetType: params.type,
       hasAtmosphere: params.hasAtmosphere,
       defaultShowRim: params.showRim,
@@ -236,6 +279,8 @@ const Planet = ({ data, starData, starRef }) => {
       rimFalloff: params.rimFalloff,
       shellIntensity: params.shellIntensity,
       haloIntensity: params.haloIntensity,
+      haloScale: params.haloScale,
+      haloFalloff: params.haloFalloff,
       hasHzGradient: params.hasHzGradient,
       ringData: ringParams ? { params: ringParams, material: ringMat } : null,
     };
@@ -245,7 +290,6 @@ const Planet = ({ data, starData, starRef }) => {
   const effectiveRim = defaultShowRim && rimIntensity > 0;
   const effectiveShell = defaultShowShell && shellIntensity > 0;
   const effectiveHalo = defaultShowHalo && haloIntensity > 0;
-  if (hasAtmosphere && name.includes('Earth')) console.log(`[HALO] ${name}: showHalo=${defaultShowHalo} haloInt=${haloIntensity} effective=${effectiveHalo} hasAtmosDayColor=${!!shaderMaterial?.uniforms?.u_atmosDayColor}`);
 
 
   useEffect(() => {
@@ -291,7 +335,7 @@ const Planet = ({ data, starData, starRef }) => {
       atmosphere: {
         rim: { intensity: parseFloat((rimIntensity || 0).toFixed(2)), falloff: parseFloat(atmosFalloff.toFixed(2)) },
         shell: { intensity: parseFloat((shellIntensity || 0).toFixed(2)), falloff: parseFloat(glowFalloff.toFixed(2)), inner: parseFloat(glowInner.toFixed(2)), hue: parseFloat(glowHueShift.toFixed(2)), sat: parseFloat(glowSaturation.toFixed(2)) },
-        halo: { intensity: parseFloat((haloIntensity || 0).toFixed(2)), scale: parseFloat(spriteGlowScale.toFixed(2)), falloff: parseFloat(spriteGlowFalloff.toFixed(2)), inner: parseFloat(spriteGlowInner.toFixed(2)) },
+        halo: { intensity: parseFloat((haloIntensity || 0).toFixed(2)), scale: parseFloat((haloScale || 0).toFixed(2)), falloff: parseFloat((haloFalloff || 0).toFixed(2)) },
       },
       clouds: { cover: parseFloat(cloudCoverage.toFixed(2)), opacity: parseFloat(cloudOpacity.toFixed(2)) },
       terrestrial: {
@@ -396,20 +440,20 @@ const Planet = ({ data, starData, starRef }) => {
       shaderAmbient, lavaAmbient, wrapRange, wrapPower,
       typeColorOverrides, shellIntensity, haloIntensity, shaderMaterial, atmosMat, planetType]);
 
-  // Halo uniforms — update when sliders or per-planet intensity changes
+  // Halo uniforms — update stable material when per-planet values change
   useEffect(() => {
-    if (softGlowRef.current?.material?.uniforms) {
-      const sgU = softGlowRef.current.material.uniforms;
-      sgU.uRadius.value = spriteGlowScale * 0.3;
-      sgU.uIntensity.value = haloIntensity;
-      sgU.uFalloff.value = spriteGlowFalloff;
-      if (sgU.uInner) sgU.uInner.value = spriteGlowInner;
+    if (haloMat?.uniforms) {
+      const u = haloMat.uniforms;
+      u.uRadius.value = haloScale * 0.3;
+      u.uIntensity.value = haloIntensity;
+      u.uFalloff.value = haloFalloff;
+      u.uInner.value = spriteGlowInner;
       // Update halo colour from current atmosphere day colour
-      if (sgU.uColor && shaderMaterial.uniforms.u_atmosDayColor) {
-        sgU.uColor.value.copy(shaderMaterial.uniforms.u_atmosDayColor.value).lerp(new THREE.Color(1, 1, 1), 0.35);
+      if (shaderMaterial.uniforms.u_atmosDayColor) {
+        u.uColor.value.copy(shaderMaterial.uniforms.u_atmosDayColor.value).lerp(new THREE.Color(1, 1, 1), 0.35);
       }
     }
-  }, [spriteGlowScale, haloIntensity, spriteGlowFalloff, spriteGlowInner, glowHueShift, glowSaturation, shaderMaterial]);
+  }, [haloMat, haloIntensity, haloScale, haloFalloff, spriteGlowInner, glowHueShift, glowSaturation, shaderMaterial]);
 
   // Per-frame: only orbital motion, time, LOD, sun direction, position sync
   useFrame((state) => {
@@ -587,59 +631,15 @@ const Planet = ({ data, starData, starRef }) => {
           </mesh>
       )}
       {/* Soft outer glow — annular ring billboard */}
-      {effectiveHalo && haloIntensity > 0 && shaderMaterial.uniforms.u_atmosDayColor && (
+      {effectiveHalo && haloMat && (
           <mesh
             ref={softGlowRef}
             geometry={getSoftGlowRingGeo()}
+            material={haloMat}
             frustumCulled={false}
             renderOrder={2}
             scale={[scale, scale, scale]}
-          >
-            <shaderMaterial
-              transparent
-              depthWrite={false}
-              depthTest={true}
-              blending={THREE.AdditiveBlending}
-              side={THREE.DoubleSide}
-              uniforms={{
-                uRadius: { value: spriteGlowScale * 0.3 },
-                uColor: { value: shaderMaterial.uniforms.u_atmosDayColor.value.clone().lerp(new THREE.Color(1, 1, 1), 0.35) },
-                uIntensity: { value: haloIntensity },
-                uFalloff: { value: spriteGlowFalloff },
-                uInner: { value: spriteGlowInner },
-              }}
-              vertexShader={`
-                attribute vec3 aPos;
-                varying float vRadial;
-                uniform float uRadius;
-                void main() {
-                  vRadial = aPos.z;
-                  // Billboard: compute centre in view space (respects all parent transforms)
-                  vec4 mvCenter = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-                  // Extract uniform scale from model matrix
-                  float s = length(vec3(modelMatrix[0][0], modelMatrix[1][0], modelMatrix[2][0]));
-                  float r = (1.0 + aPos.z * uRadius) * s;
-                  // Offset in screen-aligned view-space X/Y (always faces camera)
-                  vec3 viewPos = mvCenter.xyz + vec3(aPos.x * r, aPos.y * r, 0.0);
-                  gl_Position = projectionMatrix * vec4(viewPos, 1.0);
-                }
-              `}
-              fragmentShader={`
-                precision highp float;
-                varying float vRadial;
-                uniform vec3 uColor;
-                uniform float uIntensity;
-                uniform float uFalloff;
-                uniform float uInner;
-                void main() {
-                  float alpha = pow(1.0 - vRadial, uFalloff);
-                  if (uInner > 0.001) alpha *= smoothstep(0.0, uInner, vRadial);
-                  alpha *= uIntensity;
-                  gl_FragColor = vec4(uColor * alpha, alpha);
-                }
-              `}
-            />
-          </mesh>
+          />
       )}
     </group>
   );
