@@ -131,7 +131,7 @@ const Planet = ({ data, starData, starRef }) => {
   })();
 
   // Classify planet and create shader material + atmosphere ring
-  const { shaderMaterial, atmosParams, atmosMat, atmosScale, planetType, hasAtmosphere, defaultShowRim, defaultShowShell, defaultShowHalo, hasHzGradient, ringData } = useMemo(() => {
+  const { shaderMaterial, atmosParams, atmosMat, atmosScale, planetType, hasAtmosphere, defaultShowRim, defaultShowShell, defaultShowHalo, rimIntensity, shellIntensity, haloIntensity, hasHzGradient, ringData } = useMemo(() => {
     const params = classifyPlanet({
       massJupiter: mass,
       radiusJupiter: radius,
