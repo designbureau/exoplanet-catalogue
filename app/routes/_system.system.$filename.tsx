@@ -494,10 +494,8 @@ const App = ({ data }: any) => {
           <Toggle label="Nebula" checked={showNebula} onChange={setShowNebula} />
         </Accordion>
 
-        <Accordion title="Atmosphere" defaultOpen={false}>
-          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Rim (surface fresnel)</div>
-          <Slider label="Falloff" min={0.5} max={8} step={0.1} value={atmosFalloff} onChange={setAtmosFalloff} />
-          <div className="text-[9px] text-muted-foreground/60 mt-1 mb-0.5">Shell (day/twilight)</div>
+        <Accordion title="Atmosphere (global)" defaultOpen={false}>
+          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Shell (day/twilight)</div>
           <Slider label="Falloff" min={0.05} max={5} step={0.05} value={glowFalloff} onChange={setGlowFalloff} />
           <Slider label="Inner" min={0} max={0.9} step={0.01} value={glowInner} onChange={setGlowInner} />
           <Slider label="Hue" min={0} max={1} step={0.01} value={glowHueShift} onChange={setGlowHueShift} />
@@ -519,6 +517,7 @@ const App = ({ data }: any) => {
             <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={hzPresets.mars.warp} onChange={(v: number) => updatePreset('mars', 'warp', v)} />
             <div className="border-t border-white/10 my-0.5" />
             <Slider label="Rim" min={0} max={1} step={0.01} value={hzPresets.mars.rim} onChange={(v: number) => updatePreset('mars', 'rim', v)} />
+            <Slider label="Rim Fall" min={0.3} max={3} step={0.1} value={hzPresets.mars.rimFalloff} onChange={(v: number) => updatePreset('mars', 'rimFalloff', v)} />
             <Slider label="Shell" min={0} max={2} step={0.05} value={hzPresets.mars.shell} onChange={(v: number) => updatePreset('mars', 'shell', v)} />
             <Slider label="Halo" min={0} max={1} step={0.05} value={hzPresets.mars.halo} onChange={(v: number) => updatePreset('mars', 'halo', v)} />
           </Accordion>
@@ -532,6 +531,7 @@ const App = ({ data }: any) => {
             <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={hzPresets.earth.warp} onChange={(v: number) => updatePreset('earth', 'warp', v)} />
             <div className="border-t border-white/10 my-0.5" />
             <Slider label="Rim" min={0} max={1} step={0.01} value={hzPresets.earth.rim} onChange={(v: number) => updatePreset('earth', 'rim', v)} />
+            <Slider label="Rim Fall" min={0.3} max={3} step={0.1} value={hzPresets.earth.rimFalloff} onChange={(v: number) => updatePreset('earth', 'rimFalloff', v)} />
             <Slider label="Shell" min={0} max={2} step={0.05} value={hzPresets.earth.shell} onChange={(v: number) => updatePreset('earth', 'shell', v)} />
             <Slider label="Halo" min={0} max={1} step={0.05} value={hzPresets.earth.halo} onChange={(v: number) => updatePreset('earth', 'halo', v)} />
           </Accordion>
@@ -545,6 +545,7 @@ const App = ({ data }: any) => {
             <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={hzPresets.venus.warp} onChange={(v: number) => updatePreset('venus', 'warp', v)} />
             <div className="border-t border-white/10 my-0.5" />
             <Slider label="Rim" min={0} max={1} step={0.01} value={hzPresets.venus.rim} onChange={(v: number) => updatePreset('venus', 'rim', v)} />
+            <Slider label="Rim Fall" min={0.3} max={3} step={0.1} value={hzPresets.venus.rimFalloff} onChange={(v: number) => updatePreset('venus', 'rimFalloff', v)} />
             <Slider label="Shell" min={0} max={2} step={0.05} value={hzPresets.venus.shell} onChange={(v: number) => updatePreset('venus', 'shell', v)} />
             <Slider label="Halo" min={0} max={1} step={0.05} value={hzPresets.venus.halo} onChange={(v: number) => updatePreset('venus', 'halo', v)} />
           </Accordion>

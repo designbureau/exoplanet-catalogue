@@ -131,7 +131,7 @@ const Planet = ({ data, starData, starRef }) => {
   })();
 
   // Classify planet and create shader material + atmosphere ring
-  const { shaderMaterial, atmosParams, atmosMat, atmosScale, planetType, hasAtmosphere, defaultShowRim, defaultShowShell, defaultShowHalo, rimIntensity, shellIntensity, haloIntensity, hasHzGradient, ringData } = useMemo(() => {
+  const { shaderMaterial, atmosParams, atmosMat, atmosScale, planetType, hasAtmosphere, defaultShowRim, defaultShowShell, defaultShowHalo, rimIntensity, rimFalloff, shellIntensity, haloIntensity, hasHzGradient, ringData } = useMemo(() => {
     const params = classifyPlanet({
       massJupiter: mass,
       radiusJupiter: radius,
@@ -233,6 +233,7 @@ const Planet = ({ data, starData, starRef }) => {
       defaultShowShell: params.showShell,
       defaultShowHalo: params.showHalo,
       rimIntensity: params.rimIntensity,
+      rimFalloff: params.rimFalloff,
       shellIntensity: params.shellIntensity,
       haloIntensity: params.haloIntensity,
       hasHzGradient: params.hasHzGradient,
@@ -332,7 +333,7 @@ const Planet = ({ data, starData, starRef }) => {
   useEffect(() => {
     const u = shaderMaterial.uniforms;
     if (u.u_atmosIntensity) u.u_atmosIntensity.value = effectiveRim ? rimIntensity : 0;
-    if (u.u_atmosFalloff) u.u_atmosFalloff.value = atmosFalloff;
+    if (u.u_atmosFalloff) u.u_atmosFalloff.value = rimFalloff || atmosFalloff;
     // Clouds: only override from global sliders when HZ gradient is not active
     if (u.u_cloudCoverage && !hasHzGradient) {
       u.u_cloudCoverage.value = cloudCoverage;

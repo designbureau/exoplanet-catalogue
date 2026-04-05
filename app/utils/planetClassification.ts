@@ -53,6 +53,7 @@ export interface ShaderParams {
   hasHzGradient: boolean;
   // Per-planet atmosphere intensities
   rimIntensity: number;
+  rimFalloff: number;
   shellIntensity: number;
   haloIntensity: number;
   // Per-planet terrestrial surface params (HZ gradient)
@@ -243,6 +244,7 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
     showShell: false,
     showHalo: false,
     rimIntensity: 0,
+    rimFalloff: 1.0,
     shellIntensity: 0,
     haloIntensity: 0,
     hasHzGradient: false,
@@ -543,6 +545,7 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.showShell = true;
       base.showHalo = true;
       base.rimIntensity = lerpPreset('rim');
+      base.rimFalloff = lerpPreset('rimFalloff');
       base.shellIntensity = lerpPreset('shell');
       base.haloIntensity = lerpPreset('halo');
       base.hasHzGradient = true;
