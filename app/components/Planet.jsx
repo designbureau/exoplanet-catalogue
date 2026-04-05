@@ -279,9 +279,9 @@ const Planet = ({ data, starData, starRef }) => {
       planet: name,
       type: planetType,
       atmosphere: {
-        rim: { intensity: parseFloat(atmosIntensity.toFixed(2)), falloff: parseFloat(atmosFalloff.toFixed(2)) },
-        shell: { intensity: parseFloat(glowIntensity.toFixed(2)), scale: parseFloat(glowScale.toFixed(2)), falloff: parseFloat(glowFalloff.toFixed(2)), inner: parseFloat(glowInner.toFixed(2)), hue: parseFloat(glowHueShift.toFixed(2)), sat: parseFloat(glowSaturation.toFixed(2)) },
-        halo: { intensity: parseFloat(spriteGlowIntensity.toFixed(2)), scale: parseFloat(spriteGlowScale.toFixed(2)), falloff: parseFloat(spriteGlowFalloff.toFixed(2)), inner: parseFloat(spriteGlowInner.toFixed(2)) },
+        rim: { intensity: parseFloat((rimIntensity || 0).toFixed(2)), falloff: parseFloat(atmosFalloff.toFixed(2)) },
+        shell: { intensity: parseFloat((shellIntensity || 0).toFixed(2)), falloff: parseFloat(glowFalloff.toFixed(2)), inner: parseFloat(glowInner.toFixed(2)), hue: parseFloat(glowHueShift.toFixed(2)), sat: parseFloat(glowSaturation.toFixed(2)) },
+        halo: { intensity: parseFloat((haloIntensity || 0).toFixed(2)), scale: parseFloat(spriteGlowScale.toFixed(2)), falloff: parseFloat(spriteGlowFalloff.toFixed(2)), inner: parseFloat(spriteGlowInner.toFixed(2)) },
       },
       clouds: { cover: parseFloat(cloudCoverage.toFixed(2)), opacity: parseFloat(cloudOpacity.toFixed(2)) },
       terrestrial: {
@@ -584,7 +584,7 @@ const Planet = ({ data, starData, starRef }) => {
               uniforms={{
                 uRadius: { value: spriteGlowScale * 0.3 },
                 uColor: { value: shaderMaterial.uniforms.u_atmosDayColor.value.clone().lerp(new THREE.Color(1, 1, 1), 0.35) },
-                uIntensity: { value: spriteGlowIntensity },
+                uIntensity: { value: haloIntensity },
                 uFalloff: { value: spriteGlowFalloff },
               }}
               vertexShader={`
