@@ -36,7 +36,7 @@ export const EnvProvider = ({ children }) => {
   const [glowSaturation, setGlowSaturation] = useState(1.0);
   const [spriteGlowScale, setSpriteGlowScale] = useState(3.0);
   const [spriteGlowFalloff, setSpriteGlowFalloff] = useState(1.5);
-  const [spriteGlowInner, setSpriteGlowInner] = useState(0.3);
+  const [spriteGlowInner, setSpriteGlowInner] = useState(0.0);
   const [cloudCoverage, setCloudCoverage] = useState(0.35);
   const [cloudOpacity, setCloudOpacity] = useState(0.6);
 

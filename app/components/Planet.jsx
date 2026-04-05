@@ -631,7 +631,7 @@ const Planet = ({ data, starData, starRef }) => {
                 uniform float uInner;
                 void main() {
                   float alpha = pow(1.0 - vRadial, uFalloff);
-                  alpha *= smoothstep(0.0, uInner + 0.01, vRadial); // inner fade
+                  if (uInner > 0.001) alpha *= smoothstep(0.0, uInner, vRadial);
                   alpha *= uIntensity;
                   gl_FragColor = vec4(uColor * alpha, alpha);
                 }
