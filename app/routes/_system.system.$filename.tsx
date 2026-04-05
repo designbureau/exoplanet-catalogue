@@ -514,6 +514,12 @@ const App = ({ data }: any) => {
             <div className="border-t border-white/10 my-0.5" />
             <Slider label="Rim" min={0} max={1} step={0.01} value={hzPresets.mars.rim} onChange={(v: number) => updatePreset('mars', 'rim', v)} />
             <Slider label="Rim Fall" min={0.3} max={3} step={0.1} value={hzPresets.mars.rimFalloff} onChange={(v: number) => updatePreset('mars', 'rimFalloff', v)} />
+            <div className="flex items-center gap-1">
+              <label className="w-14 shrink-0">Day</label>
+              <input type="color" value={hzPresets.mars.rimDay} onChange={(e) => updatePreset('mars', 'rimDay', e.target.value)} className="w-5 h-5 cursor-pointer border-0 p-0 bg-transparent" />
+              <label className="w-8 shrink-0 ml-1">Twi</label>
+              <input type="color" value={hzPresets.mars.rimTwi} onChange={(e) => updatePreset('mars', 'rimTwi', e.target.value)} className="w-5 h-5 cursor-pointer border-0 p-0 bg-transparent" />
+            </div>
             <Slider label="Shell" min={0} max={2} step={0.05} value={hzPresets.mars.shell} onChange={(v: number) => updatePreset('mars', 'shell', v)} />
             <Slider label="Halo" min={0} max={1} step={0.05} value={hzPresets.mars.halo} onChange={(v: number) => updatePreset('mars', 'halo', v)} />
             <Slider label="H Scale" min={0.5} max={5} step={0.1} value={hzPresets.mars.haloScale} onChange={(v: number) => updatePreset('mars', 'haloScale', v)} />
@@ -530,6 +536,12 @@ const App = ({ data }: any) => {
             <div className="border-t border-white/10 my-0.5" />
             <Slider label="Rim" min={0} max={1} step={0.01} value={hzPresets.earth.rim} onChange={(v: number) => updatePreset('earth', 'rim', v)} />
             <Slider label="Rim Fall" min={0.3} max={3} step={0.1} value={hzPresets.earth.rimFalloff} onChange={(v: number) => updatePreset('earth', 'rimFalloff', v)} />
+            <div className="flex items-center gap-1">
+              <label className="w-14 shrink-0">Day</label>
+              <input type="color" value={hzPresets.earth.rimDay} onChange={(e) => updatePreset('earth', 'rimDay', e.target.value)} className="w-5 h-5 cursor-pointer border-0 p-0 bg-transparent" />
+              <label className="w-8 shrink-0 ml-1">Twi</label>
+              <input type="color" value={hzPresets.earth.rimTwi} onChange={(e) => updatePreset('earth', 'rimTwi', e.target.value)} className="w-5 h-5 cursor-pointer border-0 p-0 bg-transparent" />
+            </div>
             <Slider label="Shell" min={0} max={2} step={0.05} value={hzPresets.earth.shell} onChange={(v: number) => updatePreset('earth', 'shell', v)} />
             <Slider label="Halo" min={0} max={1} step={0.05} value={hzPresets.earth.halo} onChange={(v: number) => updatePreset('earth', 'halo', v)} />
             <Slider label="H Scale" min={0.5} max={5} step={0.1} value={hzPresets.earth.haloScale} onChange={(v: number) => updatePreset('earth', 'haloScale', v)} />
@@ -546,6 +558,12 @@ const App = ({ data }: any) => {
             <div className="border-t border-white/10 my-0.5" />
             <Slider label="Rim" min={0} max={1} step={0.01} value={hzPresets.venus.rim} onChange={(v: number) => updatePreset('venus', 'rim', v)} />
             <Slider label="Rim Fall" min={0.3} max={3} step={0.1} value={hzPresets.venus.rimFalloff} onChange={(v: number) => updatePreset('venus', 'rimFalloff', v)} />
+            <div className="flex items-center gap-1">
+              <label className="w-14 shrink-0">Day</label>
+              <input type="color" value={hzPresets.venus.rimDay} onChange={(e) => updatePreset('venus', 'rimDay', e.target.value)} className="w-5 h-5 cursor-pointer border-0 p-0 bg-transparent" />
+              <label className="w-8 shrink-0 ml-1">Twi</label>
+              <input type="color" value={hzPresets.venus.rimTwi} onChange={(e) => updatePreset('venus', 'rimTwi', e.target.value)} className="w-5 h-5 cursor-pointer border-0 p-0 bg-transparent" />
+            </div>
             <Slider label="Shell" min={0} max={2} step={0.05} value={hzPresets.venus.shell} onChange={(v: number) => updatePreset('venus', 'shell', v)} />
             <Slider label="Halo" min={0} max={1} step={0.05} value={hzPresets.venus.halo} onChange={(v: number) => updatePreset('venus', 'halo', v)} />
             <Slider label="H Scale" min={0.5} max={5} step={0.1} value={hzPresets.venus.haloScale} onChange={(v: number) => updatePreset('venus', 'haloScale', v)} />

@@ -446,22 +446,22 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
 
       base.atmosIntensity = lerpPreset('atmos');
 
-      // Atmosphere colour: pale grey-blue (cold) → cyan (mid) → amber (warm)
-      const coldDay = new THREE.Color(0.45, 0.5, 0.6);
-      const midDay = new THREE.Color(0x00aaff);
-      const warmDay = new THREE.Color(0xddaa44);
-      const coldTwi = new THREE.Color(0x556677);
-      const midTwi = new THREE.Color(0xff6600);
-      const warmTwi = new THREE.Color(0xcc4400);
-      if (hz < 0.5) {
-        const t2 = hz * 2;
-        base.atmosDayColor = coldDay.clone().lerp(midDay, t2);
-        base.atmosTwilightColor = coldTwi.clone().lerp(midTwi, t2);
-      } else {
-        const t2 = (hz - 0.5) * 2;
-        base.atmosDayColor = midDay.clone().lerp(warmDay, t2);
-        base.atmosTwilightColor = midTwi.clone().lerp(warmTwi, t2);
-      }
+      // Atmosphere colour: interpolate through preset day/twilight colours
+      const marsDay = new THREE.Color(mars.rimDay || '#cc6644');
+      const earthDay = new THREE.Color(earth.rimDay || '#00aaff');
+      const venusDay = new THREE.Color(venus.rimDay || '#ccaa44');
+      const marsTwi = new THREE.Color(mars.rimTwi || '#884422');
+      const earthTwi = new THREE.Color(earth.rimTwi || '#ff6600');
+      const venusTwi = new THREE.Color(venus.rimTwi || '#aa6622');
+
+      const lerpColor = (a: THREE.Color, b: THREE.Color, c: THREE.Color) => {
+        if (hz < 0.15) return a.clone();
+        if (hz < 0.85) return a.clone().lerp(b, (hz - 0.15) / 0.7);
+        return b.clone().lerp(c, (hz - 0.85) / 0.15);
+      };
+
+      base.atmosDayColor = lerpColor(marsDay, earthDay, venusDay);
+      base.atmosTwilightColor = lerpColor(marsTwi, earthTwi, venusTwi);
       base.atmosColor = base.atmosDayColor.clone().multiplyScalar(0.5);
 
       base.cloudCoverage = lerpPreset('cloudCover');
