@@ -28,17 +28,12 @@ export const EnvProvider = ({ children }) => {
   const [shaderAmbient, setShaderAmbient] = useState(0.0);
   const [lavaAmbient, setLavaAmbient] = useState(0.08);
 
-  // Atmosphere controls
-  const [atmosIntensity, setAtmosIntensity] = useState(0.3);
+  // Atmosphere controls — global shape (per-planet intensities are in hzPresets + classification)
   const [atmosFalloff, setAtmosFalloff] = useState(1.0);
-  const [glowIntensity, setGlowIntensity] = useState(0.9);
-  const [glowScale, setGlowScale] = useState(1.15);
   const [glowFalloff, setGlowFalloff] = useState(1.25);
   const [glowInner, setGlowInner] = useState(0.0);
   const [glowHueShift, setGlowHueShift] = useState(0.0);
   const [glowSaturation, setGlowSaturation] = useState(1.0);
-  // Soft sprite glow controls
-  const [spriteGlowIntensity, setSpriteGlowIntensity] = useState(0.4);
   const [spriteGlowScale, setSpriteGlowScale] = useState(3.0);
   const [spriteGlowFalloff, setSpriteGlowFalloff] = useState(1.5);
   const [spriteGlowInner, setSpriteGlowInner] = useState(0.3);
@@ -71,14 +66,11 @@ export const EnvProvider = ({ children }) => {
   const [terrWarpStrength, setTerrWarpStrength] = useState(0.5);
   const [terrIceCapSize, setTerrIceCapSize] = useState(0.92);
 
-  // Per-type atmosphere layer overrides: { TEMPERATE: { rim: true, shell: true, halo: false }, ... }
-  const [layerOverrides, setLayerOverrides] = useState({});
-
   // HZ terrestrial presets: 3 categories interpolated by hz position
   const [hzPresets, setHzPresets] = useState({
-    mars:  { atmos: 0.05, cloudCover: 0.15, cloudOpacity: 0.2,  seaLevel: 0.15, iceCap: 0.98, continentFreq: 0.10, warp: 0.3 },
-    earth: { atmos: 0.35, cloudCover: 0.45, cloudOpacity: 0.7,  seaLevel: 0.38, iceCap: 0.96, continentFreq: 0.16, warp: 0.5 },
-    venus: { atmos: 0.60, cloudCover: 0.60, cloudOpacity: 0.90, seaLevel: 0.10, iceCap: 0.99, continentFreq: 0.22, warp: 0.8 },
+    mars:  { atmos: 0.05, cloudCover: 0.15, cloudOpacity: 0.2,  seaLevel: 0.15, iceCap: 0.98, continentFreq: 0.10, warp: 0.3, rim: 0.1,  shell: 0.3, halo: 0.0 },
+    earth: { atmos: 0.35, cloudCover: 0.45, cloudOpacity: 0.7,  seaLevel: 0.38, iceCap: 0.96, continentFreq: 0.16, warp: 0.5, rim: 0.3,  shell: 0.9, halo: 0.4 },
+    venus: { atmos: 0.60, cloudCover: 0.60, cloudOpacity: 0.90, seaLevel: 0.10, iceCap: 0.99, continentFreq: 0.22, warp: 0.8, rim: 0.4,  shell: 1.2, halo: 0.6 },
   });
   const updatePreset = (cat, key, value) => setHzPresets(prev => ({ ...prev, [cat]: { ...prev[cat], [key]: value } }));
 
@@ -130,23 +122,11 @@ export const EnvProvider = ({ children }) => {
       setShowOrbits,
       shaderAmbient, setShaderAmbient,
       lavaAmbient, setLavaAmbient,
-      atmosIntensity,
-      setAtmosIntensity,
-      atmosFalloff,
-      setAtmosFalloff,
-      glowIntensity,
-      setGlowIntensity,
-      glowScale,
-      setGlowScale,
-      glowFalloff,
-      setGlowFalloff,
-      glowInner,
-      setGlowInner,
-      glowHueShift,
-      setGlowHueShift,
-      glowSaturation,
-      setGlowSaturation,
-      spriteGlowIntensity, setSpriteGlowIntensity,
+      atmosFalloff, setAtmosFalloff,
+      glowFalloff, setGlowFalloff,
+      glowInner, setGlowInner,
+      glowHueShift, setGlowHueShift,
+      glowSaturation, setGlowSaturation,
       spriteGlowScale, setSpriteGlowScale,
       spriteGlowFalloff, setSpriteGlowFalloff,
       spriteGlowInner, setSpriteGlowInner,
@@ -180,9 +160,8 @@ export const EnvProvider = ({ children }) => {
       rockyCraterDepth, setRockyCraterDepth,
       typeColorOverrides, setTypeColorOverrides,
       activePlanetInfo, setActivePlanetInfo,
-      layerOverrides, setLayerOverrides,
       hzPresets, updatePreset,
-  }), [Constants, planetDistanceFactor, binaryDistanceFactor, bodyScale, showHabitableZone, showOrbits, shaderAmbient, lavaAmbient, wrapRange, wrapPower, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, activePlanetInfo, layerOverrides, hzPresets]);
+  }), [Constants, planetDistanceFactor, binaryDistanceFactor, bodyScale, showHabitableZone, showOrbits, shaderAmbient, lavaAmbient, wrapRange, wrapPower, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, activePlanetInfo, hzPresets]);
 
   return (
     <EnvContext.Provider value={contextValue}>

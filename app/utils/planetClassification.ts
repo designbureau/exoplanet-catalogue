@@ -51,6 +51,10 @@ export interface ShaderParams {
   showShell: boolean;
   showHalo: boolean;
   hasHzGradient: boolean;
+  // Per-planet atmosphere intensities
+  rimIntensity: number;
+  shellIntensity: number;
+  haloIntensity: number;
   // Per-planet terrestrial surface params (HZ gradient)
   cloudCoverage?: number;
   cloudOpacity?: number;
@@ -238,6 +242,9 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
     showRim: false,
     showShell: false,
     showHalo: false,
+    rimIntensity: 0,
+    shellIntensity: 0,
+    haloIntensity: 0,
     hasHzGradient: false,
   };
 
@@ -318,6 +325,9 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.showRim = true;
       base.showShell = true;
       base.showHalo = true;
+      base.rimIntensity = 0.3;
+      base.shellIntensity = 1.0;
+      base.haloIntensity = 0.4;
       break;
 
     case PlanetType.SUB_NEPTUNE:
@@ -332,6 +342,9 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.showRim = true;
       base.showShell = true;
       base.showHalo = true;
+      base.rimIntensity = 0.4;
+      base.shellIntensity = 1.2;
+      base.haloIntensity = 0.5;
       break;
 
     case PlanetType.LAVA_WORLD:
@@ -349,6 +362,9 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.showRim = true;
       base.showShell = true;
       base.showHalo = false;
+      base.rimIntensity = 0.2;
+      base.shellIntensity = 0.6;
+      base.haloIntensity = 0;
       break;
 
     case PlanetType.HOT_ROCKY:
@@ -378,6 +394,9 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.showRim = true;
       base.showShell = true;
       base.showHalo = true;
+      base.rimIntensity = 0.35;
+      base.shellIntensity = 1.2;
+      base.haloIntensity = 0.5;
       break;
 
     case PlanetType.TEMPERATE: {
@@ -519,6 +538,9 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.showRim = true;
       base.showShell = true;
       base.showHalo = true;
+      base.rimIntensity = lerpPreset('rim');
+      base.shellIntensity = lerpPreset('shell');
+      base.haloIntensity = lerpPreset('halo');
       base.hasHzGradient = true;
       break;
     }
@@ -536,6 +558,9 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.showRim = true;
       base.showShell = true;
       base.showHalo = false;
+      base.rimIntensity = 0.1;
+      base.shellIntensity = 0.3;
+      base.haloIntensity = 0;
       break;
 
     default:

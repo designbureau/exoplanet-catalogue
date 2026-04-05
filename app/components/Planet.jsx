@@ -103,7 +103,7 @@ const Planet = ({ data, starData, starRef }) => {
   const ringRef = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosIntensity, atmosFalloff, glowIntensity, glowScale, glowFalloff, glowHueShift, glowSaturation, spriteGlowIntensity, spriteGlowScale, spriteGlowFalloff, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, wrapRange, wrapPower, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, layerOverrides, showOrbits, hzPresets } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosFalloff, glowFalloff, glowHueShift, glowSaturation, spriteGlowScale, spriteGlowFalloff, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, wrapRange, wrapPower, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, showOrbits, hzPresets } = useContext(EnvContext);
 
   const softGlowTexture = getSoftGlowTexture(spriteGlowFalloff, spriteGlowInner);
 
@@ -225,16 +225,18 @@ const Planet = ({ data, starData, starRef }) => {
       defaultShowRim: params.showRim,
       defaultShowShell: params.showShell,
       defaultShowHalo: params.showHalo,
+      rimIntensity: params.rimIntensity,
+      shellIntensity: params.shellIntensity,
+      haloIntensity: params.haloIntensity,
       hasHzGradient: params.hasHzGradient,
       ringData: ringParams ? { params: ringParams, material: ringMat } : null,
     };
   }, [mass, radius, rawSMA, starData?.temperature, starData?.mass, starData?.radius, name, hzPresets]);
 
-  // Effective layer visibility: classification defaults + per-type GUI overrides
-  const lo = layerOverrides[planetType] || {};
-  const effectiveRim = defaultShowRim && (lo.rim ?? true);
-  const effectiveShell = defaultShowShell && (lo.shell ?? true);
-  const effectiveHalo = defaultShowHalo && (lo.halo ?? true);
+  // Effective layer visibility: based on per-planet intensity from classification
+  const effectiveRim = defaultShowRim && rimIntensity > 0;
+  const effectiveShell = defaultShowShell && shellIntensity > 0;
+  const effectiveHalo = defaultShowHalo && haloIntensity > 0;
 
   useEffect(() => {
     addRef(name, "planet", ref);
@@ -321,7 +323,7 @@ const Planet = ({ data, starData, starRef }) => {
   // Slider-driven uniforms — only update when values change, not every frame
   useEffect(() => {
     const u = shaderMaterial.uniforms;
-    if (u.u_atmosIntensity) u.u_atmosIntensity.value = effectiveRim ? atmosIntensity : 0;
+    if (u.u_atmosIntensity) u.u_atmosIntensity.value = effectiveRim ? rimIntensity : 0;
     if (u.u_atmosFalloff) u.u_atmosFalloff.value = atmosFalloff;
     // Clouds: only override from global sliders when HZ gradient is not active
     if (u.u_cloudCoverage && !hasHzGradient) {
@@ -368,26 +370,26 @@ const Planet = ({ data, starData, starRef }) => {
       if (u.color3) u.color3.value.set(typeColors[2]);
       if (u.color4) u.color4.value.set(typeColors[3]);
     }
-    if (atmosMat?.uniforms.uFallbackIntensity) atmosMat.uniforms.uFallbackIntensity.value = glowIntensity;
-    if (atmosMat?.uniforms.uSunIntensity) atmosMat.uniforms.uSunIntensity.value = glowIntensity * 24.0;
-  }, [atmosIntensity, atmosFalloff, cloudCoverage, cloudOpacity,
+    if (atmosMat?.uniforms.uFallbackIntensity) atmosMat.uniforms.uFallbackIntensity.value = shellIntensity;
+    if (atmosMat?.uniforms.uSunIntensity) atmosMat.uniforms.uSunIntensity.value = shellIntensity * 24.0;
+  }, [rimIntensity, atmosFalloff, cloudCoverage, cloudOpacity,
       gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise,
       iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise,
       terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize,
       rockyCraterScale, rockyRidgeStrength, rockyCraterDepth,
       lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale,
       shaderAmbient, lavaAmbient, wrapRange, wrapPower,
-      typeColorOverrides, glowIntensity, shaderMaterial, atmosMat, planetType]);
+      typeColorOverrides, shellIntensity, haloIntensity, shaderMaterial, atmosMat, planetType]);
 
   // Soft glow uniforms — only when those sliders change
   useEffect(() => {
     if (softGlowRef.current?.material?.uniforms) {
       const sgU = softGlowRef.current.material.uniforms;
       sgU.uRadius.value = spriteGlowScale * 0.3;
-      sgU.uIntensity.value = spriteGlowIntensity;
+      sgU.uIntensity.value = haloIntensity;
       sgU.uFalloff.value = spriteGlowFalloff;
     }
-  }, [spriteGlowScale, spriteGlowIntensity, spriteGlowFalloff]);
+  }, [spriteGlowScale, haloIntensity, spriteGlowFalloff]);
 
   // Per-frame: only orbital motion, time, LOD, sun direction, position sync
   useFrame((state) => {
@@ -554,7 +556,7 @@ const Planet = ({ data, starData, starRef }) => {
           <ringGeometry args={[scale * ringData.params.innerRadius, scale * ringData.params.outerRadius, 128, 1]} />
         </mesh>
       )}
-      {effectiveShell && atmosMat && glowIntensity > 0 && (
+      {effectiveShell && atmosMat && shellIntensity > 0 && (
           /* BackSide atmosphere sphere — crisp day/twilight structure */
           <mesh
             ref={glowRef}
@@ -565,7 +567,7 @@ const Planet = ({ data, starData, starRef }) => {
           </mesh>
       )}
       {/* Soft outer glow — annular ring billboard */}
-      {effectiveHalo && spriteGlowIntensity > 0 && shaderMaterial.uniforms.u_atmosDayColor && (
+      {effectiveHalo && haloIntensity > 0 && shaderMaterial.uniforms.u_atmosDayColor && (
           <mesh
             ref={softGlowRef}
             geometry={getSoftGlowRingGeo()}

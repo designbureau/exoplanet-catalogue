@@ -244,34 +244,18 @@ const App = ({ data }: any) => {
     bodyScale, setBodyScale,
     showHabitableZone, setShowHabitableZone,
     showOrbits, setShowOrbits,
-    atmosIntensity, setAtmosIntensity,
     atmosFalloff, setAtmosFalloff,
-    glowIntensity, setGlowIntensity,
-    glowScale, setGlowScale,
     glowFalloff, setGlowFalloff,
     glowInner, setGlowInner,
     glowHueShift, setGlowHueShift,
     glowSaturation, setGlowSaturation,
-    spriteGlowIntensity, setSpriteGlowIntensity,
     spriteGlowScale, setSpriteGlowScale,
     spriteGlowFalloff, setSpriteGlowFalloff,
     spriteGlowInner, setSpriteGlowInner,
     cloudCoverage: ctxCloudCoverage, setCloudCoverage: ctxSetCloudCoverage,
     cloudOpacity: ctxCloudOpacity, setCloudOpacity: ctxSetCloudOpacity,
     hzPresets, updatePreset,
-    layerOverrides, setLayerOverrides,
   } = useContext(EnvContext);
-  // Local soft glow sliders — move instantly, apply on button press
-  const [localSGInt, setLocalSGInt] = useState(spriteGlowIntensity);
-  const [localSGScale, setLocalSGScale] = useState(spriteGlowScale);
-  const [localSGFall, setLocalSGFall] = useState(spriteGlowFalloff);
-  const [localSGInner, setLocalSGInner] = useState(spriteGlowInner);
-  const applySoftGlow = () => {
-    setSpriteGlowIntensity(localSGInt);
-    setSpriteGlowScale(localSGScale);
-    setSpriteGlowFalloff(localSGFall);
-    setSpriteGlowInner(localSGInner);
-  };
 
   const [follow, setFollow] = useState(true);
   const [nebulaDensity, setNebulaDensity] = useState(1.0);
@@ -511,42 +495,17 @@ const App = ({ data }: any) => {
         </Accordion>
 
         <Accordion title="Atmosphere" defaultOpen={false}>
-          {(() => {
-            const atmosTypes = ['TEMPERATE', 'VENUS_LIKE', 'WATER_WORLD', 'SUB_NEPTUNE', 'LAVA_WORLD', 'FROZEN'];
-            const setLayer = (t: string, key: string, val: boolean) => setLayerOverrides((prev: any) => ({ ...prev, [t]: { ...prev[t], [key]: val } }));
-            return (
-              <div className="flex flex-col gap-0.5 mb-1 pb-1 border-b border-white/10">
-                <div className="text-[9px] text-muted-foreground/60 mb-0.5">Layers by type</div>
-                {atmosTypes.map(t => {
-                  const lo = layerOverrides[t] || {};
-                  return (
-                    <div key={t} className="flex items-center gap-2 text-[9px]">
-                      <span className="w-20 text-muted-foreground/70 truncate">{t.replace(/_/g, ' ').toLowerCase()}</span>
-                      <label className="flex items-center gap-0.5 cursor-pointer"><input type="checkbox" checked={lo.rim ?? true} onChange={e => setLayer(t, 'rim', e.target.checked)} className="accent-cyan-400" /><span className="text-[8px]">R</span></label>
-                      <label className="flex items-center gap-0.5 cursor-pointer"><input type="checkbox" checked={lo.shell ?? true} onChange={e => setLayer(t, 'shell', e.target.checked)} className="accent-cyan-400" /><span className="text-[8px]">S</span></label>
-                      <label className="flex items-center gap-0.5 cursor-pointer"><input type="checkbox" checked={lo.halo ?? true} onChange={e => setLayer(t, 'halo', e.target.checked)} className="accent-cyan-400" /><span className="text-[8px]">H</span></label>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
           <div className="text-[9px] text-muted-foreground/60 mb-0.5">Rim (surface fresnel)</div>
-          <Slider label="Intensity" min={0} max={3} step={0.05} value={atmosIntensity} onChange={setAtmosIntensity} />
           <Slider label="Falloff" min={0.5} max={8} step={0.1} value={atmosFalloff} onChange={setAtmosFalloff} />
           <div className="text-[9px] text-muted-foreground/60 mt-1 mb-0.5">Shell (day/twilight)</div>
-          <Slider label="Intensity" min={0} max={5} step={0.01} value={glowIntensity} onChange={setGlowIntensity} />
-          <Slider label="Scale" min={0.5} max={10} step={0.05} value={glowScale} onChange={setGlowScale} />
           <Slider label="Falloff" min={0.05} max={5} step={0.05} value={glowFalloff} onChange={setGlowFalloff} />
           <Slider label="Inner" min={0} max={0.9} step={0.01} value={glowInner} onChange={setGlowInner} />
           <Slider label="Hue" min={0} max={1} step={0.01} value={glowHueShift} onChange={setGlowHueShift} />
           <Slider label="Sat" min={0} max={3} step={0.05} value={glowSaturation} onChange={setGlowSaturation} />
           <div className="text-[9px] text-muted-foreground/60 mt-1 mb-0.5">Halo (outer glow)</div>
-          <Slider label="Intensity" min={0} max={3} step={0.01} value={localSGInt} onChange={setLocalSGInt} />
-          <Slider label="Scale" min={1} max={10} step={0.1} value={localSGScale} onChange={setLocalSGScale} />
-          <Slider label="Falloff" min={0.1} max={5} step={0.05} value={localSGFall} onChange={setLocalSGFall} />
-          <Slider label="Inner" min={0} max={0.9} step={0.01} value={localSGInner} onChange={setLocalSGInner} />
-          <button onClick={applySoftGlow} className="mt-1 rounded bg-cyan-900/50 px-2 py-0.5 text-[9px] text-cyan-400 hover:bg-cyan-900/80">Apply</button>
+          <Slider label="Scale" min={1} max={10} step={0.1} value={spriteGlowScale} onChange={setSpriteGlowScale} />
+          <Slider label="Falloff" min={0.1} max={5} step={0.05} value={spriteGlowFalloff} onChange={setSpriteGlowFalloff} />
+          <Slider label="Inner" min={0} max={0.9} step={0.01} value={spriteGlowInner} onChange={setSpriteGlowInner} />
         </Accordion>
 
         <Accordion title="Terrestrial" defaultOpen={false}>
@@ -558,6 +517,10 @@ const App = ({ data }: any) => {
             <Slider label="Ice Cap" min={0.5} max={1} step={0.01} value={hzPresets.mars.iceCap} onChange={(v: number) => updatePreset('mars', 'iceCap', v)} />
             <Slider label="Land" min={0.05} max={0.4} step={0.01} value={hzPresets.mars.continentFreq} onChange={(v: number) => updatePreset('mars', 'continentFreq', v)} />
             <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={hzPresets.mars.warp} onChange={(v: number) => updatePreset('mars', 'warp', v)} />
+            <div className="border-t border-white/10 my-0.5" />
+            <Slider label="Rim" min={0} max={1} step={0.01} value={hzPresets.mars.rim} onChange={(v: number) => updatePreset('mars', 'rim', v)} />
+            <Slider label="Shell" min={0} max={2} step={0.05} value={hzPresets.mars.shell} onChange={(v: number) => updatePreset('mars', 'shell', v)} />
+            <Slider label="Halo" min={0} max={1} step={0.05} value={hzPresets.mars.halo} onChange={(v: number) => updatePreset('mars', 'halo', v)} />
           </Accordion>
           <Accordion title="Earth-like (mid HZ)" defaultOpen={false}>
             <Slider label="Atmos" min={0} max={1} step={0.01} value={hzPresets.earth.atmos} onChange={(v: number) => updatePreset('earth', 'atmos', v)} />
@@ -567,6 +530,10 @@ const App = ({ data }: any) => {
             <Slider label="Ice Cap" min={0.5} max={1} step={0.01} value={hzPresets.earth.iceCap} onChange={(v: number) => updatePreset('earth', 'iceCap', v)} />
             <Slider label="Land" min={0.05} max={0.4} step={0.01} value={hzPresets.earth.continentFreq} onChange={(v: number) => updatePreset('earth', 'continentFreq', v)} />
             <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={hzPresets.earth.warp} onChange={(v: number) => updatePreset('earth', 'warp', v)} />
+            <div className="border-t border-white/10 my-0.5" />
+            <Slider label="Rim" min={0} max={1} step={0.01} value={hzPresets.earth.rim} onChange={(v: number) => updatePreset('earth', 'rim', v)} />
+            <Slider label="Shell" min={0} max={2} step={0.05} value={hzPresets.earth.shell} onChange={(v: number) => updatePreset('earth', 'shell', v)} />
+            <Slider label="Halo" min={0} max={1} step={0.05} value={hzPresets.earth.halo} onChange={(v: number) => updatePreset('earth', 'halo', v)} />
           </Accordion>
           <Accordion title="Venus-like (warm HZ)" defaultOpen={false}>
             <Slider label="Atmos" min={0} max={1} step={0.01} value={hzPresets.venus.atmos} onChange={(v: number) => updatePreset('venus', 'atmos', v)} />
@@ -576,6 +543,10 @@ const App = ({ data }: any) => {
             <Slider label="Ice Cap" min={0.5} max={1} step={0.01} value={hzPresets.venus.iceCap} onChange={(v: number) => updatePreset('venus', 'iceCap', v)} />
             <Slider label="Land" min={0.05} max={0.4} step={0.01} value={hzPresets.venus.continentFreq} onChange={(v: number) => updatePreset('venus', 'continentFreq', v)} />
             <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={hzPresets.venus.warp} onChange={(v: number) => updatePreset('venus', 'warp', v)} />
+            <div className="border-t border-white/10 my-0.5" />
+            <Slider label="Rim" min={0} max={1} step={0.01} value={hzPresets.venus.rim} onChange={(v: number) => updatePreset('venus', 'rim', v)} />
+            <Slider label="Shell" min={0} max={2} step={0.05} value={hzPresets.venus.shell} onChange={(v: number) => updatePreset('venus', 'shell', v)} />
+            <Slider label="Halo" min={0} max={1} step={0.05} value={hzPresets.venus.halo} onChange={(v: number) => updatePreset('venus', 'halo', v)} />
           </Accordion>
           <Accordion title="Global (non-HZ)" defaultOpen={false}>
             <Slider label="Clouds" min={0.1} max={0.7} step={0.01} value={cloudCoverage} onChange={setCloudCoverage} />
