@@ -244,6 +244,11 @@ const Planet = ({ data, starData, starRef }) => {
   const effectiveShell = defaultShowShell && shellIntensity > 0;
   const effectiveHalo = defaultShowHalo && haloIntensity > 0;
 
+  // DEBUG: shell visibility
+  if (hasAtmosphere) {
+    console.log(`[ATMOS] ${name}: type=${planetType} showShell=${defaultShowShell} shellInt=${shellIntensity} effectiveShell=${effectiveShell} atmosMat=${!!atmosMat}`);
+  }
+
   useEffect(() => {
     addRef(name, "planet", ref);
   }, [name, addRef, ref]);
