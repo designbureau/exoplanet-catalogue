@@ -245,6 +245,7 @@ const Planet = ({ data, starData, starRef }) => {
   const effectiveRim = defaultShowRim && rimIntensity > 0;
   const effectiveShell = defaultShowShell && shellIntensity > 0;
   const effectiveHalo = defaultShowHalo && haloIntensity > 0;
+  if (hasAtmosphere && name.includes('Earth')) console.log(`[HALO] ${name}: showHalo=${defaultShowHalo} haloInt=${haloIntensity} effective=${effectiveHalo} hasAtmosDayColor=${!!shaderMaterial?.uniforms?.u_atmosDayColor}`);
 
 
   useEffect(() => {
