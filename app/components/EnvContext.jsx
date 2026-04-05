@@ -68,9 +68,9 @@ export const EnvProvider = ({ children }) => {
 
   // HZ terrestrial presets: 3 categories interpolated by hz position
   const [hzPresets, setHzPresets] = useState({
-    mars:  { atmos: 0.05, cloudCover: 0.15, cloudOpacity: 0.2,  seaLevel: 0.15, iceCap: 0.98, continentFreq: 0.10, warp: 0.3, rim: 0.1,  shell: 0.3, halo: 0.0 },
-    earth: { atmos: 0.35, cloudCover: 0.45, cloudOpacity: 0.7,  seaLevel: 0.38, iceCap: 0.96, continentFreq: 0.16, warp: 0.5, rim: 0.3,  shell: 0.9, halo: 0.4 },
-    venus: { atmos: 0.60, cloudCover: 0.60, cloudOpacity: 0.90, seaLevel: 0.10, iceCap: 0.99, continentFreq: 0.22, warp: 0.8, rim: 0.4,  shell: 1.2, halo: 0.6 },
+    mars:  { atmos: 0.05, cloudCover: 0.15, cloudOpacity: 0.2,  seaLevel: 0.15, iceCap: 0.98, continentFreq: 0.10, warp: 0.3, rim: 0.15, shell: 1.0, halo: 0.0 },
+    earth: { atmos: 0.35, cloudCover: 0.45, cloudOpacity: 0.7,  seaLevel: 0.38, iceCap: 0.96, continentFreq: 0.16, warp: 0.5, rim: 0.3,  shell: 1.0, halo: 0.4 },
+    venus: { atmos: 0.60, cloudCover: 0.60, cloudOpacity: 0.90, seaLevel: 0.10, iceCap: 0.99, continentFreq: 0.22, warp: 0.8, rim: 0.4,  shell: 1.5, halo: 0.6 },
   });
   const updatePreset = (cat, key, value) => setHzPresets(prev => ({ ...prev, [cat]: { ...prev[cat], [key]: value } }));
 
