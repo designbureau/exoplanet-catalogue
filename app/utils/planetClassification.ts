@@ -496,7 +496,14 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       ];
 
       const gTypePalettes: CPalette[] = [
+        // Base: deep ocean, olive vegetation, dark forest, sandy highlands
         [new THREE.Color('#1d273e'), new THREE.Color('#45482e'), new THREE.Color('#133013'), new THREE.Color('#bab2a6')],
+        // Warmer: teal ocean, yellow-green veg, warm forest, cream peaks
+        [new THREE.Color('#1e2f3a'), new THREE.Color('#4d4e28'), new THREE.Color('#1a3510'), new THREE.Color('#c4b99a')],
+        // Cooler: slate ocean, blue-green veg, deep emerald, grey peaks
+        [new THREE.Color('#1a2540'), new THREE.Color('#3b4a35'), new THREE.Color('#0f2a18'), new THREE.Color('#a8a8a4')],
+        // Arid: dark navy ocean, sage brush, muted olive, pale rock
+        [new THREE.Color('#1f2338'), new THREE.Color('#4a4c30'), new THREE.Color('#1d3418'), new THREE.Color('#b5ab98')],
       ];
 
       const fTypePalettes: CPalette[] = [
