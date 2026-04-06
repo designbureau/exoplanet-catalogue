@@ -268,7 +268,7 @@ const Planet = ({ data, starData, starRef }) => {
           vec3 sunView = normalize(mat3(viewMatrix) * uSunDirection);
           float sunDot = dot(vRingDir, sunView.xy);
           // Bright on sun side, fade on dark side
-          float shadow = smoothstep(-0.3, 0.5, sunDot);
+          float shadow = smoothstep(-0.7, 0.3, sunDot);
           alpha *= mix(0.05, 1.0, shadow);
 
           alpha *= uIntensity;
