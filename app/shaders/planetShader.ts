@@ -193,7 +193,9 @@ const noiseLib = `
     // Match planet surface wrap lighting for consistent shadow terminator
     float dayVisibility = wrapDiffuse(normal, u_sunDirection);
 
-    return mix(color, atmosColor, fresnel * dayVisibility * u_atmosIntensity);
+    // Atmosphere fades to black in shadow — both colour and blend strength
+    vec3 litAtmos = atmosColor * dayVisibility;
+    return mix(color, litAtmos, fresnel * u_atmosIntensity);
   }
 
   // LOD-aware noise: fewer octaves when u_lod is 0
