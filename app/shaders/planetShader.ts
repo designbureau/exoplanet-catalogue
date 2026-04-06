@@ -621,25 +621,41 @@ const terrestrialFragment = `
 
     vec3 surfaceColor = mix(oceanColor, landColor, isLand);
 
-    // Ice caps at poles: asymmetric, chaotic edges using domain-warped noise
+    // Ice caps at poles: organic continent-like shapes with swirly sharp edges
     float northLat = vPosition.y;
     float southLat = -vPosition.y;
-    // Irregular but roughly circular cap edges (like Earth/Mars poles)
-    // Broad lobes with clean edges
-    float northNoise = noise3d(p * 1.5 + vec3(11.0)) * 0.1
-                     + noise3d(p * 3.5 + vec3(23.0)) * 0.05;
-    float southNoise = noise3d(p * 1.5 + vec3(53.0)) * 0.12
-                     + noise3d(p * 3.5 + vec3(67.0)) * 0.06;
+
+    // Domain-warped noise for organic, fractal ice boundaries
+    // First warp pass: large-scale continental lobes
+    vec3 nWarp = vec3(
+      noise3d(p * 2.0 + vec3(11.0, 0.0, 0.0)),
+      noise3d(p * 2.0 + vec3(0.0, 23.0, 0.0)),
+      noise3d(p * 2.0 + vec3(0.0, 0.0, 37.0))
+    ) * 0.4;
+    // Second warp pass: finer swirling detail
+    vec3 nWarp2 = vec3(
+      noise3d((p + nWarp) * 4.0 + vec3(41.0)),
+      noise3d((p + nWarp) * 4.0 + vec3(59.0)),
+      noise3d((p + nWarp) * 4.0 + vec3(71.0))
+    ) * 0.15;
+    vec3 warpedIceP = p + nWarp + nWarp2;
+
+    float northNoise = noise3d(warpedIceP * 1.8 + vec3(11.0)) * 0.12
+                     + noise3d(warpedIceP * 5.0 + vec3(23.0)) * 0.04;
+    float southNoise = noise3d(warpedIceP * 1.8 + vec3(53.0)) * 0.14
+                     + noise3d(warpedIceP * 5.0 + vec3(67.0)) * 0.04;
+
     // Asymmetric cap sizes via seed
     float northStart = u_iceCapSize + u_seed.x * 0.06;
     float southStart = (u_iceCapSize - 0.02) + u_seed.y * 0.08;
-    float northCap = smoothstep(northStart, northStart + 0.04, northLat + northNoise);
-    float southCap = smoothstep(southStart, southStart + 0.04, southLat + southNoise);
+    // Sharp edge (narrow smoothstep = cleaner boundary)
+    float northCap = smoothstep(northStart, northStart + 0.02, northLat + northNoise);
+    float southCap = smoothstep(southStart, southStart + 0.02, southLat + southNoise);
     float iceCap = max(northCap, southCap);
-    // Frost fringe
-    float northFringe = smoothstep(northStart - 0.04, northStart, northLat + northNoise) * (1.0 - northCap);
-    float southFringe = smoothstep(southStart - 0.04, southStart, southLat + southNoise) * (1.0 - southCap);
-    float iceFringe = max(northFringe, southFringe) * 0.2;
+    // Frost fringe — thin icy border
+    float northFringe = smoothstep(northStart - 0.03, northStart, northLat + northNoise) * (1.0 - northCap);
+    float southFringe = smoothstep(southStart - 0.03, southStart, southLat + southNoise) * (1.0 - southCap);
+    float iceFringe = max(northFringe, southFringe) * 0.25;
     vec3 iceColor = vec3(0.82, 0.85, 0.9) + vec3(0.04, 0.03, 0.02) * microNoise;
     surfaceColor = mix(surfaceColor, mix(surfaceColor, iceColor, 0.4), iceFringe);
     surfaceColor = mix(surfaceColor, iceColor, iceCap);
