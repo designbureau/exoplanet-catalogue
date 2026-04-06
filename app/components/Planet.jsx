@@ -129,7 +129,7 @@ const Planet = ({ data, starData, starRef }) => {
   })();
 
   // Classify planet and create shader material + atmosphere ring
-  const { shaderMaterial, atmosParams, atmosMat, atmosScale, haloMat, planetType, hasAtmosphere, defaultShowRim, defaultShowShell, defaultShowHalo, rimIntensity, rimFalloff, shellIntensity, haloIntensity, haloScale, haloFalloff, haloWhiten, hasHzGradient, ringData } = useMemo(() => {
+  const { shaderMaterial, atmosParams, atmosMat, atmosScale, haloMat, planetType, hasAtmosphere, defaultShowRim, defaultShowShell, defaultShowHalo, rimIntensity, rimFalloff, shellIntensity, haloIntensity, haloScale, haloFalloff, haloWhiten, haloShadow, hasHzGradient, ringData } = useMemo(() => {
     const params = classifyPlanet({
       massJupiter: mass,
       radiusJupiter: radius,
@@ -235,6 +235,7 @@ const Planet = ({ data, starData, starRef }) => {
         uFalloff: { value: params.haloFalloff },
         uInner: { value: 0.0 },
         uSunDirection: { value: new THREE.Vector3(1, 0, 0) },
+        uHaloShadow: { value: params.haloShadow },
       },
       vertexShader: `
         attribute vec3 aPos;
@@ -260,6 +261,7 @@ const Planet = ({ data, starData, starRef }) => {
         uniform float uFalloff;
         uniform float uInner;
         uniform vec3 uSunDirection;
+        uniform float uHaloShadow;
         void main() {
           float alpha = pow(1.0 - vRadial, uFalloff);
           if (uInner > 0.001) alpha *= smoothstep(0.0, uInner, vRadial);
@@ -267,8 +269,8 @@ const Planet = ({ data, starData, starRef }) => {
           // Sun shadow on halo: project sun direction into view-space billboard plane
           vec3 sunView = normalize(mat3(viewMatrix) * uSunDirection);
           float sunDot = dot(vRingDir, sunView.xy);
-          // Bright on sun side, fade on dark side
-          float shadow = smoothstep(-0.7, 0.3, sunDot);
+          // haloShadow controls how far light wraps: 0=sun side only, 1=fully around
+          float shadow = smoothstep(-uHaloShadow, 1.0 - uHaloShadow, sunDot);
           alpha *= mix(0.05, 1.0, shadow);
 
           alpha *= uIntensity;
@@ -295,6 +297,7 @@ const Planet = ({ data, starData, starRef }) => {
       haloScale: params.haloScale,
       haloFalloff: params.haloFalloff,
       haloWhiten: params.haloWhiten,
+      haloShadow: params.haloShadow,
       hasHzGradient: params.hasHzGradient,
       ringData: ringParams ? { params: ringParams, material: ringMat } : null,
     };
@@ -462,6 +465,7 @@ const Planet = ({ data, starData, starRef }) => {
       u.uIntensity.value = haloIntensity;
       u.uFalloff.value = haloFalloff;
       u.uInner.value = spriteGlowInner;
+      if (u.uHaloShadow) u.uHaloShadow.value = haloShadow;
       // Sync sun direction for halo shadow
       if (u.uSunDirection && shaderMaterial.uniforms.u_sunDirection) {
         u.uSunDirection.value.copy(shaderMaterial.uniforms.u_sunDirection.value);
@@ -471,7 +475,7 @@ const Planet = ({ data, starData, starRef }) => {
         u.uColor.value.copy(shaderMaterial.uniforms.u_atmosDayColor.value).lerp(new THREE.Color(1, 1, 1), haloWhiten);
       }
     }
-  }, [haloMat, haloIntensity, haloScale, haloFalloff, haloWhiten, spriteGlowInner, glowHueShift, glowSaturation, shaderMaterial]);
+  }, [haloMat, haloIntensity, haloScale, haloFalloff, haloWhiten, haloShadow, spriteGlowInner, glowHueShift, glowSaturation, shaderMaterial]);
 
   // Per-frame: only orbital motion, time, LOD, sun direction, position sync
   useFrame((state) => {
