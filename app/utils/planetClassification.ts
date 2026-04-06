@@ -497,9 +497,6 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
 
       const gTypePalettes: CPalette[] = [
         [new THREE.Color('#1d273e'), new THREE.Color('#45482e'), new THREE.Color('#133013'), new THREE.Color('#bab2a6')],
-        [new THREE.Color(0.05, 0.12, 0.2), new THREE.Color(0.065, 0.11, 0.06), new THREE.Color(0.2, 0.14, 0.08), new THREE.Color(0.46, 0.43, 0.4)],
-        [new THREE.Color(0.05, 0.09, 0.2), new THREE.Color(0.09, 0.13, 0.07), new THREE.Color(0.25, 0.17, 0.09), new THREE.Color(0.52, 0.48, 0.44)],
-        [new THREE.Color(0.04, 0.07, 0.24), new THREE.Color(0.07, 0.12, 0.07), new THREE.Color(0.2, 0.15, 0.09), new THREE.Color(0.44, 0.42, 0.4)],
       ];
 
       const fTypePalettes: CPalette[] = [
