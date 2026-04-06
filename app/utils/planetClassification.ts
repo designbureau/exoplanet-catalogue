@@ -70,6 +70,7 @@ export interface ShaderParams {
   iceCapSize?: number;
   iceEdge?: number;
   iceWarp?: number;
+  iceDetail?: number;
   continentFreq?: number;
 }
 
@@ -482,6 +483,7 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.iceCapSize = lerpPreset('iceCap');
       base.iceEdge = lerpPreset('iceEdge');
       base.iceWarp = lerpPreset('iceWarp');
+      base.iceDetail = lerpPreset('iceDetail');
       base.continentFreq = lerpPreset('continentFreq');
 
       // --- Star-type colour palettes (unchanged) ---

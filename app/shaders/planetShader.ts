@@ -495,6 +495,7 @@ const terrestrialFragment = `
   uniform float u_iceCapSize;
   uniform float u_iceEdge;
   uniform float u_iceWarp;
+  uniform float u_iceDetail;
   varying vec3 vPosition;
   varying vec3 vNormal;
   varying vec3 vWorldNormal;
@@ -642,10 +643,10 @@ const terrestrialFragment = `
     ) * (u_iceWarp * 0.375);
     vec3 warpedIceP = p + nWarp + nWarp2;
 
-    float northNoise = noise3d(warpedIceP * 1.8 + vec3(11.0)) * 0.12
-                     + noise3d(warpedIceP * 5.0 + vec3(23.0)) * 0.04;
-    float southNoise = noise3d(warpedIceP * 1.8 + vec3(53.0)) * 0.14
-                     + noise3d(warpedIceP * 5.0 + vec3(67.0)) * 0.04;
+    float northNoise = noise3d(warpedIceP * u_iceDetail + vec3(11.0)) * 0.12
+                     + noise3d(warpedIceP * (u_iceDetail * 2.8) + vec3(23.0)) * 0.04;
+    float southNoise = noise3d(warpedIceP * u_iceDetail + vec3(53.0)) * 0.14
+                     + noise3d(warpedIceP * (u_iceDetail * 2.8) + vec3(67.0)) * 0.04;
 
     // Asymmetric cap sizes via seed
     float northStart = u_iceCapSize + u_seed.x * 0.06;
@@ -947,6 +948,7 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_iceCapSize: { value: params.iceCapSize ?? 0.85 },
       u_iceEdge: { value: params.iceEdge ?? 0.035 },
       u_iceWarp: { value: params.iceWarp ?? 0.4 },
+      u_iceDetail: { value: params.iceDetail ?? 1.8 },
       u_craterScale: { value: 1.0 },
       u_ridgeStrength: { value: 0.35 },
       u_craterDepth: { value: 0.7 },
