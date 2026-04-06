@@ -337,15 +337,15 @@ const App = ({ data }: any) => {
 
   // Post-processing — single config object, all neutral defaults
   const [fx, setFx] = useState({
-    smaa:          { on: true },
+    smaa:          { on: false },
     dof:           { on: false, focusDistance: 0.01, focalLength: 0.05, bokehScale: 3 },
     toneMap:       { on: true, mode: ToneMappingMode.ACES_FILMIC },
     colorGrade:    { on: false, temperature: 0, tint: 0, shadows: 0, highlights: 0 },
-    hueSat:        { on: false, saturation: 0 },
-    brightContrast:{ on: false, brightness: 0, contrast: 0 },
-    chroma:        { on: false, offset: 0 },
-    vignette:      { on: false, offset: 0.3, darkness: 0.5 },
-    noise:         { on: false, opacity: 0 },
+    hueSat:        { on: true, saturation: -0.09 },
+    brightContrast:{ on: true, brightness: 0, contrast: 0.21 },
+    chroma:        { on: true, offset: 0.0005 },
+    vignette:      { on: true, offset: 0.3, darkness: 0.6 },
+    noise:         { on: true, opacity: 0.1 },
   });
   const updateFx = (key: string, values: any) => setFx(prev => ({ ...prev, [key]: { ...prev[key as keyof typeof prev], ...values } }));
 
