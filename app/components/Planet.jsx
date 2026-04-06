@@ -400,6 +400,10 @@ const Planet = ({ data, starData, starRef }) => {
     if (u.u_cloudCoverage && !hasHzGradient) {
       u.u_cloudCoverage.value = cloudCoverage;
       u.u_cloudOpacity.value = cloudOpacity;
+      // Non-HZ planets use Earth defaults for cloud shape
+      if (u.u_cloudSwirl) u.u_cloudSwirl.value = 0.8;
+      if (u.u_cloudBands) u.u_cloudBands.value = 5.0;
+      if (u.u_cloudWarp) u.u_cloudWarp.value = 0.35;
     }
     if (u.u_gasWarp) {
       const isIce = planetType === "ICE_GIANT" || planetType === "VENUS_LIKE" || planetType === "WATER_WORLD" || planetType === "SUB_NEPTUNE";

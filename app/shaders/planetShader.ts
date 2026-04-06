@@ -486,6 +486,9 @@ const terrestrialFragment = `
   uniform vec3 u_atmosColor;
   uniform float u_cloudCoverage;
   uniform float u_cloudOpacity;
+  uniform float u_cloudSwirl;
+  uniform float u_cloudBands;
+  uniform float u_cloudWarp;
   uniform float u_seaLevel;
   uniform float u_continentFreq;
   uniform float u_terrWarp;
@@ -660,7 +663,7 @@ const terrestrialFragment = `
 
       // Strength increases with latitude (zero at equator, max at poles)
       float coriolisStrength = smoothstep(0.0, 0.5, absLat + equatorNoise * 0.5);
-      float swirlAngle = coriolisSign * coriolisStrength * 0.8 + t * windSpeed * 0.15;
+      float swirlAngle = coriolisSign * coriolisStrength * u_cloudSwirl + t * windSpeed * 0.15;
       float cs = cos(swirlAngle * 0.08);
       float sn = sin(swirlAngle * 0.08);
       cloudBase.xz = mat2(cs, -sn, sn, cs) * cloudBase.xz;
@@ -668,7 +671,7 @@ const terrestrialFragment = `
       // Domain warp for organic shapes (cloud noise for warp, fbm for mass)
       float warp1 = cloudNoise(cloudBase * 0.4, 1.2);
       float warp2 = noise3d(cloudBase * 0.6 + vec3(43.0));
-      vec3 warpedP = cloudBase + vec3(warp1 * 0.35 + warp2 * 0.15, t * 0.4, warp1 * 0.25);
+      vec3 warpedP = cloudBase + vec3(warp1 * u_cloudWarp + warp2 * (u_cloudWarp * 0.4), t * 0.4, warp1 * (u_cloudWarp * 0.7));
 
       // Streaky wispy clouds (sin-modulated cloud noise only)
       float c1 = cloudNoise_lod(warpedP + vec3(t * 0.15), 1.2);
@@ -676,7 +679,7 @@ const terrestrialFragment = `
       clouds = c1 * 0.6 + c2 * 0.4;
 
       // Soft band structure
-      float bands = sin(vPosition.y * 5.0 + warp1 * 1.5) * 0.06 + 0.5;
+      float bands = sin(vPosition.y * u_cloudBands + warp1 * 1.5) * 0.06 + 0.5;
       clouds *= bands;
 
       // Coverage threshold: lower = more clouds
@@ -912,6 +915,9 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_atmosFalloff: { value: 1.4 },
       u_cloudCoverage: { value: params.cloudCoverage ?? 0.35 },
       u_cloudOpacity: { value: params.cloudOpacity ?? 0.6 },
+      u_cloudSwirl: { value: params.cloudSwirl ?? 0.8 },
+      u_cloudBands: { value: params.cloudBands ?? 5.0 },
+      u_cloudWarp: { value: params.cloudWarp ?? 0.35 },
       u_lod: { value: 0.0 },
       u_gasWarp: { value: 4.0 },
       u_gasStorm: { value: 18.0 },

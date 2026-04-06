@@ -63,6 +63,9 @@ export interface ShaderParams {
   // Per-planet terrestrial surface params (HZ gradient)
   cloudCoverage?: number;
   cloudOpacity?: number;
+  cloudSwirl?: number;
+  cloudBands?: number;
+  cloudWarp?: number;
   seaLevel?: number;
   iceCapSize?: number;
   continentFreq?: number;
@@ -470,6 +473,9 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
 
       base.cloudCoverage = lerpPreset('cloudCover');
       base.cloudOpacity = lerpPreset('cloudOpacity');
+      base.cloudSwirl = lerpPreset('cloudSwirl');
+      base.cloudBands = lerpPreset('cloudBands');
+      base.cloudWarp = lerpPreset('cloudWarp');
       base.seaLevel = lerpPreset('seaLevel');
       base.iceCapSize = lerpPreset('iceCap');
       base.continentFreq = lerpPreset('continentFreq');
