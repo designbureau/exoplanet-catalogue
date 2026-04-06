@@ -182,8 +182,8 @@ const noiseLib = `
 
   vec3 applyAtmosphere(vec3 color, vec3 normal, vec3 worldPos) {
     vec3 viewDir = normalize(cameraPosition - worldPos);
-    float fresnel = dot(viewDir, normal) + 1.0;
-    fresnel = pow(clamp(fresnel, 0.0, 2.0), u_atmosFalloff);
+    float fresnel = 1.0 - max(dot(viewDir, normal), 0.0);
+    fresnel = pow(fresnel, u_atmosFalloff);
 
     float sunOrientation = dot(normal, u_sunDirection);
     // Day colour blend: transitions across full lit hemisphere
