@@ -354,6 +354,7 @@ const gasGiantFragment = `
 
     vec3 V = normalize(cameraPosition - vWorldPosition);
     color = planetLighting(color, vWorldNormal, u_sunDirection, V, u_ambient);
+    color = applyAtmosphere(color, vWorldNormal, vWorldPosition);
 
     gl_FragColor = vec4(color, 1.0);
   }
@@ -471,6 +472,7 @@ const rockyFragment = `
     cracks *= cracks;
     cracks *= smoothstep(0.5, 0.15, h) * u_lavaGlow;
     color += emissiveColor * cracks * emissiveIntensity;
+    color = applyAtmosphere(color, vWorldNormal, vWorldPosition);
 
     gl_FragColor = vec4(color, 1.0);
   }
@@ -695,10 +697,8 @@ const terrestrialFragment = `
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
     surfaceColor += vec3(0.3) * spec * (1.0 - isLand) * (1.0 - clouds);
 
-    // Atmospheric rim glow (fresnel)
-    float rimDot = 1.0 - max(dot(vNormal, viewDir), 0.0);
-    float atmosGlow = pow(rimDot, u_atmosFalloff) * u_atmosIntensity;
-    surfaceColor += u_atmosColor * atmosGlow;
+    // Atmospheric rim (uses shared applyAtmosphere with shadow)
+    surfaceColor = applyAtmosphere(surfaceColor, vWorldNormal, vWorldPosition);
 
     gl_FragColor = vec4(surfaceColor, 1.0);
   }
@@ -757,6 +757,7 @@ const hazyFragment = `
 
     vec3 V = normalize(cameraPosition - vWorldPosition);
     color = planetLighting(color, vWorldNormal, u_sunDirection, V, u_ambient);
+    color = applyAtmosphere(color, vWorldNormal, vWorldPosition);
     gl_FragColor = vec4(color, 1.0);
   }
 `;
@@ -853,6 +854,7 @@ const iceGiantFragment = `
 
     vec3 V = normalize(cameraPosition - vWorldPosition);
     color = planetLighting(color, vWorldNormal, u_sunDirection, V, u_ambient);
+    color = applyAtmosphere(color, vWorldNormal, vWorldPosition);
     gl_FragColor = vec4(color, 1.0);
   }
 `;
