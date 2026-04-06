@@ -691,11 +691,12 @@ const terrestrialFragment = `
     vec3 V = normalize(cameraPosition - vWorldPosition);
     surfaceColor = planetLighting(surfaceColor, vWorldNormal, u_sunDirection, V, u_ambient);
 
-    // Specular on ocean
+    // Specular on ocean — only on lit side
     vec3 viewDir = normalize(-vPosition);
     vec3 reflectDir = reflect(-u_sunDirection, vWorldNormal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
-    surfaceColor += vec3(0.3) * spec * (1.0 - isLand) * (1.0 - clouds);
+    float specShadow = wrapDiffuse(vWorldNormal, u_sunDirection);
+    surfaceColor += vec3(0.3) * spec * specShadow * (1.0 - isLand) * (1.0 - clouds);
 
     // Atmospheric rim (uses shared applyAtmosphere with shadow)
     surfaceColor = applyAtmosphere(surfaceColor, vWorldNormal, vWorldPosition);
