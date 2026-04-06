@@ -112,7 +112,7 @@ const Star = ({ data, position, distance }) => {
         const geoInner = Math.max(0, inner - padding);
         const geoOuter = outer + padding;
         return (
-          <mesh rotation-x={-Math.PI / 2 + (avgInclination * Math.PI) / 180}>
+          <mesh rotation-x={(avgInclination * Math.PI) / 180}>
             <ringGeometry args={[geoInner, geoOuter, 128]} />
             <shaderMaterial
               transparent={true}
