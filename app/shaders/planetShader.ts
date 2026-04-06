@@ -648,9 +648,8 @@ const terrestrialFragment = `
     // Asymmetric cap sizes via seed
     float northStart = u_iceCapSize + u_seed.x * 0.06;
     float southStart = (u_iceCapSize - 0.02) + u_seed.y * 0.08;
-    // Sharp edge (narrow smoothstep = cleaner boundary)
-    float northCap = smoothstep(northStart, northStart + 0.02, northLat + northNoise);
-    float southCap = smoothstep(southStart, southStart + 0.02, southLat + southNoise);
+    float northCap = smoothstep(northStart, northStart + 0.035, northLat + northNoise);
+    float southCap = smoothstep(southStart, southStart + 0.035, southLat + southNoise);
     float iceCap = max(northCap, southCap);
     // Frost fringe — thin icy border
     float northFringe = smoothstep(northStart - 0.03, northStart, northLat + northNoise) * (1.0 - northCap);
