@@ -58,6 +58,7 @@ export interface ShaderParams {
   haloIntensity: number;
   haloScale: number;
   haloFalloff: number;
+  haloWhiten: number;
   // Per-planet terrestrial surface params (HZ gradient)
   cloudCoverage?: number;
   cloudOpacity?: number;
@@ -251,6 +252,7 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
     haloIntensity: 0,
     haloScale: 2.0,
     haloFalloff: 1.5,
+    haloWhiten: 0.35,
     hasHzGradient: false,
   };
 
@@ -554,6 +556,7 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.haloIntensity = lerpPreset('halo');
       base.haloScale = lerpPreset('haloScale');
       base.haloFalloff = lerpPreset('haloFalloff');
+      base.haloWhiten = lerpPreset('haloWhiten');
       base.hasHzGradient = true;
       break;
     }

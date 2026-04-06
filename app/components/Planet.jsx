@@ -129,7 +129,7 @@ const Planet = ({ data, starData, starRef }) => {
   })();
 
   // Classify planet and create shader material + atmosphere ring
-  const { shaderMaterial, atmosParams, atmosMat, atmosScale, haloMat, planetType, hasAtmosphere, defaultShowRim, defaultShowShell, defaultShowHalo, rimIntensity, rimFalloff, shellIntensity, haloIntensity, haloScale, haloFalloff, hasHzGradient, ringData } = useMemo(() => {
+  const { shaderMaterial, atmosParams, atmosMat, atmosScale, haloMat, planetType, hasAtmosphere, defaultShowRim, defaultShowShell, defaultShowHalo, rimIntensity, rimFalloff, shellIntensity, haloIntensity, haloScale, haloFalloff, haloWhiten, hasHzGradient, ringData } = useMemo(() => {
     const params = classifyPlanet({
       massJupiter: mass,
       radiusJupiter: radius,
@@ -221,7 +221,7 @@ const Planet = ({ data, starData, starRef }) => {
     }
 
     // Stable halo material — uniforms updated via useEffect
-    const haloColor = params.atmosDayColor ? params.atmosDayColor.clone().lerp(new THREE.Color(1, 1, 1), 0.35) : new THREE.Color(0.5, 0.7, 1.0);
+    const haloColor = params.atmosDayColor ? params.atmosDayColor.clone().lerp(new THREE.Color(1, 1, 1), params.haloWhiten) : new THREE.Color(0.5, 0.7, 1.0);
     const hMat = new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
@@ -281,6 +281,7 @@ const Planet = ({ data, starData, starRef }) => {
       haloIntensity: params.haloIntensity,
       haloScale: params.haloScale,
       haloFalloff: params.haloFalloff,
+      haloWhiten: params.haloWhiten,
       hasHzGradient: params.hasHzGradient,
       ringData: ringParams ? { params: ringParams, material: ringMat } : null,
     };
@@ -450,10 +451,10 @@ const Planet = ({ data, starData, starRef }) => {
       u.uInner.value = spriteGlowInner;
       // Update halo colour from current atmosphere day colour
       if (shaderMaterial.uniforms.u_atmosDayColor) {
-        u.uColor.value.copy(shaderMaterial.uniforms.u_atmosDayColor.value).lerp(new THREE.Color(1, 1, 1), 0.35);
+        u.uColor.value.copy(shaderMaterial.uniforms.u_atmosDayColor.value).lerp(new THREE.Color(1, 1, 1), haloWhiten);
       }
     }
-  }, [haloMat, haloIntensity, haloScale, haloFalloff, spriteGlowInner, glowHueShift, glowSaturation, shaderMaterial]);
+  }, [haloMat, haloIntensity, haloScale, haloFalloff, haloWhiten, spriteGlowInner, glowHueShift, glowSaturation, shaderMaterial]);
 
   // Per-frame: only orbital motion, time, LOD, sun direction, position sync
   useFrame((state) => {
