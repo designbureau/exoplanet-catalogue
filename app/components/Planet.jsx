@@ -234,13 +234,16 @@ const Planet = ({ data, starData, starRef }) => {
         uIntensity: { value: params.haloIntensity },
         uFalloff: { value: params.haloFalloff },
         uInner: { value: 0.0 },
+        uSunDirection: { value: new THREE.Vector3(1, 0, 0) },
       },
       vertexShader: `
         attribute vec3 aPos;
         varying float vRadial;
+        varying vec2 vRingDir;
         uniform float uRadius;
         void main() {
           vRadial = aPos.z;
+          vRingDir = normalize(aPos.xy);
           vec4 mvCenter = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
           float s = length(vec3(modelMatrix[0][0], modelMatrix[1][0], modelMatrix[2][0]));
           float r = (1.0 + aPos.z * uRadius) * s;
@@ -251,13 +254,23 @@ const Planet = ({ data, starData, starRef }) => {
       fragmentShader: `
         precision highp float;
         varying float vRadial;
+        varying vec2 vRingDir;
         uniform vec3 uColor;
         uniform float uIntensity;
         uniform float uFalloff;
         uniform float uInner;
+        uniform vec3 uSunDirection;
         void main() {
           float alpha = pow(1.0 - vRadial, uFalloff);
           if (uInner > 0.001) alpha *= smoothstep(0.0, uInner, vRadial);
+
+          // Sun shadow on halo: project sun direction into view-space billboard plane
+          vec3 sunView = normalize(mat3(viewMatrix) * uSunDirection);
+          float sunDot = dot(vRingDir, sunView.xy);
+          // Bright on sun side, fade on dark side
+          float shadow = smoothstep(-0.3, 0.5, sunDot);
+          alpha *= mix(0.05, 1.0, shadow);
+
           alpha *= uIntensity;
           gl_FragColor = vec4(uColor * alpha, alpha);
         }
@@ -449,6 +462,10 @@ const Planet = ({ data, starData, starRef }) => {
       u.uIntensity.value = haloIntensity;
       u.uFalloff.value = haloFalloff;
       u.uInner.value = spriteGlowInner;
+      // Sync sun direction for halo shadow
+      if (u.uSunDirection && shaderMaterial.uniforms.u_sunDirection) {
+        u.uSunDirection.value.copy(shaderMaterial.uniforms.u_sunDirection.value);
+      }
       // Update halo colour from current atmosphere day colour
       if (shaderMaterial.uniforms.u_atmosDayColor) {
         u.uColor.value.copy(shaderMaterial.uniforms.u_atmosDayColor.value).lerp(new THREE.Color(1, 1, 1), haloWhiten);
@@ -551,7 +568,13 @@ const Planet = ({ data, starData, starRef }) => {
       ref.current.getWorldPosition(rm.uniforms.u_planetPos.value);
       rm.uniforms.u_planetRadius.value = scale;
     }
-    if (softGlowRef.current) softGlowRef.current.position.copy(ref.current.position);
+    if (softGlowRef.current) {
+      softGlowRef.current.position.copy(ref.current.position);
+      // Sync sun direction for halo shadow
+      if (haloMat?.uniforms.uSunDirection && shaderMaterial.uniforms.u_sunDirection) {
+        haloMat.uniforms.uSunDirection.value.copy(shaderMaterial.uniforms.u_sunDirection.value);
+      }
+    }
   });
 
   const position = [periapsis, 0, 0];
