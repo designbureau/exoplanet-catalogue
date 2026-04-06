@@ -190,8 +190,8 @@ const noiseLib = `
     float atmosphereDayMix = smoothstep(-0.5, 1.0, sunOrientation);
     vec3 atmosColor = mix(u_atmosTwilightColor, u_atmosDayColor, atmosphereDayMix);
 
-    // Visibility: atmosphere glow fades on dark side — tighter than BackSide sphere
-    float dayVisibility = smoothstep(-0.2, 0.3, sunOrientation);
+    // Match planet surface wrap lighting for consistent shadow terminator
+    float dayVisibility = wrapDiffuse(normal, u_sunDirection);
 
     return mix(color, atmosColor, fresnel * dayVisibility * u_atmosIntensity);
   }
