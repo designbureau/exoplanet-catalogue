@@ -533,22 +533,22 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       highland.offsetHSL(jitter * 0.3, jitter * 0.1, jitter * 0.06);
 
       // --- HZ-driven colour shifts ---
-      // Warm edge (hz > 0.55): desert/arid — vegetation dries out, sandy highlands
-      if (hz > 0.55) {
-        const warmShift = (hz - 0.55) / 0.45; // 0–1
-        lowVeg.lerp(new THREE.Color(0.30, 0.24, 0.14), warmShift * 0.8);
-        highland.lerp(new THREE.Color(0.38, 0.32, 0.20), warmShift * 0.7);
-        ocean.lerp(new THREE.Color(0.05, 0.06, 0.12), warmShift * 0.5);
-        peak.lerp(new THREE.Color(0.55, 0.50, 0.42), warmShift * 0.4);
+      // Only at extremes — palette is tuned for mid-HZ (Earth-like), shifts at edges
+      // Warm edge (hz > 0.9): approaching Venus zone — vegetation dries, sandy
+      if (hz > 0.9) {
+        const warmShift = (hz - 0.9) / 0.1; // 0–1 over the last 10%
+        lowVeg.lerp(new THREE.Color(0.30, 0.24, 0.14), warmShift * 0.6);
+        highland.lerp(new THREE.Color(0.38, 0.32, 0.20), warmShift * 0.5);
+        ocean.lerp(new THREE.Color(0.05, 0.06, 0.12), warmShift * 0.3);
+        peak.lerp(new THREE.Color(0.55, 0.50, 0.42), warmShift * 0.3);
       }
       // Cool edge (hz < 0.35): Mars-like — iron oxide, barren, dusty, no liquid water
       if (hz < 0.35) {
         const coolShift = (0.35 - hz) / 0.35; // 0–1, maxes at hz=0
-        // At full coolShift, completely replace palette with Mars tones
-        ocean.lerp(new THREE.Color(0.18, 0.12, 0.08), coolShift);           // dry basin / dust
-        lowVeg.lerp(new THREE.Color(0.28, 0.16, 0.08), coolShift);          // rust / iron oxide
-        highland.lerp(new THREE.Color(0.22, 0.15, 0.10), coolShift);        // dark basalt
-        peak.lerp(new THREE.Color(0.75, 0.72, 0.68), coolShift * 0.7);      // dusty frost/regolith
+        ocean.lerp(new THREE.Color(0.18, 0.12, 0.08), coolShift);
+        lowVeg.lerp(new THREE.Color(0.28, 0.16, 0.08), coolShift);
+        highland.lerp(new THREE.Color(0.22, 0.15, 0.10), coolShift);
+        peak.lerp(new THREE.Color(0.75, 0.72, 0.68), coolShift * 0.7);
       }
 
       base.color1 = ocean;
