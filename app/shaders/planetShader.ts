@@ -493,6 +493,8 @@ const terrestrialFragment = `
   uniform float u_continentFreq;
   uniform float u_terrWarp;
   uniform float u_iceCapSize;
+  uniform float u_iceEdge;
+  uniform float u_iceWarp;
   varying vec3 vPosition;
   varying vec3 vNormal;
   varying vec3 vWorldNormal;
@@ -631,13 +633,13 @@ const terrestrialFragment = `
       noise3d(p * 2.0 + vec3(11.0, 0.0, 0.0)),
       noise3d(p * 2.0 + vec3(0.0, 23.0, 0.0)),
       noise3d(p * 2.0 + vec3(0.0, 0.0, 37.0))
-    ) * 0.4;
+    ) * u_iceWarp;
     // Second warp pass: finer swirling detail
     vec3 nWarp2 = vec3(
       noise3d((p + nWarp) * 4.0 + vec3(41.0)),
       noise3d((p + nWarp) * 4.0 + vec3(59.0)),
       noise3d((p + nWarp) * 4.0 + vec3(71.0))
-    ) * 0.15;
+    ) * (u_iceWarp * 0.375);
     vec3 warpedIceP = p + nWarp + nWarp2;
 
     float northNoise = noise3d(warpedIceP * 1.8 + vec3(11.0)) * 0.12
@@ -648,8 +650,8 @@ const terrestrialFragment = `
     // Asymmetric cap sizes via seed
     float northStart = u_iceCapSize + u_seed.x * 0.06;
     float southStart = (u_iceCapSize - 0.02) + u_seed.y * 0.08;
-    float northCap = smoothstep(northStart, northStart + 0.035, northLat + northNoise);
-    float southCap = smoothstep(southStart, southStart + 0.035, southLat + southNoise);
+    float northCap = smoothstep(northStart, northStart + u_iceEdge, northLat + northNoise);
+    float southCap = smoothstep(southStart, southStart + u_iceEdge, southLat + southNoise);
     float iceCap = max(northCap, southCap);
     // Frost fringe — thin icy border
     float northFringe = smoothstep(northStart - 0.03, northStart, northLat + northNoise) * (1.0 - northCap);
@@ -943,6 +945,8 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_continentFreq: { value: params.continentFreq ?? 0.15 },
       u_terrWarp: { value: 0.5 },
       u_iceCapSize: { value: params.iceCapSize ?? 0.85 },
+      u_iceEdge: { value: params.iceEdge ?? 0.035 },
+      u_iceWarp: { value: params.iceWarp ?? 0.4 },
       u_craterScale: { value: 1.0 },
       u_ridgeStrength: { value: 0.35 },
       u_craterDepth: { value: 0.7 },
