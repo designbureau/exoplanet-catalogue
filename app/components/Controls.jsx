@@ -81,9 +81,6 @@ const Controls = ({ follow }) => {
           const planetRef = refs[key];
           if (!planetRef?.current?.getWorldPosition) continue;
           if (planetRef === activeRef) continue;
-          // Only avoid planets and stars (skip binaries etc.)
-          const meta = planetRef.current.metadata;
-          if (!meta || (meta.type !== "planet" && meta.type !== "star")) continue;
 
           planetRef.current.getWorldPosition(_planetPos);
 
@@ -96,11 +93,9 @@ const Controls = ({ follow }) => {
           _closestPt.copy(camPos).addScaledVector(_flightDir, projection);
           const dist = _planetPos.distanceTo(_closestPt);
 
-          // Get bounding radius (approximate from scale)
-          const bbox = new THREE.Box3().setFromObject(planetRef.current);
-          const size = new THREE.Vector3();
-          bbox.getSize(size);
-          const radius = Math.max(size.x, size.y, size.z) * 0.5;
+          // Approximate radius from mesh scale (avoids expensive Box3 per frame)
+          const s = planetRef.current.scale;
+          const radius = Math.max(s.x, s.y, s.z);
           const avoidRadius = radius * 3.0; // generous avoidance zone
 
           if (dist < avoidRadius && dist > 0.001) {
@@ -119,9 +114,16 @@ const Controls = ({ follow }) => {
         _currentOffset.lerp(_zero, 0.08);
       }
 
-      const tx = _objectPosition.x + _currentOffset.x;
-      const ty = _objectPosition.y + _currentOffset.y;
-      const tz = _objectPosition.z + _currentOffset.z;
+      const tx = _objectPosition.x;
+      const ty = _objectPosition.y;
+      const tz = _objectPosition.z;
+
+      // Apply avoidance offset to camera position (swoop around obstacles)
+      if (_currentOffset.lengthSq() > 0.001) {
+        camera.position.x += _currentOffset.x * 0.05;
+        camera.position.y += _currentOffset.y * 0.05;
+        camera.position.z += _currentOffset.z * 0.05;
+      }
 
       if (follow) {
         cameraControlsRef.current.moveTo(tx, ty, tz, true);
