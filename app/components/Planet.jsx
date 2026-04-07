@@ -623,7 +623,7 @@ const Planet = ({ data, starData, starRef }) => {
           if (dist < 0.0) dist += 1.0;
 
           // 98% visible: full for first 90%, taper over next 8%, tiny 2% gap
-          float taper = 1.0 - smoothstep(0.90, 0.98, dist);
+          float taper = 1.0 - smoothstep(0.65, 0.75, dist);
           if (taper < 0.01) discard;
 
           gl_FragColor = vec4(1.0, 1.0, 1.0, taper * 0.25);
