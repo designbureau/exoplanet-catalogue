@@ -739,7 +739,7 @@ const App = ({ data }: any) => {
           {showNebula && <Nebula seed={data?.name?.[0] ?? "system"} density={nebulaDensity} brightness={nebulaBrightness} scale={nebulaScale} warp={nebulaWarp} contrast={nebulaContrast} mix={nebulaMix} cutoff={nebulaCutoff} colors={nebulaColorOverride} starTemp={getPrimaryStarTemp(data)} />}
           <Binary data={data} />
           <Controls follow={follow} autoRotate={autoRotate} />
-          <EffectComposer key={fxKey}>
+          <EffectComposer key={fxKey} multisampling={0}>
             {/* 0. Antialiasing */}
             {fx.smaa.on && <SMAA preset={SMAAPreset.MEDIUM} edgeDetectionMode={EdgeDetectionMode.LUMA} />}
             {/* 1. HDR: Depth of Field */}
