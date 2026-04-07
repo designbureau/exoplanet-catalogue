@@ -71,7 +71,7 @@ export const EnvProvider = ({ children }) => {
     earth: { atmos: 0.0, cloudCover: 0.41, cloudOpacity: 0.89, cloudSwirl: 0.3, cloudBands: 2.5, cloudWarp: 0.5, seaLevel: 0.70, iceCap: 0.89, iceEdge: 0.035, iceWarp: 1.0, iceDetail: 0.7, continentFreq: 0.30, warp: 0.5, rim: 0.10, rimFalloff: 1.0, rimDay: '#00aaff', rimTwi: '#ff6600', shell: 0.0, halo: 0.60, haloScale: 2.0, haloFalloff: 2.7, haloWhiten: 0.15, haloShadow: 0.7 },
     warm:  { atmos: 0.0, cloudCover: 0.60, cloudOpacity: 0.90, cloudSwirl: 1.2, cloudBands: 2.0, cloudWarp: 0.5, seaLevel: 0.10, iceCap: 0.99, iceEdge: 0.035, iceWarp: 0.4, iceDetail: 1.8, continentFreq: 0.22, warp: 0.8, rim: 0.0, rimFalloff: 0.7, rimDay: '#cc8833', rimTwi: '#aa6622', shell: 0.0, halo: 0.0, haloScale: 3.0, haloFalloff: 1.0, haloWhiten: 0.35, haloShadow: 0.7 },
     // Venus Zone: runaway greenhouse (S_eff > 1.04), separate from warm HZ
-    venusZone: { atmos: 0.0, rim: 0.0, rimFalloff: 0.7, rimDay: '#ccaa44', rimTwi: '#aa6622', shell: 0.0, halo: 0.0, haloScale: 3.0, haloFalloff: 1.0, haloWhiten: 0.35, haloShadow: 0.7 },
+    venusZone: { atmos: 0.0, rim: 0.0, rimFalloff: 0.7, rimDay: '#ccaa44', rimTwi: '#aa6622', shell: 0.0, halo: 0.30, haloScale: 1.4, haloFalloff: 3.2, haloWhiten: 0.35, haloShadow: 0.7 },
     // Frozen: cold rocky with ice surface (S_eff < 0.35)
     frozen: { atmos: 0.0, rim: 0.0, rimFalloff: 1.5, rimDay: '#6688aa', rimTwi: '#334455', shell: 0.0, halo: 0.0, haloScale: 1.5, haloFalloff: 2.0, haloWhiten: 0.5, haloShadow: 0.5 },
     // Water World: deep ocean with moderate haze
