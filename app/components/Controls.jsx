@@ -67,7 +67,7 @@ const Controls = ({ follow, autoRotate = false }) => {
 
       // View from slightly above the orbital plane
       // PI/2 = equatorial, lower = more elevated
-      cameraControlsRef.current.rotatePolarTo(Math.PI * 0.38, animate);
+      cameraControlsRef.current.rotatePolarTo(Math.PI * 0.5, animate);
     }
   }, [activeRef]);
 
