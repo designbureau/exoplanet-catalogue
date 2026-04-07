@@ -225,10 +225,14 @@ const Planet = ({ data, starData, starRef }) => {
     // Stable halo material — uniforms updated via useEffect
     const haloColor = params.atmosDayColor ? params.atmosDayColor.clone().lerp(new THREE.Color(1, 1, 1), params.haloWhiten) : new THREE.Color(0.5, 0.7, 1.0);
     const hMat = new THREE.ShaderMaterial({
-      transparent: true,
+      transparent: false,
       depthWrite: false,
       depthTest: false,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.CustomBlending,
+      blendSrc: THREE.OneFactor,
+      blendDst: THREE.OneFactor,
+      blendSrcAlpha: THREE.ZeroFactor,
+      blendDstAlpha: THREE.OneFactor,
       side: THREE.DoubleSide,
       uniforms: {
         uRadius: { value: params.haloScale * 0.3 },
@@ -268,15 +272,14 @@ const Planet = ({ data, starData, starRef }) => {
           float alpha = pow(1.0 - vRadial, uFalloff);
           if (uInner > 0.001) alpha *= smoothstep(0.0, uInner, vRadial);
 
-          // Sun shadow on halo
+          // Sun shadow on halo — gentle cosine fade, no hard edges
           vec3 sunView = normalize(mat3(viewMatrix) * uSunDirection);
           float sunDot = dot(vRingDir, sunView.xy);
-          float shadow = smoothstep(-uHaloShadow, 0.3, sunDot);
-          alpha *= mix(0.05, 1.0, shadow);
+          float shadow = clamp(sunDot * (1.0 - uHaloShadow) * 0.5 + 0.5 + uHaloShadow * 0.5, 0.0, 1.0);
+          alpha *= shadow;
 
           alpha *= uIntensity;
-          if (alpha < 0.03) discard;
-          gl_FragColor = vec4(uColor * alpha, alpha);
+          gl_FragColor = vec4(uColor * alpha, 0.0);
         }
       `,
     });
