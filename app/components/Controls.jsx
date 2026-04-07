@@ -211,7 +211,7 @@ const Controls = ({ follow, autoRotate = false }) => {
 
       // Gentle auto-rotate when user isn't interacting
       if (autoRotate && !keyDown && !cameraControlsRef.current.active) {
-        cameraControlsRef.current.azimuthAngle += 0.0001 * delta * 60;
+        cameraControlsRef.current.azimuthAngle += 0.00005 * delta * 60;
       }
     }
   });
