@@ -743,11 +743,11 @@ const App = ({ data }: any) => {
             {/* 0. Antialiasing */}
             {fx.smaa.on && <SMAA preset={SMAAPreset.MEDIUM} edgeDetectionMode={EdgeDetectionMode.LUMA} />}
             {/* 1. HDR: Depth of Field */}
-            <DepthOfField
-              focusDistance={fx.dof.on ? fx.dof.focusDistance : 0}
-              focalLength={fx.dof.on ? fx.dof.focalLength : 0}
-              bokehScale={fx.dof.on ? fx.dof.bokehScale : 0}
-            />
+            {fx.dof.on && <DepthOfField
+              focusDistance={fx.dof.focusDistance}
+              focalLength={fx.dof.focalLength}
+              bokehScale={fx.dof.bokehScale}
+            />}
             {/* 2. Tone mapping: HDR → LDR (always ACES Filmic baseline) */}
             <ToneMapping mode={fx.toneMap.on ? fx.toneMap.mode : ToneMappingMode.ACES_FILMIC} />
             {/* 3. Colour grading (LDR) */}
