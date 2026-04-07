@@ -84,6 +84,7 @@ import {
   getEccentricity,
   getInclination,
   getPeriastron,
+  getPhaseOffset,
   getEllipse,
   getPeriapsis,
   getMass,
@@ -120,6 +121,7 @@ const Planet = ({ data, starData, starRef }) => {
   const radius = getRadius({ data });
   const ellipse = getEllipse(semimajoraxis, eccentricity);
   const periapsis = getPeriapsis(semimajoraxis, eccentricity) - semimajoraxis;
+  const phaseOffset = getPhaseOffset({ data, name });
 
   // Raw semi-major axis in AU (before scene scaling) for classification
   const rawSMA = (() => {
@@ -486,15 +488,13 @@ const Planet = ({ data, starData, starRef }) => {
     const elapsedTime = state.clock.getElapsedTime();
     ref.current.rotation.x = Math.PI * 0.5;
     ref.current.rotation.y += 0.001;
-    ref.current.position.x =
-      ellipse.xRadius * Math.cos((elapsedTime / period) * speed);
-    ref.current.position.y =
-      ellipse.yRadius * Math.sin((elapsedTime / period) * speed);
+    const angle = (elapsedTime / period) * speed + phaseOffset;
+    ref.current.position.x = ellipse.xRadius * Math.cos(angle);
+    ref.current.position.y = ellipse.yRadius * Math.sin(angle);
 
     // Update ribbon trail phase to follow planet
     if (orbitMat?.uniforms?.uPhase) {
-      const orbitAngle = ((elapsedTime / period) * speed) % (Math.PI * 2);
-      orbitMat.uniforms.uPhase.value = orbitAngle / (Math.PI * 2);
+      orbitMat.uniforms.uPhase.value = (angle % (Math.PI * 2)) / (Math.PI * 2);
     }
 
     // Time + LOD — only animate active planet's clouds

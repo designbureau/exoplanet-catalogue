@@ -70,6 +70,18 @@ export const getPeriastron = ({ data }: any) => {
   return periastron;
 };
 
+// Orbital phase offset in radians: periastron angle from data, or name-hash fallback
+export const getPhaseOffset = ({ data, name }: { data: any; name?: string }): number => {
+  const periastronDeg = parseFloat(data.periastron?.[0] ?? "");
+  if (!isNaN(periastronDeg)) {
+    return periastronDeg * (Math.PI / 180);
+  }
+  // Fallback: deterministic hash from planet name
+  const n = name || (data.name?.[0] ?? "planet");
+  const hash = [...n].reduce((a: number, c: string) => a + c.charCodeAt(0), 0);
+  return ((hash * 9301 + 49297) % 233280) / 233280 * Math.PI * 2;
+};
+
 export const getPeriapsis = (a: number, e: number): number => {
   return a * (1 - e);
 };
