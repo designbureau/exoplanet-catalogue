@@ -489,7 +489,7 @@ const Planet = ({ data, starData, starRef }) => {
     const elapsedTime = state.clock.getElapsedTime();
     ref.current.rotation.x = Math.PI * 0.5;
     if (autoRotate) ref.current.rotation.y += 0.001;
-    const angle = (elapsedTime / period) * speed + phaseOffset;
+    const angle = autoRotate ? (elapsedTime / period) * speed + phaseOffset : phaseOffset;
     ref.current.position.x = ellipse.xRadius * Math.cos(angle);
     ref.current.position.y = ellipse.yRadius * Math.sin(angle);
 
