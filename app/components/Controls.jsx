@@ -110,24 +110,15 @@ const Controls = ({ follow }) => {
 
       // Smooth the offset (blend in when avoiding, decay when clear)
       if (_offset.lengthSq() > 0.001) {
-        _currentOffset.lerp(_offset, 0.15); // fast response
+        _currentOffset.lerp(_offset, 0.12);
       } else {
-        _currentOffset.lerp(_zero, 0.06); // gentle decay
+        _currentOffset.lerp(_zero, 0.05);
       }
 
-      // Apply avoidance: offset both camera position and target for swooping effect
-      if (_currentOffset.lengthSq() > 0.001) {
-        const cx = _currentOffset.x;
-        const cy = _currentOffset.y;
-        const cz = _currentOffset.z;
-        camera.position.x += cx * 0.12;
-        camera.position.y += cy * 0.12;
-        camera.position.z += cz * 0.12;
-      }
-
-      const tx = _objectPosition.x;
-      const ty = _objectPosition.y;
-      const tz = _objectPosition.z;
+      // Offset the target so camera-controls arcs around obstacles naturally
+      const tx = _objectPosition.x + _currentOffset.x;
+      const ty = _objectPosition.y + _currentOffset.y;
+      const tz = _objectPosition.z + _currentOffset.z;
 
       if (follow) {
         cameraControlsRef.current.moveTo(tx, ty, tz, true);
