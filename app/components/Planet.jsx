@@ -272,12 +272,17 @@ const Planet = ({ data, starData, starRef }) => {
           vec3 sunView = normalize(mat3(viewMatrix) * uSunDirection);
           float sunDot = dot(vRingDir, sunView.xy);
           // haloShadow controls how far light wraps: 0=sun side only, 1=fully around
-          float shadow = smoothstep(-uHaloShadow, 1.0 - uHaloShadow, sunDot);
-          alpha *= mix(0.05, 1.0, shadow);
+          // Wide smooth transition to avoid hard edge
+          float shadowLow = -uHaloShadow;
+          float shadowHigh = shadowLow + 1.2;
+          float shadow = smoothstep(shadowLow, shadowHigh, sunDot);
+          alpha *= mix(0.02, 1.0, shadow);
 
           alpha *= uIntensity;
-          if (alpha < 0.005) discard;
-          gl_FragColor = vec4(uColor * alpha, alpha);
+          if (alpha < 0.01) discard;
+          // Additive blending uses RGB only; keep alpha minimal to avoid
+          // post-processing treating it as opaque dark (causes ring artifact)
+          gl_FragColor = vec4(uColor * alpha, alpha * 0.1);
         }
       `,
     });
