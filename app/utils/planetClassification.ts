@@ -328,8 +328,9 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.noiseScale = 12;
       break;
 
-    case PlanetType.WATER_WORLD:
-      // Deep blue, cloud swirls
+    case PlanetType.WATER_WORLD: {
+      // Deep blue ocean world — driven by waterWorld preset
+      const ww = (hzRanges as any)?.waterWorld || {};
       base.color1 = new THREE.Color(0.1, 0.2, 0.45);
       base.color2 = new THREE.Color(0.2, 0.35, 0.55);
       base.color3 = new THREE.Color(0.15, 0.25, 0.5);
@@ -337,31 +338,50 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.swirlStrength = 0.2;
       base.warpIntensity = 2.0;
       base.noiseScale = 8;
+      base.atmosIntensity = ww.atmos ?? 0.0;
+      base.atmosDayColor = new THREE.Color(ww.rimDay || '#2266cc');
+      base.atmosTwilightColor = new THREE.Color(ww.rimTwi || '#554422');
       base.hasAtmosphere = true;
       base.showRim = true;
-      base.showShell = true;
+      base.showShell = (ww.shell ?? 0) > 0;
       base.showHalo = true;
-      base.rimIntensity = 0.3;
-      base.shellIntensity = 1.0;
-      base.haloIntensity = 0.4;
+      base.rimIntensity = ww.rim ?? 0.0;
+      base.rimFalloff = ww.rimFalloff ?? 1.0;
+      base.shellIntensity = ww.shell ?? 0;
+      base.haloIntensity = ww.halo ?? 0.0;
+      base.haloScale = ww.haloScale ?? 2.0;
+      base.haloFalloff = ww.haloFalloff ?? 1.5;
+      base.haloWhiten = ww.haloWhiten ?? 0.3;
+      base.haloShadow = ww.haloShadow ?? 0.7;
       break;
+    }
 
-    case PlanetType.SUB_NEPTUNE:
-      // Hazy, blue-grey
+    case PlanetType.SUB_NEPTUNE: {
+      // Thick atmosphere, blue-grey — driven by subNeptune preset
+      const sn = (hzRanges as any)?.subNeptune || {};
       base.color1 = new THREE.Color(0.4, 0.45, 0.5);
       base.color2 = new THREE.Color(0.5, 0.55, 0.6);
       base.color3 = new THREE.Color(0.35, 0.4, 0.5);
       base.color4 = new THREE.Color(0.55, 0.6, 0.65);
       base.swirlStrength = 0.1;
       base.warpIntensity = 1.5;
+      base.atmosIntensity = sn.atmos ?? 0.0;
+      base.atmosDayColor = new THREE.Color(sn.rimDay || '#6688bb');
+      base.atmosTwilightColor = new THREE.Color(sn.rimTwi || '#445566');
       base.hasAtmosphere = true;
       base.showRim = true;
-      base.showShell = true;
+      base.showShell = (sn.shell ?? 0) > 0;
       base.showHalo = true;
-      base.rimIntensity = 0.4;
-      base.shellIntensity = 1.2;
-      base.haloIntensity = 0.5;
+      base.rimIntensity = sn.rim ?? 0.0;
+      base.rimFalloff = sn.rimFalloff ?? 0.8;
+      base.shellIntensity = sn.shell ?? 0;
+      base.haloIntensity = sn.halo ?? 0.0;
+      base.haloScale = sn.haloScale ?? 2.5;
+      base.haloFalloff = sn.haloFalloff ?? 1.2;
+      base.haloWhiten = sn.haloWhiten ?? 0.35;
+      base.haloShadow = sn.haloShadow ?? 0.7;
       break;
+    }
 
     case PlanetType.LAVA_WORLD:
       // Mostly black cooled crust with magma in low areas
@@ -587,8 +607,9 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       break;
     }
 
-    case PlanetType.FROZEN:
-      // White/grey ice with subtle features
+    case PlanetType.FROZEN: {
+      // Cold icy world — driven by frozen preset
+      const fr = (hzRanges as any)?.frozen || {};
       base.color1 = new THREE.Color(0.75, 0.78, 0.82);
       base.color2 = new THREE.Color(0.85, 0.87, 0.9);
       base.color3 = new THREE.Color(0.6, 0.65, 0.7);
@@ -596,14 +617,23 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.swirlStrength = 0.0;
       base.warpIntensity = 2.0;
       base.noiseScale = 15;
+      base.atmosIntensity = fr.atmos ?? 0.0;
+      base.atmosDayColor = new THREE.Color(fr.rimDay || '#6688aa');
+      base.atmosTwilightColor = new THREE.Color(fr.rimTwi || '#334455');
       base.hasAtmosphere = true;
       base.showRim = true;
-      base.showShell = true;
-      base.showHalo = false;
-      base.rimIntensity = 0.1;
-      base.shellIntensity = 0.3;
-      base.haloIntensity = 0;
+      base.showShell = (fr.shell ?? 0) > 0;
+      base.showHalo = (fr.halo ?? 0) > 0;
+      base.rimIntensity = fr.rim ?? 0.0;
+      base.rimFalloff = fr.rimFalloff ?? 1.5;
+      base.shellIntensity = fr.shell ?? 0;
+      base.haloIntensity = fr.halo ?? 0.0;
+      base.haloScale = fr.haloScale ?? 1.5;
+      base.haloFalloff = fr.haloFalloff ?? 2.0;
+      base.haloWhiten = fr.haloWhiten ?? 0.5;
+      base.haloShadow = fr.haloShadow ?? 0.5;
       break;
+    }
 
     default:
       break;

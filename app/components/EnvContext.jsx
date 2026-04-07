@@ -72,6 +72,12 @@ export const EnvProvider = ({ children }) => {
     warm:  { atmos: 0.0, cloudCover: 0.60, cloudOpacity: 0.90, cloudSwirl: 1.2, cloudBands: 2.0, cloudWarp: 0.5, seaLevel: 0.10, iceCap: 0.99, iceEdge: 0.035, iceWarp: 0.4, iceDetail: 1.8, continentFreq: 0.22, warp: 0.8, rim: 0.0, rimFalloff: 0.7, rimDay: '#cc8833', rimTwi: '#aa6622', shell: 0.0, halo: 0.0, haloScale: 3.0, haloFalloff: 1.0, haloWhiten: 0.35, haloShadow: 0.7 },
     // Venus Zone: runaway greenhouse (S_eff > 1.04), separate from warm HZ
     venusZone: { atmos: 0.0, rim: 0.0, rimFalloff: 0.7, rimDay: '#ccaa44', rimTwi: '#aa6622', shell: 0.0, halo: 0.0, haloScale: 3.0, haloFalloff: 1.0, haloWhiten: 0.35, haloShadow: 0.7 },
+    // Frozen: cold rocky with ice surface (S_eff < 0.35)
+    frozen: { atmos: 0.0, rim: 0.0, rimFalloff: 1.5, rimDay: '#6688aa', rimTwi: '#334455', shell: 0.0, halo: 0.0, haloScale: 1.5, haloFalloff: 2.0, haloWhiten: 0.5, haloShadow: 0.5 },
+    // Water World: deep ocean with moderate haze
+    waterWorld: { atmos: 0.0, rim: 0.0, rimFalloff: 1.0, rimDay: '#2266cc', rimTwi: '#554422', shell: 0.0, halo: 0.0, haloScale: 2.0, haloFalloff: 1.5, haloWhiten: 0.3, haloShadow: 0.7 },
+    // Sub-Neptune: thick atmosphere, blue-grey, no visible surface
+    subNeptune: { atmos: 0.0, rim: 0.0, rimFalloff: 0.8, rimDay: '#6688bb', rimTwi: '#445566', shell: 0.0, halo: 0.0, haloScale: 2.5, haloFalloff: 1.2, haloWhiten: 0.35, haloShadow: 0.7 },
   });
   const updatePreset = (cat, key, value) => setHzPresets(prev => ({ ...prev, [cat]: { ...prev[cat], [key]: value } }));
 
