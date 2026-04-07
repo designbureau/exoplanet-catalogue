@@ -200,7 +200,15 @@ const coolPalettes: Palette[] = [
   [new THREE.Color(0.65, 0.15, 0.1), new THREE.Color(0.1, 0.45, 0.5), new THREE.Color(0.85, 0.65, 0.15), new THREE.Color(0.4, 0.1, 0.4)],
 ];
 
-function nebulaColors(seed: number, starTemp: number): Palette {
+export function hashSeedString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return h;
+}
+
+export function nebulaColors(seed: number, starTemp: number): Palette {
   // Allow cross-group bleed: sometimes pick from adjacent temperature group
   const allGroups = [coolPalettes, solarPalettes, warmPalettes, hotPalettes];
   let groupIdx = starTemp > 15000 ? 3 : starTemp > 8000 ? 2 : starTemp > 5000 ? 1 : 0;

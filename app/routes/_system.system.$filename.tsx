@@ -4,7 +4,7 @@ import { RefContext, RefProvider } from "~/components/RefContext";
 import { EnvContext, EnvProvider } from "~/components/EnvContext";
 import Binary from "~/components/Binary";
 import Menu from "~/components/Menu";
-import Nebula from "~/components/Nebula";
+import Nebula, { nebulaColors as getNebulaColors, hashSeedString } from "~/components/Nebula";
 import { Canvas, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import Controls from "~/components/Controls";
@@ -284,7 +284,14 @@ const App = ({ data }: any) => {
   const [nebulaContrast, setNebulaContrast] = useState(1.5);
   const [nebulaMix, setNebulaMix] = useState(0.4);
   const [nebulaCutoff, setNebulaCutoff] = useState(0.0);
-  const [nebulaColors, setNebulaColors] = useState<[string, string, string, string] | null>(null);
+  const [nebulaColorOverride, setNebulaColors] = useState<[string, string, string, string] | null>(null);
+  // Compute auto nebula palette so pickers show actual colours
+  const autoNebulaColors = useMemo(() => {
+    const seedStr = data?.name?.[0] ?? "system";
+    const h = hashSeedString(seedStr);
+    const [c1, c2, c3, c4] = getNebulaColors(h, getPrimaryStarTemp(data));
+    return ['#' + c1.getHexString(), '#' + c2.getHexString(), '#' + c3.getHexString(), '#' + c4.getHexString()] as [string, string, string, string];
+  }, [data]);
   const [showNebula, setShowNebula] = useState(true);
   const [showSkybox, setShowSkybox] = useState(true);
   const [skyBrightness, setSkyBrightness] = useState(1.0);
@@ -526,20 +533,20 @@ const App = ({ data }: any) => {
           <Slider label="Mix" min={0} max={1} step={0.05} value={nebulaMix} onChange={setNebulaMix} />
           <Slider label="Cutoff" min={0} max={0.8} step={0.05} value={nebulaCutoff} onChange={setNebulaCutoff} />
           <div className="border-t border-white/10 my-0.5" />
-          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Colours {nebulaColors ? '(custom)' : '(auto from star)'}</div>
+          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Colours {nebulaColorOverride ? '(custom)' : '(auto from star)'}</div>
           <div className="flex items-center gap-1 flex-wrap">
             {[0, 1, 2, 3].map(i => (
               <input key={i} type="color"
-                value={nebulaColors ? nebulaColors[i] : '#888888'}
+                value={nebulaColorOverride ? nebulaColorOverride[i] : autoNebulaColors[i]}
                 onChange={(e) => {
-                  const cur = nebulaColors || ['#888888', '#888888', '#888888', '#888888'] as [string, string, string, string];
+                  const cur = nebulaColorOverride || [...autoNebulaColors] as [string, string, string, string];
                   const next = [...cur] as [string, string, string, string];
                   next[i] = e.target.value;
                   setNebulaColors(next);
                 }}
                 className="w-6 h-6 cursor-pointer border-0 p-0 bg-transparent" />
             ))}
-            {nebulaColors && (
+            {nebulaColorOverride && (
               <button onClick={() => setNebulaColors(null)} className="text-[9px] text-cyan-400 hover:text-cyan-300 ml-1">Reset</button>
             )}
           </div>
@@ -720,7 +727,7 @@ const App = ({ data }: any) => {
           <RendererSync toneMapping={THREE.ACESFilmicToneMapping} exposure={1.0} />
           {showSkybox && <MilkyWaySkybox brightness={skyBrightness} contrast={skyContrast} />}
           <ambientLight intensity={ambientIntensity} color={ambientColor} />
-          {showNebula && <Nebula seed={data?.name?.[0] ?? "system"} density={nebulaDensity} brightness={nebulaBrightness} scale={nebulaScale} warp={nebulaWarp} contrast={nebulaContrast} mix={nebulaMix} cutoff={nebulaCutoff} colors={nebulaColors} starTemp={getPrimaryStarTemp(data)} />}
+          {showNebula && <Nebula seed={data?.name?.[0] ?? "system"} density={nebulaDensity} brightness={nebulaBrightness} scale={nebulaScale} warp={nebulaWarp} contrast={nebulaContrast} mix={nebulaMix} cutoff={nebulaCutoff} colors={nebulaColorOverride} starTemp={getPrimaryStarTemp(data)} />}
           <Binary data={data} />
           <Controls follow={follow} />
           <EffectComposer key={fxKey}>
