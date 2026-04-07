@@ -275,7 +275,8 @@ const Planet = ({ data, starData, starRef }) => {
           alpha *= shadow;
 
           alpha *= uIntensity;
-          gl_FragColor = vec4(uColor * alpha, alpha);
+          if (alpha < 0.005) discard;
+          gl_FragColor = vec4(uColor * alpha, 0.0);
         }
       `,
     });
