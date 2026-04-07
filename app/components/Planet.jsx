@@ -227,7 +227,7 @@ const Planet = ({ data, starData, starRef }) => {
     const hMat = new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
-      depthTest: true,
+      depthTest: false,
       blending: THREE.AdditiveBlending,
       side: THREE.DoubleSide,
       uniforms: {
