@@ -63,7 +63,10 @@ const Controls = ({ follow, autoRotate = false, viewAzimuth = 0, viewPolar = Mat
       bbox.getBoundingSphere(sphere);
       cameraControlsRef.current.minDistance = sphere.radius * 1.02;
 
-      cameraControlsRef.current.fitToBox(activeRef.current, animate);
+      // fitToBox on first select to frame the star, then just move target to keep angle
+      if (isFirstSelect) {
+        cameraControlsRef.current.fitToBox(activeRef.current, animate);
+      }
     }
   }, [activeRef]);
 
