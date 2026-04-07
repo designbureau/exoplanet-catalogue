@@ -93,37 +93,41 @@ const Controls = ({ follow }) => {
           _closestPt.copy(camPos).addScaledVector(_flightDir, projection);
           const dist = _planetPos.distanceTo(_closestPt);
 
-          // Approximate radius from mesh scale (avoids expensive Box3 per frame)
-          const s = planetRef.current.scale;
-          const radius = Math.max(s.x, s.y, s.z);
-          const avoidRadius = radius * 3.0; // generous avoidance zone
+          // Get visual radius from geometry bounding sphere (cached by Three.js)
+          const geo = planetRef.current.geometry;
+          if (geo && !geo.boundingSphere) geo.computeBoundingSphere();
+          const radius = geo?.boundingSphere?.radius || 1;
+          const avoidRadius = radius * 5.0; // generous avoidance zone
 
           if (dist < avoidRadius && dist > 0.001) {
             // Push away from planet perpendicular to flight path
             _avoidDir.copy(_closestPt).sub(_planetPos).normalize();
-            const strength = (avoidRadius - dist) / avoidRadius;
-            _offset.addScaledVector(_avoidDir, strength * radius * 2.0);
+            const strength = Math.pow((avoidRadius - dist) / avoidRadius, 0.5); // sqrt for stronger at distance
+            _offset.addScaledVector(_avoidDir, strength * radius * 4.0);
           }
         }
       }
 
       // Smooth the offset (blend in when avoiding, decay when clear)
       if (_offset.lengthSq() > 0.001) {
-        _currentOffset.lerp(_offset, 0.04);
+        _currentOffset.lerp(_offset, 0.15); // fast response
       } else {
-        _currentOffset.lerp(_zero, 0.08);
+        _currentOffset.lerp(_zero, 0.06); // gentle decay
+      }
+
+      // Apply avoidance: offset both camera position and target for swooping effect
+      if (_currentOffset.lengthSq() > 0.001) {
+        const cx = _currentOffset.x;
+        const cy = _currentOffset.y;
+        const cz = _currentOffset.z;
+        camera.position.x += cx * 0.12;
+        camera.position.y += cy * 0.12;
+        camera.position.z += cz * 0.12;
       }
 
       const tx = _objectPosition.x;
       const ty = _objectPosition.y;
       const tz = _objectPosition.z;
-
-      // Apply avoidance offset to camera position (swoop around obstacles)
-      if (_currentOffset.lengthSq() > 0.001) {
-        camera.position.x += _currentOffset.x * 0.05;
-        camera.position.y += _currentOffset.y * 0.05;
-        camera.position.z += _currentOffset.z * 0.05;
-      }
 
       if (follow) {
         cameraControlsRef.current.moveTo(tx, ty, tz, true);
