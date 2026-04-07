@@ -63,10 +63,16 @@ const Controls = ({ follow, autoRotate = false, viewAzimuth = 0, viewPolar = Mat
       bbox.getBoundingSphere(sphere);
       cameraControlsRef.current.minDistance = sphere.radius * 1.02;
 
-      cameraControlsRef.current.rotateTo(viewAzimuth, viewPolar, false);
       cameraControlsRef.current.fitToBox(activeRef.current, animate);
     }
   }, [activeRef]);
+
+  // Live camera angle update from sliders
+  useEffect(() => {
+    if (cameraControlsRef.current) {
+      cameraControlsRef.current.rotateTo(viewAzimuth, viewPolar, true);
+    }
+  }, [viewAzimuth, viewPolar]);
 
   useFrame((state, delta) => {
     const elapsedTime = state.clock.getElapsedTime();
