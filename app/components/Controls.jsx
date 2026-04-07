@@ -63,10 +63,9 @@ const Controls = ({ follow, autoRotate = false }) => {
       bbox.getBoundingSphere(sphere);
       cameraControlsRef.current.minDistance = sphere.radius * 1.02;
 
-      cameraControlsRef.current.fitToBox(activeRef.current, animate).then(() => {
-        // Rotate to view from the orbital plane — azimuth 0, polar PI/2
-        cameraControlsRef.current.rotateTo(0, Math.PI * 0.5, true);
-      });
+      // Set orbital plane horizontal: camera looks along Z, orbits are in XY
+      cameraControlsRef.current.rotateTo(0, Math.PI * 0.45, false);
+      cameraControlsRef.current.fitToBox(activeRef.current, animate);
     }
   }, [activeRef]);
 
