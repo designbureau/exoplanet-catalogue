@@ -64,6 +64,15 @@ const Controls = ({ follow, autoRotate = false }) => {
       cameraControlsRef.current.minDistance = sphere.radius * 1.02;
 
       cameraControlsRef.current.fitToBox(activeRef.current, animate);
+
+      // Match camera elevation to the orbital plane
+      // The planet's parent group is rotated by inclination on X axis
+      const parent = activeRef.current.parent;
+      if (parent) {
+        // Polar angle = PI/2 is equatorial view; adjust by orbital tilt
+        const tilt = parent.rotation.x; // inclination in radians
+        cameraControlsRef.current.rotatePolarTo(Math.PI / 2 - tilt * 0.8, animate);
+      }
     }
   }, [activeRef]);
 
