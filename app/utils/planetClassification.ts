@@ -639,6 +639,33 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       break;
   }
 
+  // Apply halo presets for gas/ice giants (after switch so all subtypes covered)
+  const isGasGiant = [PlanetType.COLD_GIANT, PlanetType.COOL_GIANT, PlanetType.WARM_GIANT, PlanetType.HOT_JUPITER_IV, PlanetType.HOT_JUPITER_V].includes(type);
+  if (isGasGiant) {
+    const gg = (hzRanges as any)?.gasGiant || {};
+    base.haloIntensity = gg.halo ?? 0;
+    base.haloScale = gg.haloScale ?? 2.0;
+    base.haloFalloff = gg.haloFalloff ?? 1.5;
+    base.haloWhiten = gg.haloWhiten ?? 0.35;
+    base.haloShadow = gg.haloShadow ?? 0.7;
+    base.rimIntensity = gg.rim ?? 0;
+    base.rimFalloff = gg.rimFalloff ?? 1.0;
+    if (gg.rimDay) base.atmosDayColor = new THREE.Color(gg.rimDay);
+    if (gg.rimTwi) base.atmosTwilightColor = new THREE.Color(gg.rimTwi);
+  }
+  if (type === PlanetType.ICE_GIANT) {
+    const ig = (hzRanges as any)?.iceGiant || {};
+    base.haloIntensity = ig.halo ?? 0;
+    base.haloScale = ig.haloScale ?? 2.0;
+    base.haloFalloff = ig.haloFalloff ?? 1.5;
+    base.haloWhiten = ig.haloWhiten ?? 0.35;
+    base.haloShadow = ig.haloShadow ?? 0.7;
+    base.rimIntensity = ig.rim ?? 0;
+    base.rimFalloff = ig.rimFalloff ?? 1.0;
+    if (ig.rimDay) base.atmosDayColor = new THREE.Color(ig.rimDay);
+    if (ig.rimTwi) base.atmosTwilightColor = new THREE.Color(ig.rimTwi);
+  }
+
   // Gas giant mass/radius-based colour variation
   // Heavier giants (>0.5 Jup) → more Jupiter-like (orange/brown, strong bands)
   // Lighter giants (<0.5 Jup) → more Saturn-like (pale gold/azure, muted bands)

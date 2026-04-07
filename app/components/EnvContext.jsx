@@ -78,6 +78,10 @@ export const EnvProvider = ({ children }) => {
     waterWorld: { atmos: 0.0, rim: 0.0, rimFalloff: 1.0, rimDay: '#2266cc', rimTwi: '#554422', shell: 0.0, halo: 0.0, haloScale: 2.0, haloFalloff: 1.5, haloWhiten: 0.3, haloShadow: 0.7 },
     // Sub-Neptune: thick atmosphere, blue-grey, no visible surface
     subNeptune: { atmos: 0.0, rim: 0.0, rimFalloff: 0.8, rimDay: '#6688bb', rimTwi: '#445566', shell: 0.0, halo: 0.0, haloScale: 2.5, haloFalloff: 1.2, haloWhiten: 0.35, haloShadow: 0.7 },
+    // Gas Giant: soft edge glow
+    gasGiant: { atmos: 0.0, rim: 0.0, rimFalloff: 1.0, rimDay: '#aabbcc', rimTwi: '#556677', shell: 0.0, halo: 0.0, haloScale: 2.0, haloFalloff: 1.5, haloWhiten: 0.35, haloShadow: 0.7 },
+    // Ice Giant: subtle blue edge
+    iceGiant: { atmos: 0.0, rim: 0.0, rimFalloff: 1.0, rimDay: '#6699bb', rimTwi: '#334466', shell: 0.0, halo: 0.0, haloScale: 2.0, haloFalloff: 1.5, haloWhiten: 0.35, haloShadow: 0.7 },
   });
   const updatePreset = (cat, key, value) => setHzPresets(prev => ({ ...prev, [cat]: { ...prev[cat], [key]: value } }));
 

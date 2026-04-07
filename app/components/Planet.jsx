@@ -307,7 +307,7 @@ const Planet = ({ data, starData, starRef }) => {
   // Effective layer visibility: based on per-planet intensity from classification
   const effectiveRim = defaultShowRim && rimIntensity > 0;
   const effectiveShell = defaultShowShell && shellIntensity > 0;
-  const effectiveHalo = defaultShowHalo && haloIntensity > 0;
+  const effectiveHalo = haloIntensity > 0;
 
 
   useEffect(() => {

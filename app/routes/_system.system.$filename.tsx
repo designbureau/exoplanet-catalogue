@@ -725,6 +725,8 @@ const App = ({ data }: any) => {
           <Slider label="Turb" min={0} max={1} step={0.01} value={gasTurb} onChange={setGasTurb} />
           <Slider label="Bands" min={1} max={20} step={0.5} value={gasBands} onChange={setGasBands} />
           <Slider label="Edge" min={0} max={1} step={0.01} value={gasEdgeNoise} onChange={setGasEdgeNoise} />
+          <div className="border-t border-white/10 my-0.5" />
+          <AtmosPresetSliders preset={hzPresets.gasGiant || { rim: 0, rimFalloff: 1, rimDay: '#aabbcc', rimTwi: '#556677', shell: 0, halo: 0, haloScale: 2, haloFalloff: 1.5, haloWhiten: 0.35, haloShadow: 0.7 }} cat="gasGiant" updatePreset={updatePreset} />
         </Accordion>
 
         <Accordion title="Ice Giant" defaultOpen={false}>
@@ -733,6 +735,8 @@ const App = ({ data }: any) => {
           <Slider label="Turb" min={0} max={1} step={0.01} value={iceTurb} onChange={setIceTurb} />
           <Slider label="Bands" min={1} max={15} step={0.5} value={iceBands} onChange={setIceBands} />
           <Slider label="Edge" min={0} max={1} step={0.01} value={iceEdgeNoise} onChange={setIceEdgeNoise} />
+          <div className="border-t border-white/10 my-0.5" />
+          <AtmosPresetSliders preset={hzPresets.iceGiant || { rim: 0, rimFalloff: 1, rimDay: '#6699bb', rimTwi: '#334466', shell: 0, halo: 0, haloScale: 2, haloFalloff: 1.5, haloWhiten: 0.35, haloShadow: 0.7 }} cat="iceGiant" updatePreset={updatePreset} />
         </Accordion>
       </div>}
       <div id="canvas-container">
