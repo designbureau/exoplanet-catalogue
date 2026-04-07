@@ -15,7 +15,7 @@ const _offset = new THREE.Vector3();
 const _currentOffset = new THREE.Vector3();
 const _zero = new THREE.Vector3();
 
-const Controls = ({ follow, autoRotate = false }) => {
+const Controls = ({ follow, autoRotate = false, viewAzimuth = 0, viewPolar = Math.PI * 0.45 }) => {
   const { activeRef, refs } = useContext(RefContext);
   const cameraControlsRef = useRef();
   const { camera } = useThree();
@@ -63,8 +63,7 @@ const Controls = ({ follow, autoRotate = false }) => {
       bbox.getBoundingSphere(sphere);
       cameraControlsRef.current.minDistance = sphere.radius * 1.02;
 
-      // Set orbital plane horizontal: camera looks along Z, orbits are in XY
-      cameraControlsRef.current.rotateTo(0, Math.PI * 0.45, false);
+      cameraControlsRef.current.rotateTo(viewAzimuth, viewPolar, false);
       cameraControlsRef.current.fitToBox(activeRef.current, animate);
     }
   }, [activeRef]);

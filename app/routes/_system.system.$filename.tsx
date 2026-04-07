@@ -278,6 +278,8 @@ const App = ({ data }: any) => {
 
   const [follow, setFollow] = useState(true);
   const [autoRotate, setAutoRotate] = useState(true);
+  const [viewAzimuth, setViewAzimuth] = useState(0);
+  const [viewPolar, setViewPolar] = useState(Math.PI * 0.45);
   const [nebulaDensity, setNebulaDensity] = useState(1.0);
   const [nebulaBrightness, setNebulaBrightness] = useState(1.0);
   const [nebulaScale, setNebulaScale] = useState(1.0);
@@ -526,6 +528,8 @@ const App = ({ data }: any) => {
 
         <Accordion title="Environment" defaultOpen={false}>
           <Toggle label="Orbits" checked={showOrbits} onChange={setShowOrbits} />
+          <Slider label="Azimuth" min={-3.14} max={3.14} step={0.05} value={viewAzimuth} onChange={setViewAzimuth} />
+          <Slider label="Polar" min={0.1} max={3.0} step={0.05} value={viewPolar} onChange={setViewPolar} />
           <Toggle label="Habitable Zone" checked={showHabitableZone} onChange={setShowHabitableZone} />
           <Toggle label="Starfield" checked={showSkybox} onChange={setShowSkybox} />
           <Slider label="Sky Brt" min={0.1} max={3} step={0.05} value={skyBrightness} onChange={setSkyBrightness} />
@@ -738,7 +742,7 @@ const App = ({ data }: any) => {
           <ambientLight intensity={ambientIntensity} color={ambientColor} />
           {showNebula && <Nebula seed={data?.name?.[0] ?? "system"} density={nebulaDensity} brightness={nebulaBrightness} scale={nebulaScale} warp={nebulaWarp} contrast={nebulaContrast} mix={nebulaMix} cutoff={nebulaCutoff} colors={nebulaColorOverride} starTemp={getPrimaryStarTemp(data)} />}
           <Binary data={data} />
-          <Controls follow={follow} autoRotate={autoRotate} />
+          <Controls follow={follow} autoRotate={autoRotate} viewAzimuth={viewAzimuth} viewPolar={viewPolar} />
           <EffectComposer key={fxKey} multisampling={0}>
             {/* 0. Antialiasing */}
             {fx.smaa.on && <SMAA preset={SMAAPreset.MEDIUM} edgeDetectionMode={EdgeDetectionMode.LUMA} />}
