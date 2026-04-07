@@ -63,11 +63,10 @@ const Controls = ({ follow, autoRotate = false }) => {
       bbox.getBoundingSphere(sphere);
       cameraControlsRef.current.minDistance = sphere.radius * 1.02;
 
-      cameraControlsRef.current.fitToBox(activeRef.current, animate);
-
-      // View from slightly above the orbital plane
-      // PI/2 = equatorial, lower = more elevated
-      cameraControlsRef.current.rotatePolarTo(Math.PI * 0.5, animate);
+      // fitToBox then adjust polar angle after a tick so it doesn't get overwritten
+      cameraControlsRef.current.fitToBox(activeRef.current, animate).then(() => {
+        cameraControlsRef.current.rotatePolarTo(Math.PI * 0.5, true);
+      });
     }
   }, [activeRef]);
 
