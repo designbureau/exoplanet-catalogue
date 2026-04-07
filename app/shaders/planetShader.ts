@@ -773,10 +773,6 @@ const hazyFragment = `
     color = mix(color, color3 * 1.1, turbDetail * 0.3);
     color *= 0.85 + 0.3 * r1;
 
-    // Subtle limb brightening (hazy atmosphere scatters at edges)
-    float limb = 1.0 - abs(dot(vNormal, normalize(vec3(0.0, 0.0, 1.0))));
-    color = mix(color, color4, pow(limb, 3.0) * 0.15);
-
     vec3 V = normalize(cameraPosition - vWorldPosition);
     color = planetLighting(color, vWorldNormal, u_sunDirection, V, u_ambient);
     color = applyAtmosphere(color, vWorldNormal, vWorldPosition);
