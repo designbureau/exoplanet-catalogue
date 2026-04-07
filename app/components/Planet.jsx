@@ -310,7 +310,6 @@ const Planet = ({ data, starData, starRef }) => {
   const effectiveRim = defaultShowRim && rimIntensity > 0;
   const effectiveShell = defaultShowShell && shellIntensity > 0;
   const effectiveHalo = defaultShowHalo && haloIntensity > 0;
-  if (planetType === 'VENUS_LIKE') console.log(`[VENUS] ${name}: showHalo=${defaultShowHalo} haloInt=${haloIntensity} haloScale=${haloScale} haloFall=${haloFalloff} effective=${effectiveHalo} haloMat=${!!haloMat}`);
 
 
   useEffect(() => {
