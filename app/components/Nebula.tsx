@@ -281,11 +281,6 @@ export default function Nebula({ seed = "default", density = 0.6, brightness = 0
   }, [seed, starTemp]);
 
   useFrame((state) => {
-    // Parallax: nebula shifts slightly with camera movement relative to starfield
-    if (meshRef.current) {
-      const cam = state.camera.position;
-      meshRef.current.position.set(cam.x * 0.15, cam.y * 0.15, cam.z * 0.15);
-    }
     material.uniforms.u_time.value = state.clock.getElapsedTime();
     material.uniforms.u_nebulaDensity.value = density;
     material.uniforms.u_brightness.value = brightness;
