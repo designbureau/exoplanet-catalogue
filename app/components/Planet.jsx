@@ -228,11 +228,7 @@ const Planet = ({ data, starData, starRef }) => {
       transparent: true,
       depthWrite: false,
       depthTest: true,
-      blending: THREE.CustomBlending,
-      blendSrc: THREE.OneFactor,
-      blendDst: THREE.OneFactor,
-      blendSrcAlpha: THREE.ZeroFactor,
-      blendDstAlpha: THREE.OneFactor,
+      blending: THREE.AdditiveBlending,
       side: THREE.DoubleSide,
       uniforms: {
         uRadius: { value: params.haloScale * 0.3 },
@@ -279,9 +275,7 @@ const Planet = ({ data, starData, starRef }) => {
           alpha *= shadow;
 
           alpha *= uIntensity;
-          // Square alpha for RGB to make edge falloff steeper — prevents
-          // near-zero RGB from being amplified by post-processing into dark ring
-          gl_FragColor = vec4(uColor * alpha * alpha, 0.0);
+          gl_FragColor = vec4(uColor * alpha, alpha);
         }
       `,
     });

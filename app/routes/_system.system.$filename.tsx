@@ -732,7 +732,7 @@ const App = ({ data }: any) => {
         </Accordion>
       </div>}
       <div id="canvas-container">
-        <Canvas dpr={[1, 2]} camera={{ far: 10000000, near: 0.01, fov: 50 }}>
+        <Canvas dpr={[1, 2]} camera={{ far: 10000000, near: 0.01, fov: 50 }} gl={{ alpha: false }}>
           <RendererSync toneMapping={THREE.ACESFilmicToneMapping} exposure={1.0} />
           {showSkybox && <MilkyWaySkybox brightness={skyBrightness} contrast={skyContrast} />}
           <ambientLight intensity={ambientIntensity} color={ambientColor} />
