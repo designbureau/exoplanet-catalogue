@@ -113,7 +113,8 @@ const fragmentShader = `
     // Combine into nebula density
     float nebula = c2 * (1.0 - u_mix) + r1 * u_mix;
     nebula = pow(nebula, u_contrast) * u_nebulaDensity;
-    nebula = smoothstep(u_cutoff, u_cutoff + 0.1, nebula);
+    float gapMask = smoothstep(u_cutoff, u_cutoff + 0.15, nebula);
+    nebula *= gapMask;
     nebula = clamp(nebula, 0.0, 1.0);
 
     // Colour: spatially varied blending using different noise layers
