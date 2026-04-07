@@ -279,7 +279,9 @@ const Planet = ({ data, starData, starRef }) => {
           alpha *= shadow;
 
           alpha *= uIntensity;
-          gl_FragColor = vec4(uColor * alpha, 0.0);
+          // Square alpha for RGB to make edge falloff steeper — prevents
+          // near-zero RGB from being amplified by post-processing into dark ring
+          gl_FragColor = vec4(uColor * alpha * alpha, 0.0);
         }
       `,
     });
