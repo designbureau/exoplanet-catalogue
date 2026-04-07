@@ -43,11 +43,17 @@ const Controls = ({ follow }) => {
       activeRef?.current?.getWorldPosition instanceof Function
     ) {
       activeRef.current.getWorldPosition(_objectPosition);
+
+      // First selection (initial load) is instant, subsequent ones animate
+      const isFirstSelect = !cameraControlsRef.current._hasInitialTarget;
+      cameraControlsRef.current._hasInitialTarget = true;
+      const animate = !isFirstSelect;
+
       cameraControlsRef.current.setTarget(
         _objectPosition.x,
         _objectPosition.y,
         _objectPosition.z,
-        true
+        animate
       );
 
       // Set min distance to the object's bounding sphere radius
@@ -57,7 +63,7 @@ const Controls = ({ follow }) => {
       bbox.getBoundingSphere(sphere);
       cameraControlsRef.current.minDistance = sphere.radius * 1.02;
 
-      cameraControlsRef.current.fitToBox(activeRef.current, true);
+      cameraControlsRef.current.fitToBox(activeRef.current, animate);
     }
   }, [activeRef]);
 
