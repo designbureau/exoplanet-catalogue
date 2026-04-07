@@ -265,6 +265,7 @@ const App = ({ data }: any) => {
     bodyScale, setBodyScale,
     showHabitableZone, setShowHabitableZone,
     showOrbits, setShowOrbits,
+    autoRotate, setAutoRotate,
     atmosFalloff, setAtmosFalloff,
     glowFalloff, setGlowFalloff,
     glowInner, setGlowInner,
@@ -517,6 +518,7 @@ const App = ({ data }: any) => {
 
         <Accordion title="Environment" defaultOpen={false}>
           <Toggle label="Orbits" checked={showOrbits} onChange={setShowOrbits} />
+          <Toggle label="Auto Rotate" checked={autoRotate} onChange={setAutoRotate} />
           <Toggle label="Habitable Zone" checked={showHabitableZone} onChange={setShowHabitableZone} />
           <Toggle label="Starfield" checked={showSkybox} onChange={setShowSkybox} />
           <Slider label="Sky Brt" min={0.1} max={3} step={0.05} value={skyBrightness} onChange={setSkyBrightness} />
