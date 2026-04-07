@@ -104,7 +104,7 @@ const Planet = ({ data, starData, starRef }) => {
   const ringRef = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, wrapRange, wrapPower, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, showOrbits, autoRotate, hzPresets } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, wrapRange, wrapPower, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, showOrbits, hzPresets } = useContext(EnvContext);
 
   // Pre-allocated vectors for per-frame camera updates
   const _camRight = useMemo(() => new THREE.Vector3(), []);
@@ -488,7 +488,7 @@ const Planet = ({ data, starData, starRef }) => {
   useFrame((state) => {
     const elapsedTime = state.clock.getElapsedTime();
     ref.current.rotation.x = Math.PI * 0.5;
-    if (autoRotate) ref.current.rotation.y += 0.001;
+    ref.current.rotation.y += 0.001;
     const angle = (elapsedTime / period) * speed + phaseOffset;
     ref.current.position.x = ellipse.xRadius * Math.cos(angle);
     ref.current.position.y = ellipse.yRadius * Math.sin(angle);

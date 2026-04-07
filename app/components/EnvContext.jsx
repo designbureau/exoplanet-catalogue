@@ -23,7 +23,6 @@ export const EnvProvider = ({ children }) => {
   // Toggles
   const [showHabitableZone, setShowHabitableZone] = useState(false);
   const [showOrbits, setShowOrbits] = useState(true);
-  const [autoRotate, setAutoRotate] = useState(false);
 
   // Shader lighting
   const [shaderAmbient, setShaderAmbient] = useState(0.0);
@@ -127,7 +126,6 @@ export const EnvProvider = ({ children }) => {
       showHabitableZone,
       setShowHabitableZone,
       showOrbits, setShowOrbits,
-      autoRotate, setAutoRotate,
       shaderAmbient, setShaderAmbient,
       lavaAmbient, setLavaAmbient,
       atmosFalloff, setAtmosFalloff,
@@ -167,7 +165,7 @@ export const EnvProvider = ({ children }) => {
       typeColorOverrides, setTypeColorOverrides,
       activePlanetInfo, setActivePlanetInfo,
       hzPresets, updatePreset,
-  }), [Constants, planetDistanceFactor, binaryDistanceFactor, bodyScale, showHabitableZone, showOrbits, autoRotate, shaderAmbient, lavaAmbient, wrapRange, wrapPower, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, activePlanetInfo, hzPresets]);
+  }), [Constants, planetDistanceFactor, binaryDistanceFactor, bodyScale, showHabitableZone, showOrbits, shaderAmbient, lavaAmbient, wrapRange, wrapPower, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, activePlanetInfo, hzPresets]);
 
   return (
     <EnvContext.Provider value={contextValue}>

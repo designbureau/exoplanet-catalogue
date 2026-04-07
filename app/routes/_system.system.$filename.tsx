@@ -265,7 +265,6 @@ const App = ({ data }: any) => {
     bodyScale, setBodyScale,
     showHabitableZone, setShowHabitableZone,
     showOrbits, setShowOrbits,
-    autoRotate, setAutoRotate,
     atmosFalloff, setAtmosFalloff,
     glowFalloff, setGlowFalloff,
     glowInner, setGlowInner,
@@ -278,6 +277,7 @@ const App = ({ data }: any) => {
   } = useContext(EnvContext);
 
   const [follow, setFollow] = useState(true);
+  const [autoRotate, setAutoRotate] = useState(false);
   const [nebulaDensity, setNebulaDensity] = useState(1.0);
   const [nebulaBrightness, setNebulaBrightness] = useState(1.0);
   const [nebulaScale, setNebulaScale] = useState(1.0);
@@ -418,6 +418,14 @@ const App = ({ data }: any) => {
         >
           Lights
         </button>
+        <button
+          className={`px-3 py-1.5 text-xs rounded-md backdrop-blur-sm transition-colors ${
+            autoRotate ? "bg-green-400/20 text-green-300" : "bg-black/60 text-muted-foreground hover:text-white"
+          }`}
+          onClick={() => setAutoRotate(!autoRotate)}
+        >
+          {autoRotate ? "Rotating" : "Static"}
+        </button>
       </div>
       {showLightsGui && (
         <div className="fixed bottom-12 left-2 z-10 flex flex-col gap-1 rounded-md bg-black/60 px-4 py-3 backdrop-blur-sm text-[10px] text-muted-foreground w-64" style={{ scrollbarWidth: 'thin' }}>
@@ -518,7 +526,6 @@ const App = ({ data }: any) => {
 
         <Accordion title="Environment" defaultOpen={false}>
           <Toggle label="Orbits" checked={showOrbits} onChange={setShowOrbits} />
-          <Toggle label="Auto Rotate" checked={autoRotate} onChange={setAutoRotate} />
           <Toggle label="Habitable Zone" checked={showHabitableZone} onChange={setShowHabitableZone} />
           <Toggle label="Starfield" checked={showSkybox} onChange={setShowSkybox} />
           <Slider label="Sky Brt" min={0.1} max={3} step={0.05} value={skyBrightness} onChange={setSkyBrightness} />
@@ -731,7 +738,7 @@ const App = ({ data }: any) => {
           <ambientLight intensity={ambientIntensity} color={ambientColor} />
           {showNebula && <Nebula seed={data?.name?.[0] ?? "system"} density={nebulaDensity} brightness={nebulaBrightness} scale={nebulaScale} warp={nebulaWarp} contrast={nebulaContrast} mix={nebulaMix} cutoff={nebulaCutoff} colors={nebulaColorOverride} starTemp={getPrimaryStarTemp(data)} />}
           <Binary data={data} />
-          <Controls follow={follow} />
+          <Controls follow={follow} autoRotate={autoRotate} />
           <EffectComposer key={fxKey}>
             {/* 0. Antialiasing */}
             {fx.smaa.on && <SMAA preset={SMAAPreset.MEDIUM} edgeDetectionMode={EdgeDetectionMode.LUMA} />}

@@ -15,7 +15,7 @@ const _offset = new THREE.Vector3();
 const _currentOffset = new THREE.Vector3();
 const _zero = new THREE.Vector3();
 
-const Controls = ({ follow }) => {
+const Controls = ({ follow, autoRotate = false }) => {
   const { activeRef, refs } = useContext(RefContext);
   const cameraControlsRef = useRef();
   const { camera } = useThree();
@@ -210,7 +210,7 @@ const Controls = ({ follow }) => {
       }
 
       // Gentle auto-rotate when user isn't interacting
-      if (!keyDown && !cameraControlsRef.current.active) {
+      if (autoRotate && !keyDown && !cameraControlsRef.current.active) {
         cameraControlsRef.current.azimuthAngle += 0.0001 * delta * 60;
       }
     }
