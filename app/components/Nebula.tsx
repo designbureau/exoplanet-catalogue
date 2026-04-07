@@ -23,6 +23,10 @@ const fragmentShader = `
   uniform float u_nebulaDensity;
   uniform float u_brightness;
   uniform float u_starDensity;
+  uniform float u_scale;
+  uniform float u_warp;
+  uniform float u_contrast;
+  uniform float u_mix;
   varying vec3 vPosition;
 
   // --- Noise functions ---
@@ -97,17 +101,17 @@ const fragmentShader = `
     vec3 sp = dir + u_seed * 50.0;
 
     // Layer 1: base cloud structure
-    float c1 = cloudNoise(sp, 1.5, u_seed.x * 100.0);
+    float c1 = cloudNoise(sp, 1.5 * u_scale, u_seed.x * 100.0);
 
     // Layer 2: domain-warped cloud using layer 1
-    float c2 = cloudNoise(sp + vec3(c1 * 0.4), 2.5, u_seed.y * 100.0 + 310.4);
+    float c2 = cloudNoise(sp + vec3(c1 * u_warp), 2.5 * u_scale, u_seed.y * 100.0 + 310.4);
 
     // Layer 3: ridged features for filamentary structure
-    float r1 = ridgedNoise(sp + vec3(c1 * 0.2, c2 * 0.15, 0.0), 2.0);
+    float r1 = ridgedNoise(sp + vec3(c1 * u_warp * 0.5, c2 * u_warp * 0.375, 0.0), 2.0 * u_scale);
 
     // Combine into nebula density
-    float nebula = c2 * 0.6 + r1 * 0.4;
-    nebula = pow(nebula, 1.5) * u_nebulaDensity;
+    float nebula = c2 * (1.0 - u_mix) + r1 * u_mix;
+    nebula = pow(nebula, u_contrast) * u_nebulaDensity;
     nebula = clamp(nebula, 0.0, 1.0);
 
     // Colour: spatially varied blending using different noise layers
@@ -213,9 +217,14 @@ interface NebulaProps {
   brightness?: number;
   starTemp?: number;
   starDensity?: number;
+  scale?: number;
+  warp?: number;
+  contrast?: number;
+  mix?: number;
+  colors?: [string, string, string, string] | null;
 }
 
-export default function Nebula({ seed = "default", density = 0.6, brightness = 0.5, starTemp = 5500, starDensity = 1.0 }: NebulaProps) {
+export default function Nebula({ seed = "default", density = 0.6, brightness = 0.5, starTemp = 5500, starDensity = 1.0, scale = 1.0, warp = 0.4, contrast = 1.5, mix = 0.4, colors = null }: NebulaProps) {
   const meshRef = useRef<THREE.Mesh>(null);
 
   const material = useMemo(() => {
@@ -237,13 +246,17 @@ export default function Nebula({ seed = "default", density = 0.6, brightness = 0
       uniforms: {
         u_time: { value: 0.0 },
         u_seed: { value: seedVec },
-        u_color1: { value: c1 },
-        u_color2: { value: c2 },
-        u_color3: { value: c3 },
-        u_color4: { value: c4 },
+        u_color1: { value: colors ? new THREE.Color(colors[0]) : c1 },
+        u_color2: { value: colors ? new THREE.Color(colors[1]) : c2 },
+        u_color3: { value: colors ? new THREE.Color(colors[2]) : c3 },
+        u_color4: { value: colors ? new THREE.Color(colors[3]) : c4 },
         u_nebulaDensity: { value: density },
         u_brightness: { value: brightness },
         u_starDensity: { value: starDensity },
+        u_scale: { value: scale },
+        u_warp: { value: warp },
+        u_contrast: { value: contrast },
+        u_mix: { value: mix },
       },
       vertexShader,
       fragmentShader,
@@ -252,12 +265,22 @@ export default function Nebula({ seed = "default", density = 0.6, brightness = 0
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     });
-  }, [seed, density, brightness, starTemp, starDensity]);
+  }, [seed, starTemp]);
 
   useFrame((state) => {
     material.uniforms.u_time.value = state.clock.getElapsedTime();
     material.uniforms.u_nebulaDensity.value = density;
     material.uniforms.u_brightness.value = brightness;
+    material.uniforms.u_scale.value = scale;
+    material.uniforms.u_warp.value = warp;
+    material.uniforms.u_contrast.value = contrast;
+    material.uniforms.u_mix.value = mix;
+    if (colors) {
+      material.uniforms.u_color1.value.set(colors[0]);
+      material.uniforms.u_color2.value.set(colors[1]);
+      material.uniforms.u_color3.value.set(colors[2]);
+      material.uniforms.u_color4.value.set(colors[3]);
+    }
   });
 
   return (

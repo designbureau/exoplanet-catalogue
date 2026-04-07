@@ -279,6 +279,11 @@ const App = ({ data }: any) => {
   const [follow, setFollow] = useState(true);
   const [nebulaDensity, setNebulaDensity] = useState(1.0);
   const [nebulaBrightness, setNebulaBrightness] = useState(1.0);
+  const [nebulaScale, setNebulaScale] = useState(1.0);
+  const [nebulaWarp, setNebulaWarp] = useState(0.4);
+  const [nebulaContrast, setNebulaContrast] = useState(1.5);
+  const [nebulaMix, setNebulaMix] = useState(0.4);
+  const [nebulaColors, setNebulaColors] = useState<[string, string, string, string] | null>(null);
   const [showNebula, setShowNebula] = useState(true);
   const [showSkybox, setShowSkybox] = useState(true);
   const [skyBrightness, setSkyBrightness] = useState(1.0);
@@ -503,14 +508,39 @@ const App = ({ data }: any) => {
         <Slider label="Bodies" min={1} max={50} step={1} value={bodyScale} onChange={setBodyScale} suffix="x" />
 
         <Accordion title="Environment" defaultOpen={false}>
-          <Slider label="Nebula" min={0} max={3} step={0.05} value={nebulaDensity} onChange={setNebulaDensity} />
-          <Slider label="Bright" min={0.05} max={2} step={0.05} value={nebulaBrightness} onChange={setNebulaBrightness} />
           <Toggle label="Orbits" checked={showOrbits} onChange={setShowOrbits} />
           <Toggle label="Habitable Zone" checked={showHabitableZone} onChange={setShowHabitableZone} />
           <Toggle label="Starfield" checked={showSkybox} onChange={setShowSkybox} />
           <Slider label="Sky Brt" min={0.1} max={3} step={0.05} value={skyBrightness} onChange={setSkyBrightness} />
           <Slider label="Sky Con" min={0.1} max={3} step={0.05} value={skyContrast} onChange={setSkyContrast} />
-          <Toggle label="Nebula" checked={showNebula} onChange={setShowNebula} />
+        </Accordion>
+
+        <Accordion title="Nebula" defaultOpen={false}>
+          <Toggle label="Show" checked={showNebula} onChange={setShowNebula} />
+          <Slider label="Density" min={0} max={3} step={0.05} value={nebulaDensity} onChange={setNebulaDensity} />
+          <Slider label="Bright" min={0.05} max={2} step={0.05} value={nebulaBrightness} onChange={setNebulaBrightness} />
+          <Slider label="Scale" min={0.2} max={3} step={0.05} value={nebulaScale} onChange={setNebulaScale} />
+          <Slider label="Warp" min={0} max={1} step={0.05} value={nebulaWarp} onChange={setNebulaWarp} />
+          <Slider label="Contrast" min={0.5} max={3} step={0.1} value={nebulaContrast} onChange={setNebulaContrast} />
+          <Slider label="Mix" min={0} max={1} step={0.05} value={nebulaMix} onChange={setNebulaMix} />
+          <div className="border-t border-white/10 my-0.5" />
+          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Colours {nebulaColors ? '(custom)' : '(auto from star)'}</div>
+          <div className="flex items-center gap-1 flex-wrap">
+            {[0, 1, 2, 3].map(i => (
+              <input key={i} type="color"
+                value={nebulaColors ? nebulaColors[i] : '#888888'}
+                onChange={(e) => {
+                  const cur = nebulaColors || ['#888888', '#888888', '#888888', '#888888'] as [string, string, string, string];
+                  const next = [...cur] as [string, string, string, string];
+                  next[i] = e.target.value;
+                  setNebulaColors(next);
+                }}
+                className="w-6 h-6 cursor-pointer border-0 p-0 bg-transparent" />
+            ))}
+            {nebulaColors && (
+              <button onClick={() => setNebulaColors(null)} className="text-[9px] text-cyan-400 hover:text-cyan-300 ml-1">Reset</button>
+            )}
+          </div>
         </Accordion>
 
         <Accordion title="Atmosphere (global)" defaultOpen={false}>
@@ -688,7 +718,7 @@ const App = ({ data }: any) => {
           <RendererSync toneMapping={THREE.ACESFilmicToneMapping} exposure={1.0} />
           {showSkybox && <MilkyWaySkybox brightness={skyBrightness} contrast={skyContrast} />}
           <ambientLight intensity={ambientIntensity} color={ambientColor} />
-          {showNebula && <Nebula seed={data?.name?.[0] ?? "system"} density={nebulaDensity} brightness={nebulaBrightness} starTemp={getPrimaryStarTemp(data)} />}
+          {showNebula && <Nebula seed={data?.name?.[0] ?? "system"} density={nebulaDensity} brightness={nebulaBrightness} scale={nebulaScale} warp={nebulaWarp} contrast={nebulaContrast} mix={nebulaMix} colors={nebulaColors} starTemp={getPrimaryStarTemp(data)} />}
           <Binary data={data} />
           <Controls follow={follow} />
           <EffectComposer key={fxKey}>
