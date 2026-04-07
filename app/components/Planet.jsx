@@ -225,7 +225,7 @@ const Planet = ({ data, starData, starRef }) => {
     // Stable halo material — uniforms updated via useEffect
     const haloColor = params.atmosDayColor ? params.atmosDayColor.clone().lerp(new THREE.Color(1, 1, 1), params.haloWhiten) : new THREE.Color(0.5, 0.7, 1.0);
     const hMat = new THREE.ShaderMaterial({
-      transparent: false,
+      transparent: true,
       depthWrite: false,
       depthTest: false,
       blending: THREE.CustomBlending,
