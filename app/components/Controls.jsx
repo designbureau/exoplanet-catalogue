@@ -115,16 +115,6 @@ const Controls = ({ follow }) => {
         _currentOffset.lerp(_zero, 0.06); // gentle decay
       }
 
-      // Apply avoidance: offset both camera position and target for swooping effect
-      if (_currentOffset.lengthSq() > 0.001) {
-        const cx = _currentOffset.x;
-        const cy = _currentOffset.y;
-        const cz = _currentOffset.z;
-        camera.position.x += cx * 0.12;
-        camera.position.y += cy * 0.12;
-        camera.position.z += cz * 0.12;
-      }
-
       const tx = _objectPosition.x;
       const ty = _objectPosition.y;
       const tz = _objectPosition.z;
@@ -133,6 +123,17 @@ const Controls = ({ follow }) => {
         cameraControlsRef.current.moveTo(tx, ty, tz, true);
       } else {
         cameraControlsRef.current.setTarget(tx, ty, tz, true);
+      }
+
+      // Apply avoidance offset via camera-controls API (not raw camera.position)
+      if (_currentOffset.lengthSq() > 0.01) {
+        const cp = cameraControlsRef.current.getPosition(_closestPt);
+        cameraControlsRef.current.setPosition(
+          cp.x + _currentOffset.x * 0.15,
+          cp.y + _currentOffset.y * 0.15,
+          cp.z + _currentOffset.z * 0.15,
+          false // immediate, not animated (we're already per-frame)
+        );
       }
 
       if (keys.plus.down) {
