@@ -27,6 +27,7 @@ const fragmentShader = `
   uniform float u_warp;
   uniform float u_contrast;
   uniform float u_mix;
+  uniform float u_cutoff;
   varying vec3 vPosition;
 
   // --- Noise functions ---
@@ -112,6 +113,7 @@ const fragmentShader = `
     // Combine into nebula density
     float nebula = c2 * (1.0 - u_mix) + r1 * u_mix;
     nebula = pow(nebula, u_contrast) * u_nebulaDensity;
+    nebula = smoothstep(u_cutoff, u_cutoff + 0.1, nebula);
     nebula = clamp(nebula, 0.0, 1.0);
 
     // Colour: spatially varied blending using different noise layers
@@ -222,9 +224,10 @@ interface NebulaProps {
   contrast?: number;
   mix?: number;
   colors?: [string, string, string, string] | null;
+  cutoff?: number;
 }
 
-export default function Nebula({ seed = "default", density = 0.6, brightness = 0.5, starTemp = 5500, starDensity = 1.0, scale = 1.0, warp = 0.4, contrast = 1.5, mix = 0.4, colors = null }: NebulaProps) {
+export default function Nebula({ seed = "default", density = 0.6, brightness = 0.5, starTemp = 5500, starDensity = 1.0, scale = 1.0, warp = 0.4, contrast = 1.5, mix = 0.4, colors = null, cutoff = 0.0 }: NebulaProps) {
   const meshRef = useRef<THREE.Mesh>(null);
 
   const material = useMemo(() => {
@@ -257,6 +260,7 @@ export default function Nebula({ seed = "default", density = 0.6, brightness = 0
         u_warp: { value: warp },
         u_contrast: { value: contrast },
         u_mix: { value: mix },
+        u_cutoff: { value: cutoff },
       },
       vertexShader,
       fragmentShader,
@@ -275,6 +279,7 @@ export default function Nebula({ seed = "default", density = 0.6, brightness = 0
     material.uniforms.u_warp.value = warp;
     material.uniforms.u_contrast.value = contrast;
     material.uniforms.u_mix.value = mix;
+    material.uniforms.u_cutoff.value = cutoff;
     if (colors) {
       material.uniforms.u_color1.value.set(colors[0]);
       material.uniforms.u_color2.value.set(colors[1]);
