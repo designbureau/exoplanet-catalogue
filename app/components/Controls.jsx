@@ -81,6 +81,9 @@ const Controls = ({ follow }) => {
           const planetRef = refs[key];
           if (!planetRef?.current?.getWorldPosition) continue;
           if (planetRef === activeRef) continue;
+          // Only avoid planets and stars (skip binaries etc.)
+          const meta = planetRef.current.metadata;
+          if (!meta || (meta.type !== "planet" && meta.type !== "star")) continue;
 
           planetRef.current.getWorldPosition(_planetPos);
 
@@ -93,29 +96,29 @@ const Controls = ({ follow }) => {
           _closestPt.copy(camPos).addScaledVector(_flightDir, projection);
           const dist = _planetPos.distanceTo(_closestPt);
 
-          // Get visual radius from geometry bounding sphere (cached by Three.js)
-          const geo = planetRef.current.geometry;
-          if (geo && !geo.boundingSphere) geo.computeBoundingSphere();
-          const radius = geo?.boundingSphere?.radius || 1;
-          const avoidRadius = radius * 5.0; // generous avoidance zone
+          // Get bounding radius (approximate from scale)
+          const bbox = new THREE.Box3().setFromObject(planetRef.current);
+          const size = new THREE.Vector3();
+          bbox.getSize(size);
+          const radius = Math.max(size.x, size.y, size.z) * 0.5;
+          const avoidRadius = radius * 3.0; // generous avoidance zone
 
           if (dist < avoidRadius && dist > 0.001) {
             // Push away from planet perpendicular to flight path
             _avoidDir.copy(_closestPt).sub(_planetPos).normalize();
-            const strength = Math.pow((avoidRadius - dist) / avoidRadius, 0.5); // sqrt for stronger at distance
-            _offset.addScaledVector(_avoidDir, strength * radius * 4.0);
+            const strength = (avoidRadius - dist) / avoidRadius;
+            _offset.addScaledVector(_avoidDir, strength * radius * 2.0);
           }
         }
       }
 
       // Smooth the offset (blend in when avoiding, decay when clear)
       if (_offset.lengthSq() > 0.001) {
-        _currentOffset.lerp(_offset, 0.12);
+        _currentOffset.lerp(_offset, 0.04);
       } else {
-        _currentOffset.lerp(_zero, 0.05);
+        _currentOffset.lerp(_zero, 0.08);
       }
 
-      // Offset the target so camera-controls arcs around obstacles naturally
       const tx = _objectPosition.x + _currentOffset.x;
       const ty = _objectPosition.y + _currentOffset.y;
       const tz = _objectPosition.z + _currentOffset.z;
