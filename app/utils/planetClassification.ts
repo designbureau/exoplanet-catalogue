@@ -394,8 +394,9 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.noiseScale = 12;
       break;
 
-    case PlanetType.VENUS_LIKE:
-      // Thick yellowish haze, featureless
+    case PlanetType.VENUS_LIKE: {
+      // Thick yellowish haze — driven by Venus preset sliders
+      const vp = (hzRanges as any)?.venus || {};
       base.color1 = new THREE.Color(0.75, 0.65, 0.4);
       base.color2 = new THREE.Color(0.8, 0.7, 0.45);
       base.color3 = new THREE.Color(0.7, 0.6, 0.38);
@@ -403,17 +404,23 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.swirlStrength = 0.03;
       base.warpIntensity = 0.5;
       base.noiseScale = 6;
-      base.atmosIntensity = 0.35;
-      base.atmosDayColor = new THREE.Color(0xccaa44);
-      base.atmosTwilightColor = new THREE.Color(0xaa6622);
+      base.atmosIntensity = vp.atmos ?? 0.0;
+      base.atmosDayColor = new THREE.Color(vp.rimDay || '#ccaa44');
+      base.atmosTwilightColor = new THREE.Color(vp.rimTwi || '#aa6622');
       base.hasAtmosphere = true;
       base.showRim = true;
-      base.showShell = false;
+      base.showShell = (vp.shell ?? 0) > 0;
       base.showHalo = true;
-      base.rimIntensity = 0.35;
-      base.shellIntensity = 0;
-      base.haloIntensity = 0.5;
+      base.rimIntensity = vp.rim ?? 0.0;
+      base.rimFalloff = vp.rimFalloff ?? 0.7;
+      base.shellIntensity = vp.shell ?? 0;
+      base.haloIntensity = vp.halo ?? 0.0;
+      base.haloScale = vp.haloScale ?? 3.0;
+      base.haloFalloff = vp.haloFalloff ?? 1.0;
+      base.haloWhiten = vp.haloWhiten ?? 0.35;
+      base.haloShadow = vp.haloShadow ?? 0.7;
       break;
+    }
 
     case PlanetType.TEMPERATE: {
       // Dynamic terrestrial colours based on star type, temperature, seed,
