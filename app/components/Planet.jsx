@@ -268,20 +268,15 @@ const Planet = ({ data, starData, starRef }) => {
           float alpha = pow(1.0 - vRadial, uFalloff);
           if (uInner > 0.001) alpha *= smoothstep(0.0, uInner, vRadial);
 
-          // Sun shadow on halo: project sun direction into view-space billboard plane
+          // Sun shadow on halo
           vec3 sunView = normalize(mat3(viewMatrix) * uSunDirection);
           float sunDot = dot(vRingDir, sunView.xy);
-          // haloShadow controls how far light wraps: 0=sun side only, 1=fully around
-          // Gentle shadow: cosine-based falloff for smooth transition
-          float shadow = sunDot * 0.5 + 0.5; // remap -1..1 to 0..1
-          shadow = pow(shadow, 2.0 - uHaloShadow * 1.5); // shadow=0.7 → pow ~0.95 = gentle
-          alpha *= max(shadow, 0.08);
+          float shadow = smoothstep(-uHaloShadow, 0.3, sunDot);
+          alpha *= mix(0.05, 1.0, shadow);
 
           alpha *= uIntensity;
-          if (alpha < 0.01) discard;
-          // Additive blending uses RGB only; keep alpha minimal to avoid
-          // post-processing treating it as opaque dark (causes ring artifact)
-          gl_FragColor = vec4(uColor * alpha, alpha * 0.1);
+          if (alpha < 0.03) discard;
+          gl_FragColor = vec4(uColor * alpha, alpha);
         }
       `,
     });
