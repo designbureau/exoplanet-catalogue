@@ -272,11 +272,10 @@ const Planet = ({ data, starData, starRef }) => {
           vec3 sunView = normalize(mat3(viewMatrix) * uSunDirection);
           float sunDot = dot(vRingDir, sunView.xy);
           // haloShadow controls how far light wraps: 0=sun side only, 1=fully around
-          // Wide smooth transition to avoid hard edge
-          float shadowLow = -uHaloShadow;
-          float shadowHigh = shadowLow + 1.2;
-          float shadow = smoothstep(shadowLow, shadowHigh, sunDot);
-          alpha *= mix(0.02, 1.0, shadow);
+          // Gentle shadow: cosine-based falloff for smooth transition
+          float shadow = sunDot * 0.5 + 0.5; // remap -1..1 to 0..1
+          shadow = pow(shadow, 2.0 - uHaloShadow * 1.5); // shadow=0.7 → pow ~0.95 = gentle
+          alpha *= max(shadow, 0.08);
 
           alpha *= uIntensity;
           if (alpha < 0.01) discard;
