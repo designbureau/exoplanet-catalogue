@@ -376,7 +376,7 @@ const App = ({ data }: any) => {
     toneMap:       { on: true, mode: ToneMappingMode.ACES_FILMIC },
     colorGrade:    { on: false, temperature: 0, tint: 0, shadows: 0, highlights: 0 },
     hueSat:        { on: true, saturation: -0.09 },
-    brightContrast:{ on: true, brightness: 0, contrast: 0.21 },
+    brightContrast:{ on: false, brightness: 0, contrast: 0 },
     chroma:        { on: true, offset: 0.0005 },
     vignette:      { on: true, offset: 0.3, darkness: 0.6 },
     noise:         { on: true, opacity: 0.1 },
