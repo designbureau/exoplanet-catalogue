@@ -6,14 +6,6 @@ import * as THREE from "three";
 import { useKeyState } from "use-key-state";
 
 const _objectPosition = new THREE.Vector3();
-const _planetPos = new THREE.Vector3();
-const _toPlanet = new THREE.Vector3();
-const _flightDir = new THREE.Vector3();
-const _closestPt = new THREE.Vector3();
-const _avoidDir = new THREE.Vector3();
-const _offset = new THREE.Vector3();
-const _currentOffset = new THREE.Vector3();
-const _zero = new THREE.Vector3();
 
 const Controls = ({ follow, autoRotate = false, viewAzimuth = 0, viewPolar = Math.PI * 0.45 }) => {
   const { activeRef, refs } = useContext(RefContext);
@@ -88,59 +80,9 @@ const Controls = ({ follow, autoRotate = false, viewAzimuth = 0, viewPolar = Mat
     ) {
       activeRef.current.getWorldPosition(_objectPosition);
 
-      // --- Obstacle avoidance: curve camera path around other planets ---
-      _offset.set(0, 0, 0);
-      const camPos = camera.position;
-      _flightDir.copy(_objectPosition).sub(camPos);
-      const flightDist = _flightDir.length();
-      if (flightDist > 0.1) {
-        _flightDir.divideScalar(flightDist); // normalize
-
-        for (const key in refs) {
-          const planetRef = refs[key];
-          if (!planetRef?.current?.getWorldPosition) continue;
-          if (planetRef === activeRef) continue;
-          // Only avoid planets and stars (skip binaries etc.)
-          const meta = planetRef.current.metadata;
-          if (!meta || (meta.type !== "planet" && meta.type !== "star")) continue;
-
-          planetRef.current.getWorldPosition(_planetPos);
-
-          // Project planet position onto flight ray
-          _toPlanet.copy(_planetPos).sub(camPos);
-          const projection = _toPlanet.dot(_flightDir);
-          if (projection < 0 || projection > flightDist) continue; // behind or beyond
-
-          // Closest point on ray to planet center
-          _closestPt.copy(camPos).addScaledVector(_flightDir, projection);
-          const dist = _planetPos.distanceTo(_closestPt);
-
-          // Get bounding radius (approximate from scale)
-          const bbox = new THREE.Box3().setFromObject(planetRef.current);
-          const size = new THREE.Vector3();
-          bbox.getSize(size);
-          const radius = Math.max(size.x, size.y, size.z) * 0.5;
-          const avoidRadius = radius * 3.0; // generous avoidance zone
-
-          if (dist < avoidRadius && dist > 0.001) {
-            // Push away from planet perpendicular to flight path
-            _avoidDir.copy(_closestPt).sub(_planetPos).normalize();
-            const strength = (avoidRadius - dist) / avoidRadius;
-            _offset.addScaledVector(_avoidDir, strength * radius * 2.0);
-          }
-        }
-      }
-
-      // Smooth the offset (blend in when avoiding, decay when clear)
-      if (_offset.lengthSq() > 0.001) {
-        _currentOffset.lerp(_offset, 0.04);
-      } else {
-        _currentOffset.lerp(_zero, 0.08);
-      }
-
-      const tx = _objectPosition.x + _currentOffset.x;
-      const ty = _objectPosition.y + _currentOffset.y;
-      const tz = _objectPosition.z + _currentOffset.z;
+      const tx = _objectPosition.x;
+      const ty = _objectPosition.y;
+      const tz = _objectPosition.z;
 
       if (follow) {
         cameraControlsRef.current.moveTo(tx, ty, tz, true);
