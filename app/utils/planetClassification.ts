@@ -395,8 +395,8 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       break;
 
     case PlanetType.VENUS_LIKE: {
-      // Thick yellowish haze — driven by Venus preset sliders
-      const vp = (hzRanges as any)?.venus || {};
+      // Runaway greenhouse — driven by venusZone preset sliders
+      const vz = (hzRanges as any)?.venusZone || {};
       base.color1 = new THREE.Color(0.75, 0.65, 0.4);
       base.color2 = new THREE.Color(0.8, 0.7, 0.45);
       base.color3 = new THREE.Color(0.7, 0.6, 0.38);
@@ -404,21 +404,21 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.swirlStrength = 0.03;
       base.warpIntensity = 0.5;
       base.noiseScale = 6;
-      base.atmosIntensity = vp.atmos ?? 0.0;
-      base.atmosDayColor = new THREE.Color(vp.rimDay || '#ccaa44');
-      base.atmosTwilightColor = new THREE.Color(vp.rimTwi || '#aa6622');
+      base.atmosIntensity = vz.atmos ?? 0.0;
+      base.atmosDayColor = new THREE.Color(vz.rimDay || '#ccaa44');
+      base.atmosTwilightColor = new THREE.Color(vz.rimTwi || '#aa6622');
       base.hasAtmosphere = true;
       base.showRim = true;
-      base.showShell = (vp.shell ?? 0) > 0;
+      base.showShell = (vz.shell ?? 0) > 0;
       base.showHalo = true;
-      base.rimIntensity = vp.rim ?? 0.0;
-      base.rimFalloff = vp.rimFalloff ?? 0.7;
-      base.shellIntensity = vp.shell ?? 0;
-      base.haloIntensity = vp.halo ?? 0.0;
-      base.haloScale = vp.haloScale ?? 3.0;
-      base.haloFalloff = vp.haloFalloff ?? 1.0;
-      base.haloWhiten = vp.haloWhiten ?? 0.35;
-      base.haloShadow = vp.haloShadow ?? 0.7;
+      base.rimIntensity = vz.rim ?? 0.0;
+      base.rimFalloff = vz.rimFalloff ?? 0.7;
+      base.shellIntensity = vz.shell ?? 0;
+      base.haloIntensity = vz.halo ?? 0.0;
+      base.haloScale = vz.haloScale ?? 3.0;
+      base.haloFalloff = vz.haloFalloff ?? 1.0;
+      base.haloWhiten = vz.haloWhiten ?? 0.35;
+      base.haloShadow = vz.haloShadow ?? 0.7;
       break;
     }
 
@@ -447,15 +447,15 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       const p = hzRanges || {};
       const mars  = p.mars  || { atmos: 0.05, cloudCover: 0.15, cloudOpacity: 0.2,  seaLevel: 0.15, iceCap: 0.98, continentFreq: 0.10 };
       const earth = p.earth || { atmos: 0.35, cloudCover: 0.45, cloudOpacity: 0.7,  seaLevel: 0.38, iceCap: 0.96, continentFreq: 0.16 };
-      const venus = p.venus || { atmos: 0.60, cloudCover: 0.60, cloudOpacity: 0.90, seaLevel: 0.10, iceCap: 0.99, continentFreq: 0.22 };
+      const warm  = p.warm  || { atmos: 0.60, cloudCover: 0.60, cloudOpacity: 0.90, seaLevel: 0.10, iceCap: 0.99, continentFreq: 0.22 };
 
-      // Real S_eff mapping: Mars≈0.43→hz≈0.12, Earth≈1.0→hz≈0.94, Venus→classified as VENUS_LIKE
-      // Anchor points: Mars at hz=0.15, Earth at hz=0.85, Venus at hz=1.0
+      // Real S_eff mapping: Mars≈0.43→hz≈0.12, Earth≈1.0→hz≈0.94
+      // Anchor points: Mars at hz=0.15, Earth at hz=0.85, Warm at hz=1.0
       // hz 0→0.15: pure Mars
       // hz 0.15→0.85: Mars→Earth (main habitable gradient)
-      // hz 0.85→1.0: Earth→Venus (inner edge transition)
+      // hz 0.85→1.0: Earth→Warm (inner edge transition)
       const lerpPreset = (key: string) => {
-        const m = (mars as any)[key], e = (earth as any)[key], v = (venus as any)[key];
+        const m = (mars as any)[key], e = (earth as any)[key], v = (warm as any)[key];
         if (hz < 0.15) return m;
         if (hz < 0.85) return lerpN(m, e, (hz - 0.15) / 0.7);
         return lerpN(e, v, (hz - 0.85) / 0.15);
@@ -466,10 +466,10 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       // Atmosphere colour: interpolate through preset day/twilight colours
       const marsDay = new THREE.Color(mars.rimDay || '#cc6644');
       const earthDay = new THREE.Color(earth.rimDay || '#00aaff');
-      const venusDay = new THREE.Color(venus.rimDay || '#ccaa44');
+      const warmDay = new THREE.Color(warm.rimDay || '#cc8833');
       const marsTwi = new THREE.Color(mars.rimTwi || '#884422');
       const earthTwi = new THREE.Color(earth.rimTwi || '#ff6600');
-      const venusTwi = new THREE.Color(venus.rimTwi || '#aa6622');
+      const warmTwi = new THREE.Color(warm.rimTwi || '#aa6622');
 
       const lerpColor = (a: THREE.Color, b: THREE.Color, c: THREE.Color) => {
         if (hz < 0.15) return a.clone();
@@ -477,8 +477,8 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
         return b.clone().lerp(c, (hz - 0.85) / 0.15);
       };
 
-      base.atmosDayColor = lerpColor(marsDay, earthDay, venusDay);
-      base.atmosTwilightColor = lerpColor(marsTwi, earthTwi, venusTwi);
+      base.atmosDayColor = lerpColor(marsDay, earthDay, warmDay);
+      base.atmosTwilightColor = lerpColor(marsTwi, earthTwi, warmTwi);
       base.atmosColor = base.atmosDayColor.clone().multiplyScalar(0.5);
 
       base.cloudCoverage = lerpPreset('cloudCover');

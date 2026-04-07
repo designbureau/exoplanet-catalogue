@@ -563,35 +563,51 @@ const App = ({ data }: any) => {
             <Slider label="H White" min={0} max={1} step={0.05} value={hzPresets.earth.haloWhiten} onChange={(v: number) => updatePreset('earth', 'haloWhiten', v)} />
             <Slider label="H Shadow" min={0} max={1} step={0.05} value={hzPresets.earth.haloShadow} onChange={(v: number) => updatePreset('earth', 'haloShadow', v)} />
           </Accordion>
-          <Accordion title="Venus-like (warm HZ)" defaultOpen={false}>
-            <Slider label="Atmos" min={0} max={1} step={0.01} value={hzPresets.venus.atmos} onChange={(v: number) => updatePreset('venus', 'atmos', v)} />
-            <Slider label="Clouds" min={0} max={1} step={0.01} value={hzPresets.venus.cloudCover} onChange={(v: number) => updatePreset('venus', 'cloudCover', v)} />
-            <Slider label="Opacity" min={0} max={1} step={0.01} value={hzPresets.venus.cloudOpacity} onChange={(v: number) => updatePreset('venus', 'cloudOpacity', v)} />
-            <Slider label="Swirl" min={0} max={2} step={0.05} value={hzPresets.venus.cloudSwirl} onChange={(v: number) => updatePreset('venus', 'cloudSwirl', v)} />
-            <Slider label="Bands" min={1} max={10} step={0.5} value={hzPresets.venus.cloudBands} onChange={(v: number) => updatePreset('venus', 'cloudBands', v)} />
-            <Slider label="Cld Warp" min={0} max={1} step={0.05} value={hzPresets.venus.cloudWarp} onChange={(v: number) => updatePreset('venus', 'cloudWarp', v)} />
-            <Slider label="Sea Lvl" min={0} max={0.8} step={0.01} value={hzPresets.venus.seaLevel} onChange={(v: number) => updatePreset('venus', 'seaLevel', v)} />
-            <Slider label="Ice Cap" min={0.5} max={1} step={0.01} value={hzPresets.venus.iceCap} onChange={(v: number) => updatePreset('venus', 'iceCap', v)} />
-            <Slider label="Ice Edge" min={0.01} max={0.1} step={0.005} value={hzPresets.venus.iceEdge} onChange={(v: number) => updatePreset('venus', 'iceEdge', v)} />
-            <Slider label="Ice Warp" min={0} max={1} step={0.05} value={hzPresets.venus.iceWarp} onChange={(v: number) => updatePreset('venus', 'iceWarp', v)} />
-            <Slider label="Ice Detail" min={0.5} max={4} step={0.1} value={hzPresets.venus.iceDetail} onChange={(v: number) => updatePreset('venus', 'iceDetail', v)} />
-            <Slider label="Land" min={0.05} max={0.4} step={0.01} value={hzPresets.venus.continentFreq} onChange={(v: number) => updatePreset('venus', 'continentFreq', v)} />
-            <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={hzPresets.venus.warp} onChange={(v: number) => updatePreset('venus', 'warp', v)} />
+          <Accordion title="Warm (inner HZ)" defaultOpen={false}>
+            <Slider label="Atmos" min={0} max={1} step={0.01} value={hzPresets.warm.atmos} onChange={(v: number) => updatePreset('warm', 'atmos', v)} />
+            <Slider label="Clouds" min={0} max={1} step={0.01} value={hzPresets.warm.cloudCover} onChange={(v: number) => updatePreset('warm', 'cloudCover', v)} />
+            <Slider label="Opacity" min={0} max={1} step={0.01} value={hzPresets.warm.cloudOpacity} onChange={(v: number) => updatePreset('warm', 'cloudOpacity', v)} />
+            <Slider label="Swirl" min={0} max={2} step={0.05} value={hzPresets.warm.cloudSwirl} onChange={(v: number) => updatePreset('warm', 'cloudSwirl', v)} />
+            <Slider label="Bands" min={1} max={10} step={0.5} value={hzPresets.warm.cloudBands} onChange={(v: number) => updatePreset('warm', 'cloudBands', v)} />
+            <Slider label="Cld Warp" min={0} max={1} step={0.05} value={hzPresets.warm.cloudWarp} onChange={(v: number) => updatePreset('warm', 'cloudWarp', v)} />
+            <Slider label="Sea Lvl" min={0} max={0.8} step={0.01} value={hzPresets.warm.seaLevel} onChange={(v: number) => updatePreset('warm', 'seaLevel', v)} />
+            <Slider label="Ice Cap" min={0.5} max={1} step={0.01} value={hzPresets.warm.iceCap} onChange={(v: number) => updatePreset('warm', 'iceCap', v)} />
+            <Slider label="Ice Edge" min={0.01} max={0.1} step={0.005} value={hzPresets.warm.iceEdge} onChange={(v: number) => updatePreset('warm', 'iceEdge', v)} />
+            <Slider label="Ice Warp" min={0} max={1} step={0.05} value={hzPresets.warm.iceWarp} onChange={(v: number) => updatePreset('warm', 'iceWarp', v)} />
+            <Slider label="Ice Detail" min={0.5} max={4} step={0.1} value={hzPresets.warm.iceDetail} onChange={(v: number) => updatePreset('warm', 'iceDetail', v)} />
+            <Slider label="Land" min={0.05} max={0.4} step={0.01} value={hzPresets.warm.continentFreq} onChange={(v: number) => updatePreset('warm', 'continentFreq', v)} />
+            <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={hzPresets.warm.warp} onChange={(v: number) => updatePreset('warm', 'warp', v)} />
             <div className="border-t border-white/10 my-0.5" />
-            <Slider label="Rim" min={0} max={1} step={0.01} value={hzPresets.venus.rim} onChange={(v: number) => updatePreset('venus', 'rim', v)} />
-            <Slider label="Rim Fall" min={0.3} max={3} step={0.1} value={hzPresets.venus.rimFalloff} onChange={(v: number) => updatePreset('venus', 'rimFalloff', v)} />
+            <Slider label="Rim" min={0} max={1} step={0.01} value={hzPresets.warm.rim} onChange={(v: number) => updatePreset('warm', 'rim', v)} />
+            <Slider label="Rim Fall" min={0.3} max={3} step={0.1} value={hzPresets.warm.rimFalloff} onChange={(v: number) => updatePreset('warm', 'rimFalloff', v)} />
             <div className="flex items-center gap-1">
               <label className="w-14 shrink-0">Day</label>
-              <input type="color" value={hzPresets.venus.rimDay} onChange={(e) => updatePreset('venus', 'rimDay', e.target.value)} className="w-5 h-5 cursor-pointer border-0 p-0 bg-transparent" />
+              <input type="color" value={hzPresets.warm.rimDay} onChange={(e) => updatePreset('warm', 'rimDay', e.target.value)} className="w-5 h-5 cursor-pointer border-0 p-0 bg-transparent" />
               <label className="w-8 shrink-0 ml-1">Twi</label>
-              <input type="color" value={hzPresets.venus.rimTwi} onChange={(e) => updatePreset('venus', 'rimTwi', e.target.value)} className="w-5 h-5 cursor-pointer border-0 p-0 bg-transparent" />
+              <input type="color" value={hzPresets.warm.rimTwi} onChange={(e) => updatePreset('warm', 'rimTwi', e.target.value)} className="w-5 h-5 cursor-pointer border-0 p-0 bg-transparent" />
             </div>
-            <Slider label="Shell" min={0} max={2} step={0.05} value={hzPresets.venus.shell} onChange={(v: number) => updatePreset('venus', 'shell', v)} />
-            <Slider label="Halo" min={0} max={1} step={0.05} value={hzPresets.venus.halo} onChange={(v: number) => updatePreset('venus', 'halo', v)} />
-            <Slider label="H Scale" min={0.5} max={5} step={0.1} value={hzPresets.venus.haloScale} onChange={(v: number) => updatePreset('venus', 'haloScale', v)} />
-            <Slider label="H Fall" min={0.3} max={4} step={0.1} value={hzPresets.venus.haloFalloff} onChange={(v: number) => updatePreset('venus', 'haloFalloff', v)} />
-            <Slider label="H White" min={0} max={1} step={0.05} value={hzPresets.venus.haloWhiten} onChange={(v: number) => updatePreset('venus', 'haloWhiten', v)} />
-            <Slider label="H Shadow" min={0} max={1} step={0.05} value={hzPresets.venus.haloShadow} onChange={(v: number) => updatePreset('venus', 'haloShadow', v)} />
+            <Slider label="Shell" min={0} max={2} step={0.05} value={hzPresets.warm.shell} onChange={(v: number) => updatePreset('warm', 'shell', v)} />
+            <Slider label="Halo" min={0} max={1} step={0.05} value={hzPresets.warm.halo} onChange={(v: number) => updatePreset('warm', 'halo', v)} />
+            <Slider label="H Scale" min={0.5} max={5} step={0.1} value={hzPresets.warm.haloScale} onChange={(v: number) => updatePreset('warm', 'haloScale', v)} />
+            <Slider label="H Fall" min={0.3} max={4} step={0.1} value={hzPresets.warm.haloFalloff} onChange={(v: number) => updatePreset('warm', 'haloFalloff', v)} />
+            <Slider label="H White" min={0} max={1} step={0.05} value={hzPresets.warm.haloWhiten} onChange={(v: number) => updatePreset('warm', 'haloWhiten', v)} />
+            <Slider label="H Shadow" min={0} max={1} step={0.05} value={hzPresets.warm.haloShadow} onChange={(v: number) => updatePreset('warm', 'haloShadow', v)} />
+          </Accordion>
+          <Accordion title="Venus Zone (greenhouse)" defaultOpen={false}>
+            <Slider label="Rim" min={0} max={1} step={0.01} value={hzPresets.venusZone.rim} onChange={(v: number) => updatePreset('venusZone', 'rim', v)} />
+            <Slider label="Rim Fall" min={0.3} max={3} step={0.1} value={hzPresets.venusZone.rimFalloff} onChange={(v: number) => updatePreset('venusZone', 'rimFalloff', v)} />
+            <div className="flex items-center gap-1">
+              <label className="w-14 shrink-0">Day</label>
+              <input type="color" value={hzPresets.venusZone.rimDay} onChange={(e) => updatePreset('venusZone', 'rimDay', e.target.value)} className="w-5 h-5 cursor-pointer border-0 p-0 bg-transparent" />
+              <label className="w-8 shrink-0 ml-1">Twi</label>
+              <input type="color" value={hzPresets.venusZone.rimTwi} onChange={(e) => updatePreset('venusZone', 'rimTwi', e.target.value)} className="w-5 h-5 cursor-pointer border-0 p-0 bg-transparent" />
+            </div>
+            <Slider label="Shell" min={0} max={2} step={0.05} value={hzPresets.venusZone.shell} onChange={(v: number) => updatePreset('venusZone', 'shell', v)} />
+            <Slider label="Halo" min={0} max={1} step={0.05} value={hzPresets.venusZone.halo} onChange={(v: number) => updatePreset('venusZone', 'halo', v)} />
+            <Slider label="H Scale" min={0.5} max={5} step={0.1} value={hzPresets.venusZone.haloScale} onChange={(v: number) => updatePreset('venusZone', 'haloScale', v)} />
+            <Slider label="H Fall" min={0.3} max={4} step={0.1} value={hzPresets.venusZone.haloFalloff} onChange={(v: number) => updatePreset('venusZone', 'haloFalloff', v)} />
+            <Slider label="H White" min={0} max={1} step={0.05} value={hzPresets.venusZone.haloWhiten} onChange={(v: number) => updatePreset('venusZone', 'haloWhiten', v)} />
+            <Slider label="H Shadow" min={0} max={1} step={0.05} value={hzPresets.venusZone.haloShadow} onChange={(v: number) => updatePreset('venusZone', 'haloShadow', v)} />
           </Accordion>
           <Accordion title="Global (non-HZ)" defaultOpen={false}>
             <Slider label="Clouds" min={0.1} max={0.7} step={0.01} value={cloudCoverage} onChange={setCloudCoverage} />

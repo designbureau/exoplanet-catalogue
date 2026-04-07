@@ -69,7 +69,9 @@ export const EnvProvider = ({ children }) => {
   const [hzPresets, setHzPresets] = useState({
     mars:  { atmos: 0.0, cloudCover: 0.33, cloudOpacity: 0.29, cloudSwirl: 1.2, cloudBands: 3.0, cloudWarp: 0.2, seaLevel: 0.33, iceCap: 1.0, iceEdge: 0.025, iceWarp: 0.75, iceDetail: 0.9, continentFreq: 0.19, warp: 0.3, rim: 0.05, rimFalloff: 1.7, rimDay: '#a06040', rimTwi: '#805030', shell: 0.0, halo: 0.25, haloScale: 1.5, haloFalloff: 3.1, haloWhiten: 0.35, haloShadow: 0.7 },
     earth: { atmos: 0.0, cloudCover: 0.41, cloudOpacity: 0.89, cloudSwirl: 0.3, cloudBands: 2.5, cloudWarp: 0.5, seaLevel: 0.70, iceCap: 0.89, iceEdge: 0.035, iceWarp: 1.0, iceDetail: 0.7, continentFreq: 0.30, warp: 0.5, rim: 0.10, rimFalloff: 1.0, rimDay: '#00aaff', rimTwi: '#ff6600', shell: 0.0, halo: 0.60, haloScale: 2.0, haloFalloff: 2.7, haloWhiten: 0.15, haloShadow: 0.7 },
-    venus: { atmos: 0.0, cloudCover: 0.60, cloudOpacity: 0.90, cloudSwirl: 1.2, cloudBands: 2.0, cloudWarp: 0.5, seaLevel: 0.10, iceCap: 0.99, iceEdge: 0.035, iceWarp: 0.4, iceDetail: 1.8, continentFreq: 0.22, warp: 0.8, rim: 0.0, rimFalloff: 0.7, rimDay: '#ccaa44', rimTwi: '#aa6622', shell: 0.0, halo: 0.0, haloScale: 3.0, haloFalloff: 1.0, haloWhiten: 0.35, haloShadow: 0.7 },
+    warm:  { atmos: 0.0, cloudCover: 0.60, cloudOpacity: 0.90, cloudSwirl: 1.2, cloudBands: 2.0, cloudWarp: 0.5, seaLevel: 0.10, iceCap: 0.99, iceEdge: 0.035, iceWarp: 0.4, iceDetail: 1.8, continentFreq: 0.22, warp: 0.8, rim: 0.0, rimFalloff: 0.7, rimDay: '#cc8833', rimTwi: '#aa6622', shell: 0.0, halo: 0.0, haloScale: 3.0, haloFalloff: 1.0, haloWhiten: 0.35, haloShadow: 0.7 },
+    // Venus Zone: runaway greenhouse (S_eff > 1.04), separate from warm HZ
+    venusZone: { atmos: 0.0, rim: 0.0, rimFalloff: 0.7, rimDay: '#ccaa44', rimTwi: '#aa6622', shell: 0.0, halo: 0.0, haloScale: 3.0, haloFalloff: 1.0, haloWhiten: 0.35, haloShadow: 0.7 },
   });
   const updatePreset = (cat, key, value) => setHzPresets(prev => ({ ...prev, [cat]: { ...prev[cat], [key]: value } }));
 
