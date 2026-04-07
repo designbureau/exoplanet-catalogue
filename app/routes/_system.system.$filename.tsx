@@ -277,7 +277,7 @@ const App = ({ data }: any) => {
   } = useContext(EnvContext);
 
   const [follow, setFollow] = useState(true);
-  const [autoRotate, setAutoRotate] = useState(false);
+  const [autoRotate, setAutoRotate] = useState(true);
   const [nebulaDensity, setNebulaDensity] = useState(1.0);
   const [nebulaBrightness, setNebulaBrightness] = useState(1.0);
   const [nebulaScale, setNebulaScale] = useState(1.0);
