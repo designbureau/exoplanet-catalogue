@@ -408,10 +408,10 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.atmosTwilightColor = new THREE.Color(0xaa6622);
       base.hasAtmosphere = true;
       base.showRim = true;
-      base.showShell = true;
+      base.showShell = false;
       base.showHalo = true;
       base.rimIntensity = 0.35;
-      base.shellIntensity = 1.2;
+      base.shellIntensity = 0;
       base.haloIntensity = 0.5;
       break;
 
