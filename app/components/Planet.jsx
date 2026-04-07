@@ -622,11 +622,13 @@ const Planet = ({ data, starData, starRef }) => {
           float dist = vT - uPhase;
           if (dist < 0.0) dist += 1.0;
 
-          // 98% visible: full for first 90%, taper over next 8%, tiny 2% gap
+          // 75% trail: fade opacity along entire length, taper at end
           float taper = 1.0 - smoothstep(0.65, 0.75, dist);
-          if (taper < 0.01) discard;
+          float fade = 1.0 - dist / 0.75; // linear fade from planet to tail
+          float alpha = taper * fade * 0.3;
+          if (alpha < 0.005) discard;
 
-          gl_FragColor = vec4(1.0, 1.0, 1.0, taper * 0.25);
+          gl_FragColor = vec4(1.0, 1.0, 1.0, alpha);
         }
       `,
     });
