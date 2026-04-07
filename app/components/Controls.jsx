@@ -63,12 +63,12 @@ const Controls = ({ follow, autoRotate = false, viewAzimuth = 0, viewPolar = Mat
       bbox.getBoundingSphere(sphere);
       cameraControlsRef.current.minDistance = sphere.radius * 1.02;
 
-      // Save current angles, fitToBox (resets them), then restore
-      const savedAzimuth = cameraControlsRef.current.azimuthAngle;
+      // Save polar (elevation), fitToBox, then restore polar only
+      // Azimuth changes freely (turns toward target), polar stays level
       const savedPolar = cameraControlsRef.current.polarAngle;
       cameraControlsRef.current.fitToBox(activeRef.current, animate);
       if (!isFirstSelect) {
-        cameraControlsRef.current.rotateTo(savedAzimuth, savedPolar, false);
+        cameraControlsRef.current.rotatePolarTo(savedPolar, animate);
       }
     }
   }, [activeRef]);
