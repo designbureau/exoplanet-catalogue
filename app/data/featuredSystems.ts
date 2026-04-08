@@ -120,4 +120,34 @@ export const featuredSystems: FeaturedSystem[] = [
     description: "A nearby Sun-like star with multiple planet candidates. A staple of science fiction.",
     tags: ["Sun-like", "nearest", "multi-planet"],
   },
+  {
+    filename: "TOI-178",
+    name: "TOI-178",
+    description: "A 6-planet resonant chain with two likely water worlds. A laboratory for planetary formation.",
+    tags: ["water world", "multi-planet", "resonant chain"],
+  },
+  {
+    filename: "Kepler-11",
+    name: "Kepler-11",
+    description: "Six tightly packed low-density planets, including probable water worlds. A benchmark compact system.",
+    tags: ["water world", "multi-planet", "compact"],
+  },
+  {
+    filename: "GJ 357",
+    name: "GJ 357",
+    description: "A nearby M-dwarf with a hot super-Earth and a potentially habitable outer world.",
+    tags: ["super-earth", "red dwarf", "nearest"],
+  },
+  {
+    filename: "LHS 1478",
+    name: "LHS 1478",
+    description: "A nearby super-Earth orbiting a red dwarf, one of the best targets for atmospheric study.",
+    tags: ["super-earth", "red dwarf", "nearest"],
+  },
+  {
+    filename: "HD 260655",
+    name: "HD 260655",
+    description: "Two rocky super-Earths orbiting a bright nearby red dwarf. Ideal for JWST follow-up.",
+    tags: ["super-earth", "red dwarf", "nearest", "multi-planet"],
+  },
 ];
