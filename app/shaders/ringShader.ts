@@ -100,14 +100,26 @@ const ringFragmentShader = `
       shadow = smoothstep(u_planetRadius * 0.8, u_planetRadius, perpDist);
     }
 
-    // Lighting: back side of ring is darker (shadow side)
-    // Use max of both normal orientations so DoubleSide rendering gets
-    // bright on sun-facing side, dark on shadow side
-    float diff = max(dot(vNormal, u_sunDirection), 0.0);
-    float diffBack = max(dot(-vNormal, u_sunDirection), 0.0);
-    diff = gl_FrontFacing ? diff : diffBack;
-    float ambient = 0.08;
-    color *= (ambient + (1.0 - ambient) * diff) * (0.3 + 0.7 * shadow);
+    // Ring lighting with translucency
+    // Front: full diffuse reflection
+    // Back: transmitted light passes through thin ring material
+    float sunDot = dot(vNormal, u_sunDirection);
+    float frontLight = max(sunDot, 0.0);
+    float backLight = max(-sunDot, 0.0);
+
+    // Forward scattering: light passing through the ring from behind
+    // Thinner parts (higher alpha = denser = less transmission)
+    float transmission = backLight * 0.4; // 40% light passes through
+
+    float light;
+    if (gl_FrontFacing) {
+      light = frontLight + transmission * 0.3; // front sees some backlit glow
+    } else {
+      light = backLight * 0.15 + transmission; // back is mostly transmitted light
+    }
+
+    float ambient = 0.06;
+    color *= (ambient + (1.0 - ambient) * light) * (0.3 + 0.7 * shadow);
 
     // Overall opacity with soft edges
     float alpha = edgeFade * u_opacity * (0.5 + bands * 0.5);
