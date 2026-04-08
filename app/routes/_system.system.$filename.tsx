@@ -265,6 +265,9 @@ const App = ({ data }: any) => {
     bodyScale, setBodyScale,
     showHabitableZone, setShowHabitableZone,
     showOrbits, setShowOrbits,
+    starGlowScale, setStarGlowScale,
+    starGlowFalloff, setStarGlowFalloff,
+    starGlowOpacity, setStarGlowOpacity,
     atmosFalloff, setAtmosFalloff,
     glowFalloff, setGlowFalloff,
     glowInner, setGlowInner,
@@ -439,6 +442,11 @@ const App = ({ data }: any) => {
             <input type="color" value={ambientColor} onChange={(e) => setAmbientColor(e.target.value)} className="w-6 h-5 cursor-pointer border-0 p-0 bg-transparent" />
             <span className="text-[9px] text-muted-foreground/50">{ambientColor}</span>
           </div>
+          <div className="border-t border-white/10 my-1" />
+          <div className="text-[9px] text-muted-foreground/60 mb-0.5">Star Glow</div>
+          <Slider label="Scale" min={1} max={10} step={0.5} value={starGlowScale} onChange={setStarGlowScale} />
+          <Slider label="Falloff" min={0.5} max={4} step={0.1} value={starGlowFalloff} onChange={setStarGlowFalloff} />
+          <Slider label="Opacity" min={0} max={1} step={0.05} value={starGlowOpacity} onChange={setStarGlowOpacity} />
           <div className="border-t border-white/10 my-1" />
           <div className="text-[9px] text-muted-foreground/60 mb-0.5">Shader Ambient (fresnel rim on dark side)</div>
           <Slider label="Planets" min={0} max={0.5} step={0.005} value={shaderAmbient} onChange={setShaderAmbient} />

@@ -211,6 +211,7 @@ function tempToGlowColor(temp: number): THREE.Color {
 
 export interface StarShaderParams {
   temperature: number;
+  glowFalloff?: number;
 }
 
 export function createStarMaterial(params: StarShaderParams): THREE.ShaderMaterial {
@@ -252,7 +253,8 @@ export function createStarGlowMaterial(params: StarShaderParams): THREE.SpriteMa
       const dx = (x - centre) / centre;
       const dy = (y - centre) / centre;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      const alpha = dist < 1.0 ? Math.pow(1.0 - dist, 1.8) * 255 : 0;
+      const falloff = params.glowFalloff ?? 1.8;
+      const alpha = dist < 1.0 ? Math.pow(1.0 - dist, falloff) * 255 : 0;
       const idx = (y * size + x) * 4;
       data[idx] = 255;
       data[idx + 1] = 255;

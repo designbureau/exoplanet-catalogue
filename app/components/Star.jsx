@@ -23,7 +23,7 @@ const Star = ({ data, position, distance }) => {
   const glowRef = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, showHabitableZone } = useContext(EnvContext);
+  const { Constants, showHabitableZone, starGlowScale, starGlowFalloff, starGlowOpacity } = useContext(EnvContext);
 
   const name = data.name ? data.name[0] : "Unnamed star";
 
@@ -76,9 +76,9 @@ const Star = ({ data, position, distance }) => {
   const { starMaterial, glowMaterial } = useMemo(() => {
     const temp = temperature || 5500;
     const starMat = createStarMaterial({ temperature: temp });
-    const glowMat = createStarGlowMaterial({ temperature: temp });
+    const glowMat = createStarGlowMaterial({ temperature: temp, glowFalloff: starGlowFalloff });
     return { starMaterial: starMat, glowMaterial: glowMat };
-  }, [temperature]);
+  }, [temperature, starGlowFalloff]);
 
   useFrame((state) => {
     const elapsed = state.clock.getElapsedTime();
@@ -164,8 +164,8 @@ const Star = ({ data, position, distance }) => {
       </mesh>
 
       {/* Star glow sprite */}
-      <sprite ref={glowRef} scale={[scale * 4, scale * 4, 1]}>
-        <primitive object={glowMaterial} attach="material" />
+      <sprite ref={glowRef} scale={[scale * starGlowScale, scale * starGlowScale, 1]}>
+        <primitive object={Object.assign(glowMaterial, { opacity: starGlowOpacity })} attach="material" />
       </sprite>
 
       {/* Sun rays + flares — only rendered when star is focused */}
