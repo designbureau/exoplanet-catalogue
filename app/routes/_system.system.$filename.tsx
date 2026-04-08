@@ -684,6 +684,17 @@ const App = ({ data }: any) => {
 
         <Accordion title="Sub-Neptune" defaultOpen={false}>
           <Accordion title="Water World" defaultOpen={false}>
+            <Slider label="Sea Lvl" min={0.5} max={0.95} step={0.01} value={hzPresets.waterWorld.seaLevel} onChange={(v: number) => updatePreset('waterWorld', 'seaLevel', v)} />
+            <Slider label="Land" min={0.02} max={0.2} step={0.01} value={hzPresets.waterWorld.continentFreq} onChange={(v: number) => updatePreset('waterWorld', 'continentFreq', v)} />
+            <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={hzPresets.waterWorld.warp} onChange={(v: number) => updatePreset('waterWorld', 'warp', v)} />
+            <Slider label="Ice Cap" min={0.8} max={1} step={0.01} value={hzPresets.waterWorld.iceCap} onChange={(v: number) => updatePreset('waterWorld', 'iceCap', v)} />
+            <Slider label="Ice Edge" min={0.01} max={0.1} step={0.005} value={hzPresets.waterWorld.iceEdge} onChange={(v: number) => updatePreset('waterWorld', 'iceEdge', v)} />
+            <Slider label="Ice Warp" min={0} max={1} step={0.05} value={hzPresets.waterWorld.iceWarp} onChange={(v: number) => updatePreset('waterWorld', 'iceWarp', v)} />
+            <Slider label="Clouds" min={0} max={1} step={0.01} value={hzPresets.waterWorld.cloudCover} onChange={(v: number) => updatePreset('waterWorld', 'cloudCover', v)} />
+            <Slider label="Opacity" min={0} max={1} step={0.01} value={hzPresets.waterWorld.cloudOpacity} onChange={(v: number) => updatePreset('waterWorld', 'cloudOpacity', v)} />
+            <Slider label="Swirl" min={0} max={2} step={0.05} value={hzPresets.waterWorld.cloudSwirl} onChange={(v: number) => updatePreset('waterWorld', 'cloudSwirl', v)} />
+            <Slider label="Bands" min={1} max={10} step={0.5} value={hzPresets.waterWorld.cloudBands} onChange={(v: number) => updatePreset('waterWorld', 'cloudBands', v)} />
+            <div className="border-t border-white/10 my-0.5" />
             <AtmosPresetSliders preset={hzPresets.waterWorld} cat="waterWorld" updatePreset={updatePreset} />
           </Accordion>
           <Accordion title="Sub-Neptune" defaultOpen={false}>

@@ -329,15 +329,29 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       break;
 
     case PlanetType.WATER_WORLD: {
-      // Deep blue ocean world — driven by waterWorld preset
+      // Ocean-dominated terrestrial — driven by waterWorld preset
       const ww = (hzRanges as any)?.waterWorld || {};
-      base.color1 = new THREE.Color(0.1, 0.2, 0.45);
-      base.color2 = new THREE.Color(0.2, 0.35, 0.55);
-      base.color3 = new THREE.Color(0.15, 0.25, 0.5);
-      base.color4 = new THREE.Color(0.6, 0.65, 0.7);
-      base.swirlStrength = 0.2;
-      base.warpIntensity = 2.0;
-      base.noiseScale = 8;
+      // Deep ocean, volcanic islands, reef/sand, pale peaks
+      base.color1 = new THREE.Color('#0a1a3d'); // deep ocean
+      base.color2 = new THREE.Color('#2a3025'); // dark volcanic rock
+      base.color3 = new THREE.Color('#1a2a1a'); // mossy island
+      base.color4 = new THREE.Color('#8a8a7a'); // pale reef/sand
+      base.noiseScale = 12;
+      // Surface params from preset
+      base.seaLevel = ww.seaLevel ?? 0.85;
+      base.continentFreq = ww.continentFreq ?? 0.08;
+      base.iceCapSize = ww.iceCap ?? 0.95;
+      base.iceEdge = ww.iceEdge ?? 0.03;
+      base.iceWarp = ww.iceWarp ?? 0.6;
+      base.iceDetail = ww.iceDetail ?? 0.8;
+      base.warpIntensity = (ww.warp ?? 0.4) * 6.0;
+      base.swirlStrength = 0.15;
+      base.cloudCoverage = ww.cloudCover ?? 0.50;
+      base.cloudOpacity = ww.cloudOpacity ?? 0.75;
+      base.cloudSwirl = ww.cloudSwirl ?? 0.8;
+      base.cloudBands = ww.cloudBands ?? 3.0;
+      base.cloudWarp = ww.cloudWarp ?? 0.35;
+      // Atmosphere
       base.atmosIntensity = ww.atmos ?? 0.0;
       base.atmosDayColor = new THREE.Color(ww.rimDay || '#2266cc');
       base.atmosTwilightColor = new THREE.Color(ww.rimTwi || '#554422');
@@ -353,6 +367,7 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.haloFalloff = ww.haloFalloff ?? 1.5;
       base.haloWhiten = ww.haloWhiten ?? 0.3;
       base.haloShadow = ww.haloShadow ?? 0.7;
+      base.hasHzGradient = true; // preset controls override globals
       break;
     }
 

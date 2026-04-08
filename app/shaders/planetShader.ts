@@ -890,6 +890,8 @@ function selectFragmentShader(type: PlanetType): string {
       return iceGiantFragment;
 
     case PlanetType.WATER_WORLD:
+      return terrestrialFragment;
+
     case PlanetType.SUB_NEPTUNE:
       return hazyFragment;
 
