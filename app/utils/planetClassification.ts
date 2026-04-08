@@ -402,8 +402,9 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       break;
     }
 
-    case PlanetType.LAVA_WORLD:
-      // Mostly black cooled crust with magma in low areas
+    case PlanetType.LAVA_WORLD: {
+      // Mostly black cooled crust with magma in low areas — driven by lavaWorld preset
+      const lw = (hzRanges as any)?.lavaWorld || {};
       base.color1 = new THREE.Color(0.8, 0.25, 0.02);     // low: exposed magma (orange)
       base.color2 = new THREE.Color(0.3, 0.08, 0.02);     // mid-low: cooling rock (dark red)
       base.color3 = new THREE.Color(0.06, 0.04, 0.03);    // mid-high: cooled basalt (near black)
@@ -413,14 +414,23 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.noiseScale = 15;
       base.emissive = new THREE.Color(1.0, 0.4, 0.05);
       base.emissiveIntensity = 0.6;
+      base.atmosIntensity = lw.atmos ?? 0.0;
+      base.atmosDayColor = new THREE.Color(lw.rimDay || '#ff4400');
+      base.atmosTwilightColor = new THREE.Color(lw.rimTwi || '#881100');
       base.hasAtmosphere = true;
       base.showRim = true;
-      base.showShell = true;
-      base.showHalo = false;
-      base.rimIntensity = 0.2;
-      base.shellIntensity = 0.6;
-      base.haloIntensity = 0;
+      base.showShell = (lw.shell ?? 0) > 0;
+      base.showHalo = true;
+      base.rimIntensity = lw.rim ?? 0.0;
+      base.rimFalloff = lw.rimFalloff ?? 0.8;
+      base.shellIntensity = lw.shell ?? 0;
+      base.haloIntensity = lw.halo ?? 0.0;
+      base.haloScale = lw.haloScale ?? 1.5;
+      base.haloFalloff = lw.haloFalloff ?? 2.0;
+      base.haloWhiten = lw.haloWhiten ?? 0.1;
+      base.haloShadow = lw.haloShadow ?? 0.8;
       break;
+    }
 
     case PlanetType.HOT_ROCKY:
       // Mercury-like: dark grey cratered surface

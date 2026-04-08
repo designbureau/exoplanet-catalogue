@@ -709,6 +709,8 @@ const App = ({ data }: any) => {
           <Slider label="Glow" min={0} max={2} step={0.05} value={lavaGlow} onChange={setLavaGlow} />
           <Slider label="Height" min={-0.6} max={0.3} step={0.02} value={lavaHeightOffset} onChange={setLavaHeightOffset} />
           <Slider label="Flow Scl" min={0.5} max={5} step={0.1} value={lavaFlowScale} onChange={setLavaFlowScale} />
+          <div className="border-t border-white/10 my-0.5" />
+          <AtmosPresetSliders preset={hzPresets.lavaWorld} cat="lavaWorld" updatePreset={updatePreset} />
         </Accordion>
 
         <Accordion title="Rocky" defaultOpen={false}>
