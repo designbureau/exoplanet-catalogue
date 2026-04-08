@@ -131,7 +131,7 @@ const Planet = ({ data, starData, starRef }) => {
   })();
 
   // Classify planet and create shader material + atmosphere ring
-  const { shaderMaterial, atmosParams, atmosMat, atmosScale, haloMat, planetType, hasAtmosphere, defaultShowRim, defaultShowShell, defaultShowHalo, rimIntensity, rimFalloff, shellIntensity, haloIntensity, haloScale, haloFalloff, haloWhiten, haloShadow, hasHzGradient, ringData } = useMemo(() => {
+  const { shaderMaterial, atmosParams, atmosMat, atmosScale, haloMat, planetType, hasAtmosphere, defaultShowRim, defaultShowShell, defaultShowHalo, rimIntensity, rimFalloff, shellIntensity, haloIntensity, haloScale, haloFalloff, haloWhiten, haloShadow, atmosDayColor, hasHzGradient, ringData } = useMemo(() => {
     const params = classifyPlanet({
       massJupiter: mass,
       radiusJupiter: radius,
@@ -299,6 +299,7 @@ const Planet = ({ data, starData, starRef }) => {
       haloFalloff: params.haloFalloff,
       haloWhiten: params.haloWhiten,
       haloShadow: params.haloShadow,
+      atmosDayColor: params.atmosDayColor?.clone(),
       hasHzGradient: params.hasHzGradient,
       ringData: ringParams ? { params: ringParams, material: ringMat } : null,
     };
@@ -475,12 +476,12 @@ const Planet = ({ data, starData, starRef }) => {
       if (u.uSunDirection && shaderMaterial.uniforms.u_sunDirection) {
         u.uSunDirection.value.copy(shaderMaterial.uniforms.u_sunDirection.value);
       }
-      // Update halo colour from current atmosphere day colour
-      if (shaderMaterial.uniforms.u_atmosDayColor) {
-        u.uColor.value.copy(shaderMaterial.uniforms.u_atmosDayColor.value).lerp(new THREE.Color(1, 1, 1), haloWhiten);
+      // Update halo colour from classification atmosDayColor
+      if (atmosDayColor) {
+        u.uColor.value.copy(atmosDayColor).lerp(new THREE.Color(1, 1, 1), haloWhiten);
       }
     }
-  }, [haloMat, haloIntensity, haloScale, haloFalloff, haloWhiten, haloShadow, spriteGlowInner, glowHueShift, glowSaturation, shaderMaterial, hzPresets]);
+  }, [haloMat, haloIntensity, haloScale, haloFalloff, haloWhiten, haloShadow, atmosDayColor, spriteGlowInner, glowHueShift, glowSaturation, shaderMaterial]);
 
   // Per-frame: only orbital motion, time, LOD, sun direction, position sync
   useFrame((state) => {
