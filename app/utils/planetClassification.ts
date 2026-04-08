@@ -71,6 +71,8 @@ export interface ShaderParams {
   iceEdge?: number;
   iceWarp?: number;
   iceDetail?: number;
+  coastDetail?: number;
+  landContrast?: number;
   continentFreq?: number;
 }
 
@@ -345,6 +347,8 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.iceWarp = ww.iceWarp ?? 0.6;
       base.iceDetail = ww.iceDetail ?? 0.8;
       base.warpIntensity = (ww.warp ?? 0.4) * 6.0;
+      base.coastDetail = ww.coastDetail ?? 0.35;
+      base.landContrast = ww.landContrast ?? 1.6;
       base.swirlStrength = 0.15;
       base.cloudCoverage = ww.cloudCover ?? 0.50;
       base.cloudOpacity = ww.cloudOpacity ?? 0.75;

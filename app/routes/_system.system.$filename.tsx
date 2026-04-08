@@ -686,6 +686,8 @@ const App = ({ data }: any) => {
           <Accordion title="Water World" defaultOpen={false}>
             <Slider label="Sea Lvl" min={0.5} max={0.95} step={0.01} value={hzPresets.waterWorld.seaLevel} onChange={(v: number) => updatePreset('waterWorld', 'seaLevel', v)} />
             <Slider label="Land" min={0.02} max={0.2} step={0.01} value={hzPresets.waterWorld.continentFreq} onChange={(v: number) => updatePreset('waterWorld', 'continentFreq', v)} />
+            <Slider label="Coast" min={0.1} max={1.0} step={0.05} value={hzPresets.waterWorld.coastDetail} onChange={(v: number) => updatePreset('waterWorld', 'coastDetail', v)} />
+            <Slider label="Contrast" min={0.5} max={4.0} step={0.1} value={hzPresets.waterWorld.landContrast} onChange={(v: number) => updatePreset('waterWorld', 'landContrast', v)} />
             <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={hzPresets.waterWorld.warp} onChange={(v: number) => updatePreset('waterWorld', 'warp', v)} />
             <Slider label="Ice Cap" min={0.8} max={1} step={0.01} value={hzPresets.waterWorld.iceCap} onChange={(v: number) => updatePreset('waterWorld', 'iceCap', v)} />
             <Slider label="Ice Edge" min={0.01} max={0.1} step={0.005} value={hzPresets.waterWorld.iceEdge} onChange={(v: number) => updatePreset('waterWorld', 'iceEdge', v)} />

@@ -496,6 +496,8 @@ const terrestrialFragment = `
   uniform float u_iceEdge;
   uniform float u_iceWarp;
   uniform float u_iceDetail;
+  uniform float u_coastDetail;
+  uniform float u_landContrast;
   varying vec3 vPosition;
   varying vec3 vNormal;
   varying vec3 vWorldNormal;
@@ -527,7 +529,7 @@ const terrestrialFragment = `
     float h1b = noise3d(wp * u_continentFreq * 0.67 + vec3(42.0)) * 0.3;
 
     // Cloud noise for organic coastline detail (LOD-aware, lower freq)
-    float h2 = cloudNoise_lod(wp, 0.35) * 0.2;
+    float h2 = cloudNoise_lod(wp, u_coastDetail) * 0.2;
 
     // Ridged noise + coastline detail only at high LOD (reduced contribution)
     float h3 = 0.0;
@@ -544,7 +546,7 @@ const terrestrialFragment = `
 
     // Base dominates, detail layers are subtle
     float raw = (h1 + h1b) * 0.55 + h2 + h3 + h4;
-    return enhanceContrast(raw, 0.48, 1.6);
+    return enhanceContrast(raw, 0.48, u_landContrast);
   }
 
   void main() {
@@ -947,6 +949,8 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_iceEdge: { value: params.iceEdge ?? 0.035 },
       u_iceWarp: { value: params.iceWarp ?? 0.4 },
       u_iceDetail: { value: params.iceDetail ?? 1.8 },
+      u_coastDetail: { value: params.coastDetail ?? 0.35 },
+      u_landContrast: { value: params.landContrast ?? 1.6 },
       u_craterScale: { value: 1.0 },
       u_ridgeStrength: { value: 0.35 },
       u_craterDepth: { value: 0.7 },
