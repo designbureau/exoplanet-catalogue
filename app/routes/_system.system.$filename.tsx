@@ -451,9 +451,9 @@ const App = ({ data }: any) => {
           <div className="flex items-center gap-1">
             <label className="w-14 shrink-0">Blend</label>
             <select value={starGlowBlend} onChange={(e) => setStarGlowBlend(e.target.value)} className="flex-1 bg-black/50 text-[9px] rounded px-1 py-0.5 border border-white/10">
-              <option value="additive">Additive</option>
-              <option value="normal">Normal</option>
+              <option value="additive">Additive (Linear Dodge)</option>
               <option value="screen">Screen</option>
+              <option value="normal">Normal</option>
               <option value="multiply">Multiply</option>
               <option value="subtractive">Subtractive</option>
             </select>
