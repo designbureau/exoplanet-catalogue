@@ -23,7 +23,7 @@ const Star = ({ data, position, distance }) => {
   const glowRef = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, showHabitableZone, starGlowScale, starGlowFalloff, starGlowOpacity } = useContext(EnvContext);
+  const { Constants, showHabitableZone, starGlowScale, starGlowFalloff, starGlowOpacity, starGlowBlend } = useContext(EnvContext);
 
   const name = data.name ? data.name[0] : "Unnamed star";
 
@@ -165,7 +165,10 @@ const Star = ({ data, position, distance }) => {
 
       {/* Star glow sprite */}
       <sprite ref={glowRef} scale={[scale * starGlowScale, scale * starGlowScale, 1]}>
-        <primitive object={Object.assign(glowMaterial, { opacity: starGlowOpacity })} attach="material" />
+        <primitive object={Object.assign(glowMaterial, {
+          opacity: starGlowOpacity,
+          blending: starGlowBlend === 'normal' ? THREE.NormalBlending : THREE.AdditiveBlending,
+        })} attach="material" />
       </sprite>
 
       {/* Sun rays + flares — only rendered when star is focused */}
