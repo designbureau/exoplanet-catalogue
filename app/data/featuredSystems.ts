@@ -31,10 +31,10 @@ export const featuredSystems: FeaturedSystem[] = [
     tags: ["hot jupiter", "historic"],
   },
   {
-    filename: "Proxima Centauri",
-    name: "Proxima Centauri",
-    description: "The nearest star to the Sun hosts a rocky planet in its habitable zone, just 4.2 light-years away.",
-    tags: ["nearest", "habitable zone", "rocky"],
+    filename: "Alpha Centauri",
+    name: "Alpha Centauri",
+    description: "The nearest star system to the Sun, including Proxima Centauri with a rocky planet in its habitable zone, just 4.2 light-years away.",
+    tags: ["nearest", "habitable zone", "rocky", "binary"],
   },
   {
     filename: "Alpha Centauri",
