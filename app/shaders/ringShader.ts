@@ -100,9 +100,13 @@ const ringFragmentShader = `
       shadow = smoothstep(u_planetRadius * 0.8, u_planetRadius, perpDist);
     }
 
-    // Lighting: use abs(dot) so both sides of the thin ring are lit
-    float diff = abs(dot(vNormal, u_sunDirection));
-    float ambient = 0.25;
+    // Lighting: back side of ring is darker (shadow side)
+    // Use max of both normal orientations so DoubleSide rendering gets
+    // bright on sun-facing side, dark on shadow side
+    float diff = max(dot(vNormal, u_sunDirection), 0.0);
+    float diffBack = max(dot(-vNormal, u_sunDirection), 0.0);
+    diff = gl_FrontFacing ? diff : diffBack;
+    float ambient = 0.08;
     color *= (ambient + (1.0 - ambient) * diff) * (0.3 + 0.7 * shadow);
 
     // Overall opacity with soft edges
