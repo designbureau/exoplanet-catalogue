@@ -584,7 +584,7 @@ const App = ({ data }: any) => {
             <Slider label="Bands" min={1} max={10} step={0.5} value={hzPresets.mars.cloudBands} onChange={(v: number) => updatePreset('mars', 'cloudBands', v)} />
             <Slider label="Cld Warp" min={0} max={1} step={0.05} value={hzPresets.mars.cloudWarp} onChange={(v: number) => updatePreset('mars', 'cloudWarp', v)} />
             <Slider label="Sea Lvl" min={0} max={0.8} step={0.01} value={hzPresets.mars.seaLevel} onChange={(v: number) => updatePreset('mars', 'seaLevel', v)} />
-            <Slider label="Ice Cap" min={0.5} max={1} step={0.01} value={hzPresets.mars.iceCap} onChange={(v: number) => updatePreset('mars', 'iceCap', v)} />
+            <Slider label="Ice Cap" min={0.5} max={1.1} step={0.01} value={hzPresets.mars.iceCap} onChange={(v: number) => updatePreset('mars', 'iceCap', v)} />
             <Slider label="Ice Edge" min={0.01} max={0.1} step={0.005} value={hzPresets.mars.iceEdge} onChange={(v: number) => updatePreset('mars', 'iceEdge', v)} />
             <Slider label="Ice Warp" min={0} max={1} step={0.05} value={hzPresets.mars.iceWarp} onChange={(v: number) => updatePreset('mars', 'iceWarp', v)} />
             <Slider label="Ice Detail" min={0.5} max={4} step={0.1} value={hzPresets.mars.iceDetail} onChange={(v: number) => updatePreset('mars', 'iceDetail', v)} />
@@ -614,7 +614,7 @@ const App = ({ data }: any) => {
             <Slider label="Bands" min={1} max={10} step={0.5} value={hzPresets.earth.cloudBands} onChange={(v: number) => updatePreset('earth', 'cloudBands', v)} />
             <Slider label="Cld Warp" min={0} max={1} step={0.05} value={hzPresets.earth.cloudWarp} onChange={(v: number) => updatePreset('earth', 'cloudWarp', v)} />
             <Slider label="Sea Lvl" min={0} max={0.8} step={0.01} value={hzPresets.earth.seaLevel} onChange={(v: number) => updatePreset('earth', 'seaLevel', v)} />
-            <Slider label="Ice Cap" min={0.5} max={1} step={0.01} value={hzPresets.earth.iceCap} onChange={(v: number) => updatePreset('earth', 'iceCap', v)} />
+            <Slider label="Ice Cap" min={0.5} max={1.1} step={0.01} value={hzPresets.earth.iceCap} onChange={(v: number) => updatePreset('earth', 'iceCap', v)} />
             <Slider label="Ice Edge" min={0.01} max={0.1} step={0.005} value={hzPresets.earth.iceEdge} onChange={(v: number) => updatePreset('earth', 'iceEdge', v)} />
             <Slider label="Ice Warp" min={0} max={1} step={0.05} value={hzPresets.earth.iceWarp} onChange={(v: number) => updatePreset('earth', 'iceWarp', v)} />
             <Slider label="Ice Detail" min={0.5} max={4} step={0.1} value={hzPresets.earth.iceDetail} onChange={(v: number) => updatePreset('earth', 'iceDetail', v)} />
@@ -644,7 +644,7 @@ const App = ({ data }: any) => {
             <Slider label="Bands" min={1} max={10} step={0.5} value={hzPresets.warm.cloudBands} onChange={(v: number) => updatePreset('warm', 'cloudBands', v)} />
             <Slider label="Cld Warp" min={0} max={1} step={0.05} value={hzPresets.warm.cloudWarp} onChange={(v: number) => updatePreset('warm', 'cloudWarp', v)} />
             <Slider label="Sea Lvl" min={0} max={0.8} step={0.01} value={hzPresets.warm.seaLevel} onChange={(v: number) => updatePreset('warm', 'seaLevel', v)} />
-            <Slider label="Ice Cap" min={0.5} max={1} step={0.01} value={hzPresets.warm.iceCap} onChange={(v: number) => updatePreset('warm', 'iceCap', v)} />
+            <Slider label="Ice Cap" min={0.5} max={1.1} step={0.01} value={hzPresets.warm.iceCap} onChange={(v: number) => updatePreset('warm', 'iceCap', v)} />
             <Slider label="Ice Edge" min={0.01} max={0.1} step={0.005} value={hzPresets.warm.iceEdge} onChange={(v: number) => updatePreset('warm', 'iceEdge', v)} />
             <Slider label="Ice Warp" min={0} max={1} step={0.05} value={hzPresets.warm.iceWarp} onChange={(v: number) => updatePreset('warm', 'iceWarp', v)} />
             <Slider label="Ice Detail" min={0.5} max={4} step={0.1} value={hzPresets.warm.iceDetail} onChange={(v: number) => updatePreset('warm', 'iceDetail', v)} />
@@ -689,7 +689,7 @@ const App = ({ data }: any) => {
             <Slider label="Coast" min={0.1} max={1.0} step={0.05} value={hzPresets.waterWorld.coastDetail} onChange={(v: number) => updatePreset('waterWorld', 'coastDetail', v)} />
             <Slider label="Contrast" min={0.5} max={4.0} step={0.1} value={hzPresets.waterWorld.landContrast} onChange={(v: number) => updatePreset('waterWorld', 'landContrast', v)} />
             <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={hzPresets.waterWorld.warp} onChange={(v: number) => updatePreset('waterWorld', 'warp', v)} />
-            <Slider label="Ice Cap" min={0.8} max={1} step={0.01} value={hzPresets.waterWorld.iceCap} onChange={(v: number) => updatePreset('waterWorld', 'iceCap', v)} />
+            <Slider label="Ice Cap" min={0.5} max={1.1} step={0.01} value={hzPresets.waterWorld.iceCap} onChange={(v: number) => updatePreset('waterWorld', 'iceCap', v)} />
             <Slider label="Ice Edge" min={0.01} max={0.1} step={0.005} value={hzPresets.waterWorld.iceEdge} onChange={(v: number) => updatePreset('waterWorld', 'iceEdge', v)} />
             <Slider label="Ice Warp" min={0} max={1} step={0.05} value={hzPresets.waterWorld.iceWarp} onChange={(v: number) => updatePreset('waterWorld', 'iceWarp', v)} />
             <Slider label="Clouds" min={0} max={1} step={0.01} value={hzPresets.waterWorld.cloudCover} onChange={(v: number) => updatePreset('waterWorld', 'cloudCover', v)} />
