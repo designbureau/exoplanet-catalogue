@@ -165,10 +165,23 @@ const Star = ({ data, position, distance }) => {
 
       {/* Star glow sprite */}
       <sprite ref={glowRef} scale={[scale * starGlowScale, scale * starGlowScale, 1]}>
-        <primitive object={Object.assign(glowMaterial, {
-          opacity: starGlowOpacity,
-          blending: starGlowBlend === 'normal' ? THREE.NormalBlending : THREE.AdditiveBlending,
-        })} attach="material" />
+        <primitive object={(() => {
+          glowMaterial.opacity = starGlowOpacity;
+          if (starGlowBlend === 'screen') {
+            glowMaterial.blending = THREE.CustomBlending;
+            glowMaterial.blendSrc = THREE.OneFactor;
+            glowMaterial.blendDst = THREE.OneMinusSrcColorFactor;
+          } else {
+            glowMaterial.blending = ({
+              additive: THREE.AdditiveBlending,
+              normal: THREE.NormalBlending,
+              multiply: THREE.MultiplyBlending,
+              subtractive: THREE.SubtractiveBlending,
+            })[starGlowBlend] || THREE.AdditiveBlending;
+          }
+          glowMaterial.needsUpdate = true;
+          return glowMaterial;
+        })()} attach="material" />
       </sprite>
 
       {/* Sun rays + flares — only rendered when star is focused */}

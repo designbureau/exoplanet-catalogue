@@ -453,6 +453,9 @@ const App = ({ data }: any) => {
             <select value={starGlowBlend} onChange={(e) => setStarGlowBlend(e.target.value)} className="flex-1 bg-black/50 text-[9px] rounded px-1 py-0.5 border border-white/10">
               <option value="additive">Additive</option>
               <option value="normal">Normal</option>
+              <option value="screen">Screen</option>
+              <option value="multiply">Multiply</option>
+              <option value="subtractive">Subtractive</option>
             </select>
           </div>
           <div className="border-t border-white/10 my-1" />
