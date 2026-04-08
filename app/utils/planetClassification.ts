@@ -415,7 +415,7 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.emissive = new THREE.Color(1.0, 0.4, 0.05);
       base.emissiveIntensity = 0.6;
       base.atmosIntensity = lw.atmos ?? 0.0;
-      base.atmosDayColor = new THREE.Color(lw.rimDay || '#ff4400');
+      base.atmosDayColor = new THREE.Color(lw.rimDay || '#ff7300');
       base.atmosTwilightColor = new THREE.Color(lw.rimTwi || '#881100');
       base.hasAtmosphere = true;
       base.showRim = true;

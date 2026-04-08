@@ -83,7 +83,7 @@ export const EnvProvider = ({ children }) => {
     // Ice Giant: subtle blue edge
     iceGiant: { atmos: 0.0, rim: 0.0, rimFalloff: 1.0, rimDay: '#6699bb', rimTwi: '#334466', shell: 0.0, halo: 0.0, haloScale: 2.0, haloFalloff: 1.5, haloWhiten: 0.35, haloShadow: 0.7 },
     // Lava World: molten glow
-    lavaWorld: { atmos: 0.0, rim: 0.0, rimFalloff: 0.8, rimDay: '#ff4400', rimTwi: '#881100', shell: 0.0, halo: 0.45, haloScale: 1.5, haloFalloff: 4.0, haloWhiten: 0.1, haloShadow: 0.2 },
+    lavaWorld: { atmos: 0.0, rim: 0.0, rimFalloff: 0.8, rimDay: '#ff7300', rimTwi: '#881100', shell: 0.0, halo: 0.45, haloScale: 1.5, haloFalloff: 4.0, haloWhiten: 0.1, haloShadow: 0.2 },
   });
   const updatePreset = (cat, key, value) => setHzPresets(prev => ({ ...prev, [cat]: { ...prev[cat], [key]: value } }));
 
