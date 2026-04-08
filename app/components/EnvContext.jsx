@@ -75,7 +75,7 @@ export const EnvProvider = ({ children }) => {
     // Frozen: cold rocky with ice surface (S_eff < 0.35)
     frozen: { atmos: 0.0, rim: 0.0, rimFalloff: 1.5, rimDay: '#6688aa', rimTwi: '#334455', shell: 0.0, halo: 0.0, haloScale: 1.5, haloFalloff: 2.0, haloWhiten: 0.5, haloShadow: 0.5 },
     // Water World: deep ocean with moderate haze
-    waterWorld: { seaLevel: 0.85, continentFreq: 0.08, coastDetail: 0.35, landContrast: 1.6, iceCap: 0.95, iceEdge: 0.03, iceWarp: 0.6, iceDetail: 0.8, warp: 0.4, cloudCover: 0.50, cloudOpacity: 0.75, cloudSwirl: 0.8, cloudBands: 3.0, cloudWarp: 0.35, atmos: 0.0, rim: 0.0, rimFalloff: 1.0, rimDay: '#2266cc', rimTwi: '#554422', shell: 0.0, halo: 0.0, haloScale: 2.0, haloFalloff: 1.5, haloWhiten: 0.3, haloShadow: 0.7 },
+    waterWorld: { seaLevel: 0.85, continentFreq: 0.05, coastDetail: 0.35, landContrast: 1.6, iceCap: 0.95, iceEdge: 0.03, iceWarp: 0.6, iceDetail: 0.8, warp: 0.4, cloudCover: 0.50, cloudOpacity: 0.75, cloudSwirl: 0.8, cloudBands: 3.0, cloudWarp: 0.35, atmos: 0.0, rim: 0.0, rimFalloff: 1.0, rimDay: '#2266cc', rimTwi: '#554422', shell: 0.0, halo: 0.0, haloScale: 2.0, haloFalloff: 1.5, haloWhiten: 0.3, haloShadow: 0.7 },
     // Sub-Neptune: thick atmosphere, blue-grey, no visible surface
     subNeptune: { atmos: 0.0, rim: 0.0, rimFalloff: 0.8, rimDay: '#6688bb', rimTwi: '#445566', shell: 0.0, halo: 0.0, haloScale: 2.5, haloFalloff: 1.2, haloWhiten: 0.35, haloShadow: 0.7 },
     // Gas Giant: soft edge glow

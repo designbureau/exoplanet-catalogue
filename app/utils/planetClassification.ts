@@ -341,7 +341,7 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.noiseScale = 12;
       // Surface params from preset
       base.seaLevel = ww.seaLevel ?? 0.85;
-      base.continentFreq = ww.continentFreq ?? 0.08;
+      base.continentFreq = ww.continentFreq ?? 0.05;
       base.iceCapSize = ww.iceCap ?? 0.95;
       base.iceEdge = ww.iceEdge ?? 0.03;
       base.iceWarp = ww.iceWarp ?? 0.6;
