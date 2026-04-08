@@ -480,7 +480,7 @@ const Planet = ({ data, starData, starRef }) => {
         u.uColor.value.copy(shaderMaterial.uniforms.u_atmosDayColor.value).lerp(new THREE.Color(1, 1, 1), haloWhiten);
       }
     }
-  }, [haloMat, haloIntensity, haloScale, haloFalloff, haloWhiten, haloShadow, spriteGlowInner, glowHueShift, glowSaturation, shaderMaterial]);
+  }, [haloMat, haloIntensity, haloScale, haloFalloff, haloWhiten, haloShadow, spriteGlowInner, glowHueShift, glowSaturation, shaderMaterial, hzPresets]);
 
   // Per-frame: only orbital motion, time, LOD, sun direction, position sync
   useFrame((state) => {
