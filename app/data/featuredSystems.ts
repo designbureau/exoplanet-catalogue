@@ -37,12 +37,6 @@ export const featuredSystems: FeaturedSystem[] = [
     tags: ["nearest", "habitable zone", "rocky", "binary"],
   },
   {
-    filename: "Alpha Centauri",
-    name: "Alpha Centauri",
-    description: "Our nearest stellar neighbours. A binary star system 4.37 light-years from Earth.",
-    tags: ["binary", "nearest"],
-  },
-  {
     filename: "HD 209458",
     name: "HD 209458 (Osiris)",
     description: "Home to the first transiting exoplanet ever detected and the first with a confirmed atmosphere.",
