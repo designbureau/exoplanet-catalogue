@@ -1,6 +1,7 @@
 import { useRef, useMemo } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
+import chroma from "chroma-js";
 
 // ---- Shared visibility GLSL (from sun/js/shader/includes/visibility.glsl) ----
 const visibilityGLSL = `
@@ -354,14 +355,21 @@ function tempToGlowTint(temp: number): number {
 }
 
 interface StarEffectsProps {
-  starRadius: number;  // Scene-space radius of the star sphere
+  starRadius: number;
   temperature?: number;
+  focused?: boolean;
+  glowScale?: number;
+  glowFalloff?: number;
+  glowBrightness?: number;
 }
 
-export default function StarEffects({ starRadius, temperature = 5500 }: StarEffectsProps) {
+export default function StarEffects({ starRadius, temperature = 5500, focused = false, glowScale = 4.0, glowFalloff = 1.8, glowBrightness = 1.0 }: StarEffectsProps) {
   const raysRef = useRef<THREE.Mesh>(null);
   const flaresRef = useRef<THREE.Mesh>(null);
   const { camera } = useThree();
+
+  // Blackbody colour from chroma.js
+  const glowColor = useMemo(() => chroma.temperature(temperature).hex('rgb'), [temperature]);
 
   // Base colour for rays/flares based on star temperature
   const baseColor = useMemo(() => {
@@ -484,18 +492,14 @@ export default function StarEffects({ starRadius, temperature = 5500 }: StarEffe
       fragmentShader: `
         precision highp float;
         varying float vRadial;
-        uniform float uTint;
+        uniform vec3 uColor;
         uniform float uBrightness;
+        uniform float uFalloff;
         uniform float uFalloffColor;
-        vec3 brightnessToColor(float b) {
-          b *= uTint;
-          return (vec3(b, b*b, b*b*b*b) / uTint) * uBrightness;
-        }
         void main() {
-          float alpha = (1.0 - vRadial);
-          alpha *= alpha;
+          float alpha = pow(1.0 - vRadial, uFalloff);
           float brightness = 1.0 + alpha * uFalloffColor;
-          vec3 col = brightnessToColor(brightness) * alpha;
+          vec3 col = uColor * brightness * uBrightness * alpha;
           gl_FragColor = vec4(col, alpha);
         }
       `,
@@ -505,9 +509,10 @@ export default function StarEffects({ starRadius, temperature = 5500 }: StarEffe
       blending: THREE.AdditiveBlending,
       side: THREE.DoubleSide,
       uniforms: {
-        uRadius: { value: 0.6 },
-        uTint: { value: tempToGlowTint(temperature) },
-        uBrightness: { value: 1.4 },
+        uRadius: { value: glowScale * 0.15 },
+        uColor: { value: new THREE.Color(glowColor) },
+        uBrightness: { value: glowBrightness },
+        uFalloff: { value: glowFalloff },
         uFalloffColor: { value: 0.7 },
         uCamRight: { value: new THREE.Vector3(1, 0, 0) },
         uCamUp: { value: new THREE.Vector3(0, 1, 0) },
@@ -528,16 +533,26 @@ export default function StarEffects({ starRadius, temperature = 5500 }: StarEffe
     const t = state.clock.getElapsedTime() * 0.25;
 
     // Time always updates (cheap)
-    raysMat.uniforms.uTime.value = t;
-    flaresMat.uniforms.uTime.value = t;
+    if (focused) {
+      raysMat.uniforms.uTime.value = t;
+      flaresMat.uniforms.uTime.value = t;
+    }
+
+    // Update glow controls
+    glowMat.uniforms.uRadius.value = glowScale * 0.15;
+    glowMat.uniforms.uBrightness.value = glowBrightness;
+    glowMat.uniforms.uFalloff.value = glowFalloff;
+    glowMat.uniforms.uColor.value.set(glowColor);
 
     // Camera-dependent uniforms every 3rd frame
     frameSkip.current++;
     if (frameSkip.current >= 3) {
       frameSkip.current = 0;
       camera.getWorldPosition(_camPos);
-      raysMat.uniforms.uCamPos.value.copy(_camPos);
-      flaresMat.uniforms.uCamPos.value.copy(_camPos);
+      if (focused) {
+        raysMat.uniforms.uCamPos.value.copy(_camPos);
+        flaresMat.uniforms.uCamPos.value.copy(_camPos);
+      }
       camera.matrixWorld.extractBasis(_camRight, _camUp, _camFwd);
       glowMat.uniforms.uCamRight.value.copy(_camRight);
       glowMat.uniforms.uCamUp.value.copy(_camUp);
@@ -547,8 +562,12 @@ export default function StarEffects({ starRadius, temperature = 5500 }: StarEffe
   return (
     <>
       <mesh geometry={glowGeo} material={glowMat} frustumCulled={false} renderOrder={2} />
-      <mesh ref={raysRef} geometry={raysGeo} material={raysMat} frustumCulled={false} renderOrder={3} />
-      <mesh ref={flaresRef} geometry={flaresGeo} material={flaresMat} frustumCulled={false} renderOrder={1} />
+      {focused && (
+        <>
+          <mesh ref={raysRef} geometry={raysGeo} material={raysMat} frustumCulled={false} renderOrder={3} />
+          <mesh ref={flaresRef} geometry={flaresGeo} material={flaresMat} frustumCulled={false} renderOrder={1} />
+        </>
+      )}
     </>
   );
 }

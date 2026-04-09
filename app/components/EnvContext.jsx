@@ -32,7 +32,6 @@ export const EnvProvider = ({ children }) => {
   const [starGlowScale, setStarGlowScale] = useState(4.0);
   const [starGlowFalloff, setStarGlowFalloff] = useState(1.8);
   const [starGlowOpacity, setStarGlowOpacity] = useState(1.0);
-  const [starGlowBlend, setStarGlowBlend] = useState('additive'); // 'additive' | 'normal'
 
   // Atmosphere controls — global shape (per-planet intensities are in hzPresets + classification)
   // Atmosphere global shape — all start at 0/neutral, build up from nothing
@@ -143,7 +142,6 @@ export const EnvProvider = ({ children }) => {
       starGlowScale, setStarGlowScale,
       starGlowFalloff, setStarGlowFalloff,
       starGlowOpacity, setStarGlowOpacity,
-      starGlowBlend, setStarGlowBlend,
       atmosFalloff, setAtmosFalloff,
       glowFalloff, setGlowFalloff,
       glowInner, setGlowInner,
@@ -181,7 +179,7 @@ export const EnvProvider = ({ children }) => {
       typeColorOverrides, setTypeColorOverrides,
       activePlanetInfo, setActivePlanetInfo,
       hzPresets, updatePreset,
-  }), [Constants, planetDistanceFactor, binaryDistanceFactor, bodyScale, showHabitableZone, showOrbits, shaderAmbient, starGlowScale, starGlowFalloff, starGlowOpacity, starGlowBlend, lavaAmbient, wrapRange, wrapPower, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, activePlanetInfo, hzPresets]);
+  }), [Constants, planetDistanceFactor, binaryDistanceFactor, bodyScale, showHabitableZone, showOrbits, shaderAmbient, starGlowScale, starGlowFalloff, starGlowOpacity, lavaAmbient, wrapRange, wrapPower, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, activePlanetInfo, hzPresets]);
 
   return (
     <EnvContext.Provider value={contextValue}>

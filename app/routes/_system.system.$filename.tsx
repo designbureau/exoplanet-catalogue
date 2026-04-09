@@ -268,7 +268,6 @@ const App = ({ data }: any) => {
     starGlowScale, setStarGlowScale,
     starGlowFalloff, setStarGlowFalloff,
     starGlowOpacity, setStarGlowOpacity,
-    starGlowBlend, setStarGlowBlend,
     atmosFalloff, setAtmosFalloff,
     glowFalloff, setGlowFalloff,
     glowInner, setGlowInner,
@@ -448,16 +447,6 @@ const App = ({ data }: any) => {
           <Slider label="Scale" min={1} max={10} step={0.5} value={starGlowScale} onChange={setStarGlowScale} />
           <Slider label="Falloff" min={0.5} max={4} step={0.1} value={starGlowFalloff} onChange={setStarGlowFalloff} />
           <Slider label="Opacity" min={0} max={1} step={0.05} value={starGlowOpacity} onChange={setStarGlowOpacity} />
-          <div className="flex items-center gap-1">
-            <label className="w-14 shrink-0">Blend</label>
-            <select value={starGlowBlend} onChange={(e) => setStarGlowBlend(e.target.value)} className="flex-1 bg-black/50 text-[9px] rounded px-1 py-0.5 border border-white/10">
-              <option value="additive">Additive (Linear Dodge)</option>
-              <option value="screen">Screen</option>
-              <option value="normal">Normal</option>
-              <option value="multiply">Multiply</option>
-              <option value="subtractive">Subtractive</option>
-            </select>
-          </div>
           <div className="border-t border-white/10 my-1" />
           <div className="text-[9px] text-muted-foreground/60 mb-0.5">Shader Ambient (fresnel rim on dark side)</div>
           <Slider label="Planets" min={0} max={0.5} step={0.005} value={shaderAmbient} onChange={setShaderAmbient} />

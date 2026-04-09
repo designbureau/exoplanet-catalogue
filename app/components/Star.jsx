@@ -7,7 +7,7 @@ import {
 } from "../utils/getHabitableZone";
 import Planet from "./Planet";
 import * as THREE from "three";
-import { createStarMaterial, createStarGlowMaterial } from "../shaders/starShader";
+import { createStarMaterial } from "../shaders/starShader";
 import StarEffects from "./StarEffects";
 
 import {
@@ -20,10 +20,9 @@ import {
 
 const Star = ({ data, position, distance }) => {
   const ref = useRef();
-  const glowRef = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, showHabitableZone, starGlowScale, starGlowFalloff, starGlowOpacity, starGlowBlend } = useContext(EnvContext);
+  const { Constants, showHabitableZone, starGlowScale, starGlowFalloff, starGlowOpacity } = useContext(EnvContext);
 
   const name = data.name ? data.name[0] : "Unnamed star";
 
@@ -73,12 +72,9 @@ const Star = ({ data, position, distance }) => {
   scale = scale * Constants.radius.sol * Constants.radius.scale;
 
   // Create procedural star shader material
-  const { starMaterial, glowMaterial } = useMemo(() => {
-    const temp = temperature || 5500;
-    const starMat = createStarMaterial({ temperature: temp });
-    const glowMat = createStarGlowMaterial({ temperature: temp, glowFalloff: starGlowFalloff });
-    return { starMaterial: starMat, glowMaterial: glowMat };
-  }, [temperature, starGlowFalloff]);
+  const starMaterial = useMemo(() => {
+    return createStarMaterial({ temperature: temperature || 5500 });
+  }, [temperature]);
 
   useFrame((state) => {
     const elapsed = state.clock.getElapsedTime();
@@ -163,31 +159,15 @@ const Star = ({ data, position, distance }) => {
         <primitive object={starMaterial} attach="material" />
       </mesh>
 
-      {/* Star glow sprite */}
-      <sprite ref={glowRef} scale={[scale * starGlowScale, scale * starGlowScale, 1]}>
-        <primitive object={(() => {
-          glowMaterial.opacity = starGlowOpacity;
-          if (starGlowBlend === 'screen') {
-            glowMaterial.blending = THREE.CustomBlending;
-            glowMaterial.blendSrc = THREE.OneFactor;
-            glowMaterial.blendDst = THREE.OneMinusSrcColorFactor;
-          } else {
-            glowMaterial.blending = ({
-              additive: THREE.AdditiveBlending,
-              normal: THREE.NormalBlending,
-              multiply: THREE.MultiplyBlending,
-              subtractive: THREE.SubtractiveBlending,
-            })[starGlowBlend] || THREE.AdditiveBlending;
-          }
-          glowMaterial.needsUpdate = true;
-          return glowMaterial;
-        })()} attach="material" />
-      </sprite>
-
-      {/* Sun rays + flares — only rendered when star is focused */}
-      {activeRef?.current === ref.current && (
-        <StarEffects starRadius={scale} temperature={temperature} />
-      )}
+      {/* Star glow ring + rays/flares */}
+      <StarEffects
+        starRadius={scale}
+        temperature={temperature}
+        focused={activeRef?.current === ref.current}
+        glowScale={starGlowScale}
+        glowFalloff={starGlowFalloff}
+        glowBrightness={starGlowOpacity}
+      />
 
       {data.planet &&
         data.planet.map((planet, index) => (
