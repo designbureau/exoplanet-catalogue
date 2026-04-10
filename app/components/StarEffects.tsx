@@ -396,9 +396,9 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
     const rayLength = s * 0.04;
     const rayWidth = s * 0.03;
     const rayOpacity = 0.35;
-    const flareAmp = s * 0.06;
-    const flareWidth = s * 0.003;
-    const flareOpacity = 0.7;
+    const flareAmp = 0.5;          // original: 0.5 (not scaled by star size)
+    const flareWidth = 0.005;      // original: 0.005
+    const flareOpacity = 0.2;      // original: 0.2
 
     const rGeo = buildRaysGeometry(starRadius);
     const rMat = new THREE.ShaderMaterial({
