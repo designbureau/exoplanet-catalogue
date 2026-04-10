@@ -209,8 +209,8 @@ const sunFlaresFS = `
 
 // ---- Geometry builders ----
 
-function buildRaysGeometry(starRadius: number): THREE.BufferGeometry {
-  const lineCount = 4000;
+function buildRaysGeometry(starRadius: number, count: number = 6000): THREE.BufferGeometry {
+  const lineCount = count;
   const lineLength = 8;
 
   const totalVerts = lineCount * lineLength * 2;
@@ -389,7 +389,7 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
     return 0.0;
   }, [temperature]);
 
-  const { raysGeo, raysMat, flaresGeo, flaresMat, glowGeo, glowMat } = useMemo(() => {
+  const { raysGeo, raysGeoHigh, raysGeoLow, raysMat, flaresGeo, flaresMat, glowGeo, glowMat } = useMemo(() => {
     // Non-linear scaling: sqrt(r) capped for giant stars
     const r = starRadius;
     const s = Math.sqrt(Math.min(r, 20)); // cap at ~20 scene units to prevent giant star bloat
@@ -400,7 +400,9 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
     const flareWidth = 0.005;      // original: 0.005
     const flareOpacity = 0.2;      // original: 0.2
 
-    const rGeo = buildRaysGeometry(starRadius);
+    const rGeoHigh = buildRaysGeometry(starRadius, 8000);
+    const rGeoLow = buildRaysGeometry(starRadius, 2000);
+    const rGeo = rGeoHigh;
     const rMat = new THREE.ShaderMaterial({
       vertexShader: sunRaysVS,
       fragmentShader: sunRaysFS,
@@ -517,7 +519,7 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
       },
     });
 
-    return { raysGeo: rGeo, raysMat: rMat, flaresGeo: fGeo, flaresMat: fMat, glowGeo: gGeo, glowMat: gMat };
+    return { raysGeo: rGeo, raysGeoHigh: rGeoHigh, raysGeoLow: rGeoLow, raysMat: rMat, flaresGeo: fGeo, flaresMat: fMat, glowGeo: gGeo, glowMat: gMat };
   }, [starRadius, hue, baseColor, temperature]);
 
   // Pre-allocate vectors to avoid per-frame GC jitter
@@ -547,6 +549,14 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
     if (frameSkip.current >= 3) {
       frameSkip.current = 0;
       camera.getWorldPosition(_camPos);
+
+      // LOD: swap ray geometry based on camera distance
+      if (focused && raysRef.current) {
+        const dist = _camPos.length();
+        const useHigh = dist < starRadius * 8;
+        const targetGeo = useHigh ? raysGeoHigh : raysGeoLow;
+        if (raysRef.current.geometry !== targetGeo) raysRef.current.geometry = targetGeo;
+      }
       if (focused) {
         raysMat.uniforms.uCamPos.value.copy(_camPos);
         flaresMat.uniforms.uCamPos.value.copy(_camPos);
