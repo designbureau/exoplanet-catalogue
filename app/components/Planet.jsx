@@ -494,7 +494,7 @@ const Planet = ({ data, starData, starRef }) => {
 
     // Update ribbon trail phase to follow planet
     if (orbitMat?.uniforms?.uPhase) {
-      orbitMat.uniforms.uPhase.value = (angle % (Math.PI * 2)) / (Math.PI * 2);
+      orbitMat.uniforms.uPhase.value = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2);
     }
 
     // Time + LOD — only animate active planet's clouds
