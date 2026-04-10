@@ -572,7 +572,7 @@ const terrestrialFragment = `
     // Noise layers for colour variation
     float moisture = (u_lod > 0.5) ? cloudNoise(p * 0.5 + vec3(33.0), 1.0) : noise3d(p * 0.5 + vec3(33.0));
     float mountainRidge = (u_lod > 0.5) ? ridgedNoise(p, 2.0) : 0.0;
-    float microNoise = noise3d(p * 8.0);
+    float microNoise = noise3d(p * 4.0);
     float warpNoise = noise3d(p * 3.0 + vec3(77.0));
 
     // Ocean: 3-zone depth with colour variation
@@ -622,7 +622,7 @@ const terrestrialFragment = `
     landColor = mix(landColor, peaks, smoothstep(0.88, 0.96, landHeight));
 
     // Surface texture variation
-    landColor *= 0.92 + 0.16 * microNoise;
+    landColor *= 0.95 + 0.08 * microNoise;
 
     vec3 surfaceColor = mix(oceanColor, landColor, isLand);
 
