@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { useKeyState } from "use-key-state";
 
 const _objectPosition = new THREE.Vector3();
+const _starWorldPos = new THREE.Vector3();
 
 const Controls = ({ follow, autoRotate = false, viewAzimuth = 0, viewPolar = Math.PI * 0.45 }) => {
   const { activeRef, refs } = useContext(RefContext);
@@ -70,11 +71,33 @@ const Controls = ({ follow, autoRotate = false, viewAzimuth = 0, viewPolar = Mat
         const viewDist = Math.max(maxChildDist * 4, 50);
         cameraControlsRef.current.dollyTo(viewDist, animate);
       } else {
-        // For stars/planets: fitToBox with preserved polar angle
-        const savedPolar = cameraControlsRef.current.polarAngle;
+        // For stars/planets: fitToBox then orient for horizontal orbit + 80/20 lighting
         cameraControlsRef.current.fitToBox(activeRef.current, animate);
-        if (!isFirstSelect) {
-          cameraControlsRef.current.rotatePolarTo(savedPolar, animate);
+
+        // Find parent star position for sun-aware camera angle
+        // Planet mesh → orbit group → star group
+        const parent = activeRef.current.parent;
+        const starGroup = parent?.parent;
+        if (starGroup && starGroup.getWorldPosition) {
+          starGroup.getWorldPosition(_starWorldPos);
+
+          // Sun direction from planet to star, projected to XZ plane
+          const dx = _starWorldPos.x - _objectPosition.x;
+          const dz = _starWorldPos.z - _objectPosition.z;
+          const sunDist = Math.sqrt(dx * dx + dz * dz);
+
+          if (sunDist > 0.01) {
+            // Azimuth of sun direction
+            const sunAzimuth = Math.atan2(dx, dz);
+            // Offset ~30° from sun for 80% lit / 20% shadow
+            const cameraAzimuth = sunAzimuth + 0.5;
+            // Eye level for horizontal orbit
+            const cameraPolar = Math.PI / 2;
+            cameraControlsRef.current.rotateTo(cameraAzimuth, cameraPolar, animate);
+          }
+        } else if (!isFirstSelect) {
+          // Fallback: preserve polar angle
+          cameraControlsRef.current.rotatePolarTo(Math.PI / 2, animate);
         }
       }
     }
