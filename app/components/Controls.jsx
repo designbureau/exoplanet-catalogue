@@ -49,18 +49,33 @@ const Controls = ({ follow, autoRotate = false, viewAzimuth = 0, viewPolar = Mat
       );
 
       // Set min distance to the object's bounding sphere radius
-      // so the camera can't clip through the surface
       const bbox = new THREE.Box3().setFromObject(activeRef.current);
       const sphere = new THREE.Sphere();
       bbox.getBoundingSphere(sphere);
       cameraControlsRef.current.minDistance = sphere.radius * 1.02;
 
-      // Save polar (elevation), fitToBox, then restore polar only
-      // Azimuth changes freely (turns toward target), polar stays level
-      const savedPolar = cameraControlsRef.current.polarAngle;
-      cameraControlsRef.current.fitToBox(activeRef.current, animate);
-      if (!isFirstSelect) {
-        cameraControlsRef.current.rotatePolarTo(savedPolar, animate);
+      // Check if this is a binary group (has children with stars, not a mesh itself)
+      const isBinary = !activeRef.current.geometry;
+
+      if (isBinary) {
+        // For binaries: zoom to a reasonable distance showing the stars,
+        // not the entire orbit system. Use a moderate multiple of the
+        // separation between direct child stars.
+        let maxChildDist = 0;
+        activeRef.current.children.forEach(child => {
+          if (child.position) {
+            maxChildDist = Math.max(maxChildDist, child.position.length());
+          }
+        });
+        const viewDist = Math.max(maxChildDist * 4, 50);
+        cameraControlsRef.current.dollyTo(viewDist, animate);
+      } else {
+        // For stars/planets: fitToBox with preserved polar angle
+        const savedPolar = cameraControlsRef.current.polarAngle;
+        cameraControlsRef.current.fitToBox(activeRef.current, animate);
+        if (!isFirstSelect) {
+          cameraControlsRef.current.rotatePolarTo(savedPolar, animate);
+        }
       }
     }
   }, [activeRef]);
