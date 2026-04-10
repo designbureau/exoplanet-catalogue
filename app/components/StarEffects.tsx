@@ -393,9 +393,9 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
     // Non-linear scaling: sqrt(r) capped for giant stars
     const r = starRadius;
     const s = Math.sqrt(Math.min(r, 20)); // cap at ~20 scene units to prevent giant star bloat
-    const rayLength = 0.3 + s * 0.02;  // longer, slight size scaling
-    const rayWidth = 0.02 + s * 0.005; // thinner, slight size scaling
-    const rayOpacity = 0.06;            // much more subtle (was 0.35, original 0.03)
+    const rayLength = Math.min(s * 0.12, 0.5);  // proportional, clamped
+    const rayWidth = Math.min(s * 0.015, 0.06);  // proportional, clamped
+    const rayOpacity = 0.15;
     const flareAmp = 0.5;          // original: 0.5 (not scaled by star size)
     const flareWidth = 0.005;      // original: 0.005
     const flareOpacity = 0.2;      // original: 0.2
