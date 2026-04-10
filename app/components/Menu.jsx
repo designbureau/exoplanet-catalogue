@@ -28,31 +28,22 @@ const Menu = ({ data }) => {
       const uniqueKey = `${type}-${name}`;
       const isActive = uniqueKey === activeMenuItem;
 
-      // Binary names are group headers, not clickable items
-      if (type === "binary") {
-        return (
-          <li key={uniqueKey}>
-            {children.length > 0 && <ul>{children}</ul>}
-          </li>
-        );
-      }
+      const typeStyles = {
+        binary: isActive ? "text-cyan-400" : "text-muted-foreground/50 hover:text-white text-[9px] italic",
+        star: isActive ? "text-cyan-400 font-medium" : "text-muted-foreground/80 hover:text-white font-medium",
+        planet: isActive ? "text-cyan-400" : "text-muted-foreground hover:text-white",
+      };
 
       return (
         <li key={uniqueKey}>
           <button
-            className={`block w-full text-right px-1 py-0.5 text-[11px] rounded transition-colors ${
-              isActive
-                ? "text-cyan-400"
-                : type === "star"
-                ? "text-muted-foreground/80 hover:text-white font-medium"
-                : "text-muted-foreground hover:text-white"
-            }`}
+            className={`block w-full text-right px-1 py-0.5 text-[11px] rounded transition-colors ${typeStyles[type] || typeStyles.planet}`}
             data-name={`${type}-${name}`}
             onClick={() => handleClick(name, type)}
           >
             {name}
           </button>
-          {children.length > 0 && <ul className="ml-2">{children}</ul>}
+          {children.length > 0 && <ul className="ml-3 border-r border-white/10 pr-1">{children}</ul>}
         </li>
       );
     });
