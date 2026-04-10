@@ -211,7 +211,7 @@ function MilkyWaySkybox({ brightness, contrast }: { brightness: number; contrast
 
   return (
     <mesh renderOrder={-2}>
-      <sphereGeometry args={[90000, 32, 16]} />
+      <sphereGeometry args={[5000000, 32, 16]} />
       <primitive object={material} attach="material" />
     </mesh>
   );
