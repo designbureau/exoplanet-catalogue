@@ -37,20 +37,20 @@ const Menu = ({ data }) => {
       return (
         <li key={uniqueKey}>
           <button
-            className={`block w-full text-right px-1 py-0.5 text-[11px] rounded transition-colors ${typeStyles[type] || typeStyles.planet}`}
+            className={`block w-full text-left px-1 py-0.5 text-[11px] rounded transition-colors ${typeStyles[type] || typeStyles.planet}`}
             data-name={`${type}-${name}`}
             onClick={() => handleClick(name, type)}
           >
             {name}
           </button>
-          {children.length > 0 && <ul className="ml-3 border-r border-white/10 pr-1">{children}</ul>}
+          {children.length > 0 && <ul className="pl-3">{children}</ul>}
         </li>
       );
     });
   };
 
   return (
-    <nav className="fixed right-2 bottom-2 z-10 rounded-md bg-black/60 backdrop-blur-sm px-2 py-1.5 max-h-[40vh] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+    <nav className="fixed right-2 bottom-2 z-10 rounded-md bg-black/60 backdrop-blur-sm px-3 py-2 max-h-[40vh] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
       <ul>
         {data.star && generateMenuItems(data.star, "star")}
         {data.binary && generateMenuItems(data.binary, "binary")}
