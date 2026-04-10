@@ -392,9 +392,9 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
   }, [temperature]);
 
   const { raysGeo, raysMat, flaresGeo, flaresMat, glowGeo, glowMat } = useMemo(() => {
-    // Non-linear scaling: sqrt(r) so small stars get proportionally bigger effects
+    // Non-linear scaling: sqrt(r) capped for giant stars
     const r = starRadius;
-    const s = Math.sqrt(r);
+    const s = Math.sqrt(Math.min(r, 20)); // cap at ~20 scene units to prevent giant star bloat
     const rayLength = s * 0.04;
     const rayWidth = s * 0.03;
     const rayOpacity = 0.35;
