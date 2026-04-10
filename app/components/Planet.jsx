@@ -78,6 +78,7 @@ import { useRef, useContext, useEffect, useMemo } from "react";
 import { RefContext } from "./RefContext";
 import { EnvContext } from "./EnvContext";
 import { getRingParams, createRingMaterial } from "../shaders/ringShader";
+import { keplerPosition } from "../utils/kepler";
 import {
   getSemimajoraxis,
   getPeriod,
@@ -488,13 +489,15 @@ const Planet = ({ data, starData, starRef }) => {
     const elapsedTime = state.clock.getElapsedTime();
     ref.current.rotation.x = Math.PI * 0.5;
     ref.current.rotation.y += 0.001;
-    const angle = (elapsedTime / period) * speed + phaseOffset;
-    ref.current.position.x = ellipse.xRadius * Math.cos(angle);
-    ref.current.position.y = ellipse.yRadius * Math.sin(angle);
+    // Keplerian orbit: mean anomaly linear in time, true anomaly varies (faster at periapsis)
+    const meanAnomaly = (elapsedTime / period) * speed * 2 * Math.PI + phaseOffset;
+    const [kx, ky] = keplerPosition(meanAnomaly, eccentricity, semimajoraxis);
+    ref.current.position.x = kx;
+    ref.current.position.y = ky;
 
-    // Update ribbon trail phase to follow planet
+    // Update ribbon trail phase — normalised mean anomaly
     if (orbitMat?.uniforms?.uPhase) {
-      orbitMat.uniforms.uPhase.value = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2);
+      orbitMat.uniforms.uPhase.value = ((meanAnomaly % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2);
     }
 
     // Time + LOD — only animate active planet's clouds
