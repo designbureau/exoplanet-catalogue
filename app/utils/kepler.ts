@@ -24,19 +24,19 @@ export function eccentricToTrue(E: number, e: number): number {
   );
 }
 
-// Get orbital position (x, y) from mean anomaly and orbital elements
-// Returns [x, y] in the orbital plane
+// Get orbital position (x, y) and true anomaly from mean anomaly and orbital elements
 export function keplerPosition(
   meanAnomaly: number,
   eccentricity: number,
   semiMajorAxis: number
-): [number, number] {
+): { x: number; y: number; trueAnomaly: number } {
   if (eccentricity < 1e-6) {
     // Nearly circular — skip Kepler solve
-    return [
-      semiMajorAxis * Math.cos(meanAnomaly),
-      semiMajorAxis * Math.sin(meanAnomaly)
-    ];
+    return {
+      x: semiMajorAxis * Math.cos(meanAnomaly),
+      y: semiMajorAxis * Math.sin(meanAnomaly),
+      trueAnomaly: meanAnomaly,
+    };
   }
 
   const E = solveKepler(meanAnomaly, eccentricity);
@@ -45,8 +45,9 @@ export function keplerPosition(
   // Distance from focus
   const r = semiMajorAxis * (1 - eccentricity * Math.cos(E));
 
-  return [
-    r * Math.cos(trueAnomaly),
-    r * Math.sin(trueAnomaly)
-  ];
+  return {
+    x: r * Math.cos(trueAnomaly),
+    y: r * Math.sin(trueAnomaly),
+    trueAnomaly,
+  };
 }

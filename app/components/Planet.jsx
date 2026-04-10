@@ -491,13 +491,13 @@ const Planet = ({ data, starData, starRef }) => {
     ref.current.rotation.y += 0.001;
     // Keplerian orbit: mean anomaly linear in time, true anomaly varies (faster at periapsis)
     const meanAnomaly = (elapsedTime / period) * speed * 2 * Math.PI + phaseOffset;
-    const [kx, ky] = keplerPosition(meanAnomaly, eccentricity, semimajoraxis);
-    ref.current.position.x = kx;
-    ref.current.position.y = ky;
+    const kep = keplerPosition(meanAnomaly, eccentricity, semimajoraxis);
+    ref.current.position.x = kep.x;
+    ref.current.position.y = kep.y;
 
-    // Update ribbon trail phase — normalised mean anomaly
+    // Update ribbon trail phase — normalised true anomaly to match orbit line parameterisation
     if (orbitMat?.uniforms?.uPhase) {
-      orbitMat.uniforms.uPhase.value = ((meanAnomaly % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2);
+      orbitMat.uniforms.uPhase.value = ((kep.trueAnomaly % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2);
     }
 
     // Time + LOD — only animate active planet's clouds
@@ -588,19 +588,28 @@ const Planet = ({ data, starData, starRef }) => {
     }
   });
 
-  const position = [periapsis, 0, 0];
+  const position = [0, 0, 0]; // star at focus, keplerPosition handles offset
   // Orbit line with per-vertex alpha for taper effect
   const orbitLine = useRef();
   const { orbitGeo, orbitMat } = useMemo(() => {
     const circumference = Math.PI * (ellipse.xRadius + ellipse.yRadius);
     const segments = Math.max(128, Math.min(512, Math.round(circumference * 0.5)));
-    const curve = new THREE.EllipseCurve(0, 0, ellipse.xRadius, ellipse.yRadius, 0, 2 * Math.PI, false, 0);
-    const points = curve.getPoints(segments);
+    // Generate orbit from Kepler positions so line matches planet motion
+    const points = [];
+    for (let i = 0; i <= segments; i++) {
+      const M = (i / segments) * Math.PI * 2;
+      const { x, y } = keplerPosition(M, eccentricity, semimajoraxis);
+      points.push(new THREE.Vector3(x, y, 0));
+    }
     const geo = new THREE.BufferGeometry().setFromPoints(points);
 
-    // Store normalized t (0→1) per vertex for the shader taper
+    // Store normalized true anomaly (0→1) per vertex for the shader taper
     const tValues = new Float32Array(segments + 1);
-    for (let i = 0; i <= segments; i++) tValues[i] = i / segments;
+    for (let i = 0; i <= segments; i++) {
+      const M = (i / segments) * Math.PI * 2;
+      const { trueAnomaly } = keplerPosition(M, eccentricity, semimajoraxis);
+      tValues[i] = ((trueAnomaly % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2);
+    }
     geo.setAttribute("aT", new THREE.BufferAttribute(tValues, 1));
 
     const mat = new THREE.ShaderMaterial({
@@ -638,7 +647,7 @@ const Planet = ({ data, starData, starRef }) => {
     });
 
     return { orbitGeo: geo, orbitMat: mat };
-  }, [ellipse.xRadius, ellipse.yRadius]);
+  }, [semimajoraxis, eccentricity]);
 
   return (
     <group position={position} rotation={[(inclination * Math.PI) / 90, 0, 0]}>
