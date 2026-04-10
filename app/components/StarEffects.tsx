@@ -393,9 +393,9 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
     // Non-linear scaling: sqrt(r) capped for giant stars
     const r = starRadius;
     const s = Math.sqrt(Math.min(r, 20)); // cap at ~20 scene units to prevent giant star bloat
-    const rayLength = s * 0.04;
-    const rayWidth = s * 0.03;
-    const rayOpacity = 0.35;
+    const rayLength = 0.45;       // original: 0.45
+    const rayWidth = 0.03;        // original: 0.03
+    const rayOpacity = 0.03;      // original: 0.03
     const flareAmp = 0.5;          // original: 0.5 (not scaled by star size)
     const flareWidth = 0.005;      // original: 0.005
     const flareOpacity = 0.2;      // original: 0.2
@@ -502,9 +502,10 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
         }
       `,
       transparent: true,
+      premultipliedAlpha: true,
       depthWrite: false,
-      depthTest: true,
-      blending: THREE.AdditiveBlending,
+      depthTest: false,
+      blending: THREE.NormalBlending,
       side: THREE.DoubleSide,
       uniforms: {
         uRadius: { value: glowScale * 0.15 },
