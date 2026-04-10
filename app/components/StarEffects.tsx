@@ -155,7 +155,7 @@ const sunFlaresVS = `
     return p;
   }
 
-  uniform vec3 uBaseColor;
+  #define hue(v) ( .6 + .6 * cos( 6.3*(v) + vec3(0.0,23.0,21.0) ) )
 
   void main() {
     vUVY = aPos.z;
@@ -180,9 +180,7 @@ const sunFlaresVS = `
     vOpacity = smoothstep(R, R * 1.03, lenW);
     vOpacity *= (1.0 - animPhase);
     vOpacity *= uOpacity;
-    // Temperature-matched colour with per-wire variation
-    float variation = aWireRandom.w * uHueSpread;
-    vColor = uBaseColor * (0.8 + variation * 0.4);
+    vColor = hue(aWireRandom.w * uHueSpread + uHue);
 
     gl_Position = projectionMatrix * viewMatrix * vec4(pW, 1.0);
   }
@@ -444,7 +442,6 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
         uAlphaBlended: { value: 0.65 },
         uHueSpread: { value: 0.16 },
         uHue: { value: hue },
-        uBaseColor: { value: baseColor },
         uNoiseFrequency: { value: 4.0 },
         uNoiseAmplitude: { value: 0.2 },
       },
