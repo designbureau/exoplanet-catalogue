@@ -428,9 +428,10 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
       vertexShader: sunFlaresVS,
       fragmentShader: sunFlaresFS,
       transparent: true,
+      premultipliedAlpha: true,
       depthWrite: false,
       depthTest: true,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
       side: THREE.DoubleSide,
       uniforms: {
         uTime: { value: 0 },
