@@ -1054,6 +1054,7 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
 // Cloud layer material — separate sphere slightly above planet surface
 const cloudFragmentShader = `
   uniform float u_time;
+  uniform vec3 u_seed;
   uniform float u_cloudCoverage;
   uniform float u_cloudOpacity;
   uniform float u_cloudSwirl;
@@ -1125,7 +1126,7 @@ const cloudFragmentShader = `
     float sn = sin(swirlAngle * 0.08);
     cloudBase.xz = mat2(cs, -sn, sn, cs) * cloudBase.xz;
 
-    float warp1 = cloudNoise(cloudBase * 0.4, 1.2);
+    float warp1 = cloudNoise(cloudBase * 0.4, 1.2, u_seed.x * 100.0);
     float warp2 = noise3d(cloudBase * 0.6 + vec3(43.0));
     vec3 warpedP = cloudBase + vec3(warp1 * u_cloudWarp + warp2 * (u_cloudWarp * 0.4), t * 0.4, warp1 * (u_cloudWarp * 0.7));
 
