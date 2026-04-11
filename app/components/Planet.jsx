@@ -12,8 +12,7 @@ function getLodSphereGeo(radius, segments) {
 // LOD tiers: [maxDistMultiplier, planetSegs, atmosSegs, vertLOD]
 // vertLOD: 0=no displacement, 1=basic, 2=full displacement + normals
 const LOD_TIERS = [
-  [2,    1024, 64, 2],    // ultra close: max detail
-  [5,    512,  64, 2],    // close: full displacement + normals
+  [4,    512,  64, 2],    // close: full displacement + normals
   [12,   256,  64, 1],    // mid-close: basic displacement
   [30,   128,  64, 0],    // mid: no displacement, full fragment
   [60,   64,   48, 0],    // mid-range
@@ -424,20 +423,14 @@ const Planet = ({ data, starData, starRef }) => {
       u.u_gasBands.value = isIce ? iceBands : gasBands;
       u.u_gasEdgeNoise.value = isIce ? iceEdgeNoise : gasEdgeNoise;
     }
-    // Terrestrial: only override from global sliders when HZ gradient is not active
-    if (u.u_seaLevel && !hasHzGradient) {
+    // Terrestrial: global sliders always apply (no HZ guard)
+    if (u.u_seaLevel) {
       u.u_seaLevel.value = terrSeaLevel;
       u.u_continentFreq.value = terrContinentFreq;
       u.u_terrWarp.value = terrWarpStrength;
       u.u_iceCapSize.value = terrIceCapSize;
-    }
-    if (u.u_bumpStrength) {
       u.u_bumpStrength.value = terrBumpStrength;
-    }
-    if (u.u_coastDetail) {
       u.u_coastDetail.value = terrCoastDetail;
-    }
-    if (u.u_landContrast) {
       u.u_landContrast.value = terrLandContrast;
     }
     if (u.u_craterScale) {
