@@ -108,11 +108,11 @@ const terrestrialVertexShader = `
 
   // ── Vertex noise: exact mirrors of fragment hi* functions ──
 
-  // Cloud noise: 10-octave sin-modulated — matches fragment hiCloud
+  // Cloud noise: 6-octave sin-modulated — matches fragment hiCloud
   float vCloud(vec3 pos, float frq, float sd) {
     float n = 0.0, amp = 0.5;
     vec3 p = pos * frq + vec3(sd);
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 6; i++) {
       float s = pnoise3d(p);
       s = sin(s * 5.0) * 0.5 + 0.5;
       n += s * amp;
@@ -122,11 +122,11 @@ const terrestrialVertexShader = `
     return clamp(n, 0.0, 1.0);
   }
 
-  // Ridged: 10-octave ridge-folded — matches fragment hiRidged
+  // Ridged: 6-octave ridge-folded — matches fragment hiRidged
   float vRidged(vec3 pos, float frq, float sd) {
     float n = 0.0, amp = 0.5;
     vec3 p = pos * frq + vec3(sd);
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 6; i++) {
       float s = pnoise3d(p);
       s = 2.0 * (0.5 - abs(0.5 - s));
       n += s * amp;
@@ -172,24 +172,19 @@ const terrestrialVertexShader = `
       float height = computeHeight(dir);
       displacedPos = position + normal * height * u_displace;
 
-      // Finite-difference normal: build tangent frame on sphere
+      // Forward-difference normal: 2 neighbors (3 total height calls)
       vec3 up = abs(dir.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
       vec3 tangent = normalize(cross(up, dir));
       vec3 bitangent = cross(dir, tangent);
 
-      float eps = 0.002;
-      vec3 pxp = normalize(dir + tangent * eps);
-      vec3 pxn = normalize(dir - tangent * eps);
-      vec3 pyp = normalize(dir + bitangent * eps);
-      vec3 pyn = normalize(dir - bitangent * eps);
-
+      float eps = 0.003;
       float r = length(position);
-      vec3 posXp = pxp * r + pxp * computeHeight(pxp) * u_displace;
-      vec3 posXn = pxn * r + pxn * computeHeight(pxn) * u_displace;
-      vec3 posYp = pyp * r + pyp * computeHeight(pyp) * u_displace;
-      vec3 posYn = pyn * r + pyn * computeHeight(pyn) * u_displace;
+      vec3 pT = normalize(dir + tangent * eps);
+      vec3 pB = normalize(dir + bitangent * eps);
+      vec3 posT = pT * r + pT * computeHeight(pT) * u_displace;
+      vec3 posB = pB * r + pB * computeHeight(pB) * u_displace;
 
-      displacedNormal = normalize(cross(posXp - posXn, posYp - posYn));
+      displacedNormal = normalize(cross(posT - displacedPos, posB - displacedPos));
       vPosition = normalize(displacedPos);
     } else {
       vPosition = dir;
@@ -249,14 +244,16 @@ const noiseLib = `
     return v;
   }
 
-  // ── High-detail noise (Perlin-based, 10 octaves — matching ColorDodge) ──
-  // With proper gradient noise we can now push to 10+ octaves cleanly.
+  // ── High-detail noise (Perlin-based, LOD-aware: 6 oct close, 3 oct far) ──
+  // Octaves 7-10 contribute <1% each — imperceptible but double the cost.
 
-  // Base FBM: 10-octave, contrast-boosted
+  // Base FBM: 6/3-octave, contrast-boosted
   float hiFBM(vec3 pos, float frq, float sd) {
     float n = 0.0, amp = 0.5;
     vec3 p = pos * frq + vec3(sd);
-    for (int i = 0; i < 10; i++) {
+    int oct = (u_lod > 0.5) ? 6 : 3;
+    for (int i = 0; i < 6; i++) {
+      if (i >= oct) break;
       n += pnoise3d(p) * amp;
       p = p * 2.03 + vec3(float(i) * 13.7, float(i) * 7.3, float(i) * 19.1);
       amp *= 0.5;
@@ -264,11 +261,13 @@ const noiseLib = `
     return clamp((n - 0.5) * 2.0 + 0.5, 0.0, 1.0);
   }
 
-  // Ridged: 10-octave, ridge-folded, pow4 sharpened
+  // Ridged: 6/3-octave, ridge-folded, pow4 sharpened
   float hiRidged(vec3 pos, float frq, float sd) {
     float n = 0.0, amp = 0.5;
     vec3 p = pos * frq + vec3(sd);
-    for (int i = 0; i < 10; i++) {
+    int oct = (u_lod > 0.5) ? 6 : 3;
+    for (int i = 0; i < 6; i++) {
+      if (i >= oct) break;
       float s = pnoise3d(p);
       s = 2.0 * (0.5 - abs(0.5 - s));
       n += s * amp;
@@ -283,11 +282,13 @@ const noiseLib = `
     return 1.0 - hiRidged(pos, frq, sd);
   }
 
-  // Cloud noise: 10-octave sin-modulated for organic shapes
+  // Cloud noise: 6/3-octave sin-modulated for organic shapes
   float hiCloud(vec3 pos, float frq, float sd) {
     float n = 0.0, amp = 0.5;
     vec3 p = pos * frq + vec3(sd);
-    for (int i = 0; i < 10; i++) {
+    int oct = (u_lod > 0.5) ? 6 : 3;
+    for (int i = 0; i < 6; i++) {
+      if (i >= oct) break;
       float s = pnoise3d(p);
       s = sin(s * 5.0) * 0.5 + 0.5;
       n += s * amp;
@@ -783,20 +784,16 @@ const terrestrialFragment = `
     float seaLevel = u_seaLevel;
     float isLand = smoothstep(seaLevel - 0.02, seaLevel + 0.02, continent);
 
-    // ── Normal mapping: 6-neighbor central differences ──
+    // ── Normal mapping: 3-neighbor forward differences (4 total calls) ──
     vec3 bumpNormal = vNormal;
     if (u_lod > 0.5) {
-      float eps = 0.002;
-      float hxp = computeContinent(p + vec3(eps, 0.0, 0.0));
-      float hxn = computeContinent(p - vec3(eps, 0.0, 0.0));
-      float hyp = computeContinent(p + vec3(0.0, eps, 0.0));
-      float hyn = computeContinent(p - vec3(0.0, eps, 0.0));
-      float hzp = computeContinent(p + vec3(0.0, 0.0, eps));
-      float hzn = computeContinent(p - vec3(0.0, 0.0, eps));
-      vec3 grad = vec3(hxp - hxn, hyp - hyn, hzp - hzn) / (2.0 * eps);
+      float eps = 0.003;
+      float hx = computeContinent(p + vec3(eps, 0.0, 0.0));
+      float hy = computeContinent(p + vec3(0.0, eps, 0.0));
+      float hz = computeContinent(p + vec3(0.0, 0.0, eps));
+      vec3 grad = vec3(continent - hx, continent - hy, continent - hz) / eps;
       float strength = (u_displace > 0.0) ? u_bumpStrength * 0.5 : u_bumpStrength;
-      bumpNormal = normalize(vNormal - grad * strength);
-      // Flatten water normals
+      bumpNormal = normalize(vNormal + grad * strength);
       bumpNormal = mix(vNormal, bumpNormal, isLand * 0.95 + 0.05);
     }
 

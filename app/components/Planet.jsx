@@ -543,8 +543,9 @@ const Planet = ({ data, starData, starRef }) => {
       }
     }
 
-    // Geometry LOD — swap sphere resolution based on camera distance
-    if (ref.current) {
+    // Geometry LOD — throttle checks for non-active planets
+    const frameCount = Math.round(state.clock.elapsedTime * 60);
+    if (ref.current && (isActive || frameCount % 30 === 0)) {
       ref.current.getWorldPosition(_camUp);
       const camDist = state.camera.position.distanceTo(_camUp);
       for (const [maxDistMult, pSegs, aSegs, vertLOD] of LOD_TIERS) {
@@ -556,12 +557,12 @@ const Planet = ({ data, starData, starRef }) => {
             const newAtmosGeo = getLodSphereGeo(scale * atmosScale, aSegs);
             if (glowRef.current.geometry !== newAtmosGeo) glowRef.current.geometry = newAtmosGeo;
           }
-          // Vertex displacement: scale + LOD level for terrestrial planets
+          // Vertex displacement: only for active (selected) planet
           if (shaderMaterial.uniforms.u_displace) {
-            shaderMaterial.uniforms.u_displace.value = vertLOD > 0 ? scale * terrDisplaceScale : 0;
+            shaderMaterial.uniforms.u_displace.value = (isActive && vertLOD > 0) ? scale * terrDisplaceScale : 0;
           }
           if (shaderMaterial.uniforms.u_vertLOD) {
-            shaderMaterial.uniforms.u_vertLOD.value = vertLOD;
+            shaderMaterial.uniforms.u_vertLOD.value = isActive ? vertLOD : 0;
           }
           break;
         }
