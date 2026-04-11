@@ -531,21 +531,35 @@ const terrestrialFragment = `
     // Cloud noise for organic coastline detail (LOD-aware, lower freq)
     float h2 = cloudNoise_lod(wp, u_coastDetail) * 0.2;
 
-    // Ridged noise + coastline detail only at high LOD (reduced contribution)
+    // Ridged noise + detail layers at high LOD
     float h3 = 0.0;
     float h4 = 0.0;
+    float h5 = 0.0; // mountain ridges
+    float h6 = 0.0; // micro-terrain
     if (u_lod > 0.5) {
-      h3 = ridgedNoise(wp + vec3(h1 * 0.5), 0.8) * 0.08;
+      // Mountain ridges — sharp peaks from ridged noise
+      h3 = ridgedNoise(wp + vec3(h1 * 0.5), 0.8) * 0.1;
+
+      // Secondary domain warp for mid-frequency detail
       vec3 wp2 = wp + 0.08 * vec3(
         noise3d(wp * 1.5 + vec3(17.0)),
         noise3d(wp * 1.5 + vec3(31.0)),
         noise3d(wp * 1.5 + vec3(47.0))
       );
-      h4 = noise3d(wp2 * 1.2) * 0.05;
+      h4 = noise3d(wp2 * 1.2) * 0.06;
+
+      // Mountain range chains — elongated ridged noise at medium frequency
+      float ridgeWarp = noise3d(wp * 0.6 + vec3(83.0)) * 0.3;
+      h5 = ridgedNoise(wp + vec3(ridgeWarp, 0.0, ridgeWarp * 0.7), 1.5) * 0.06;
+
+      // Micro-terrain: fine surface detail (valleys, hills, erosion patterns)
+      float erosion = noise3d(wp * 4.0 + vec3(h3 * 2.0)) * 0.02;
+      float valleys = (1.0 - ridgedNoise(wp, 3.0)) * 0.015; // inverted ridges = valleys
+      h6 = erosion - valleys;
     }
 
-    // Base dominates, detail layers are subtle
-    float raw = (h1 + h1b) * 0.55 + h2 + h3 + h4;
+    // Base dominates, detail layers add complexity
+    float raw = (h1 + h1b) * 0.5 + h2 + h3 + h4 + h5 + h6;
     return enhanceContrast(raw, 0.48, u_landContrast);
   }
 
@@ -557,12 +571,22 @@ const terrestrialFragment = `
     // Bump normal: only compute at high LOD
     vec3 bumpNormal = vNormal;
     if (u_lod > 0.5) {
-      float eps = 0.002;
+      // Fine bump from continent height
+      float eps = 0.001;
       float cx = computeContinent(p + vec3(eps, 0.0, 0.0));
       float cy = computeContinent(p + vec3(0.0, eps, 0.0));
       float cz = computeContinent(p + vec3(0.0, 0.0, eps));
       vec3 bumpGrad = vec3(continent - cx, continent - cy, continent - cz) / eps;
-      bumpNormal = normalize(vNormal + bumpGrad * 0.08);
+      bumpNormal = normalize(vNormal + bumpGrad * 0.15);
+
+      // Secondary micro-bump for surface roughness (higher frequency)
+      float me = 0.003;
+      float mx = noise3d((p + vec3(me, 0.0, 0.0)) * 6.0);
+      float my = noise3d((p + vec3(0.0, me, 0.0)) * 6.0);
+      float mz = noise3d((p + vec3(0.0, 0.0, me)) * 6.0);
+      float mc = noise3d(p * 6.0);
+      vec3 microGrad = vec3(mc - mx, mc - my, mc - mz) / me;
+      bumpNormal = normalize(bumpNormal + microGrad * 0.03);
     }
 
     // Sea level threshold (higher = more ocean, fewer but bigger continents)
@@ -590,39 +614,50 @@ const terrestrialFragment = `
     vec3 coastalColor = mix(color2, color3, 0.5) * 0.8 + vec3(0.06, 0.05, 0.02);
     oceanColor = mix(oceanColor, coastalColor, coastalBand * 0.6);
 
-    // Land: multi-zone with noise-driven variation
+    // Land: multi-zone biome system with height + moisture + latitude
     float landHeight = (continent - seaLevel) / (1.0 - seaLevel);
+    float latitude = abs(vPosition.y); // 0 at equator, 1 at poles
 
     // Beach/shore zone
     vec3 shoreColor = mix(color2, color3, 0.3) + vec3(0.08, 0.06, 0.02);
-    float isShore = 1.0 - smoothstep(0.0, 0.08, landHeight);
 
-    // Lowland with moisture-driven variation
-    vec3 lowWet = color2 * 1.1 + vec3(-0.005, 0.015, -0.005);  // slightly lusher
-    vec3 lowDry = mix(color2, color3, 0.4);  // drier/browner
-    vec3 lowland = mix(lowWet, lowDry, smoothstep(0.45, 0.3, moisture));
-    // Micro-variation within lowlands
-    lowland += vec3(0.02, -0.01, -0.02) * warpNoise;
+    // Lowland biomes driven by moisture AND latitude
+    vec3 lowWet = color2 * 1.1 + vec3(-0.005, 0.015, -0.005);  // tropical/temperate forest
+    vec3 lowDry = mix(color2, color3, 0.4);  // savanna/grassland
+    vec3 lowArid = color3 * 0.9 + vec3(0.04, 0.02, -0.01);  // desert/scrubland
+    // Latitude shifts toward drier at equator (deserts), wetter at mid-latitudes
+    float latMoisture = moisture + smoothstep(0.0, 0.25, latitude) * 0.15 - smoothstep(0.5, 0.8, latitude) * 0.1;
+    vec3 lowland = mix(lowArid, lowDry, smoothstep(0.25, 0.4, latMoisture));
+    lowland = mix(lowland, lowWet, smoothstep(0.4, 0.6, latMoisture));
+    // Micro-variation
+    lowland += vec3(0.015, -0.008, -0.015) * warpNoise;
 
-    // Highland with ridge influence
-    vec3 highland = color3;
-    highland += vec3(0.03, 0.01, -0.02) * mountainRidge;
-    // Rocky exposed areas
-    vec3 exposedRock = color3 * 0.7 + color4 * 0.3;
+    // Highland with ridge influence — darker, rockier
+    vec3 highland = color3 * 0.9;
+    highland += vec3(0.02, 0.008, -0.015) * mountainRidge;
+    // Tundra at high latitude + high elevation
+    vec3 tundra = mix(color3 * 0.75, color4 * 0.6, 0.4) + vec3(-0.02, -0.01, 0.02);
+    highland = mix(highland, tundra, smoothstep(0.5, 0.8, latitude) * smoothstep(0.3, 0.6, landHeight));
 
-    // Peak/snow zone
+    // Exposed rock on steep slopes
+    vec3 exposedRock = color3 * 0.65 + color4 * 0.35;
+
+    // Peak/snow zone — latitude-dependent (snow starts lower near poles)
+    float snowLine = mix(0.92, 0.7, smoothstep(0.4, 0.8, latitude));
     vec3 peaks = color4;
 
-    // Blend terrain zones with wide, overlapping transitions
+    // Blend terrain zones with overlapping transitions
     vec3 landColor = mix(shoreColor, lowland, smoothstep(0.02, 0.12, landHeight));
-    // Gradual green-to-brown blend driven by both height and moisture
-    float brownBlend = smoothstep(0.1, 0.55, landHeight) * (0.6 + 0.4 * (1.0 - moisture));
+    // Height + moisture → highland transition
+    float brownBlend = smoothstep(0.1, 0.55, landHeight) * (0.6 + 0.4 * (1.0 - latMoisture));
     landColor = mix(landColor, highland, brownBlend);
-    landColor = mix(landColor, exposedRock, mountainRidge * smoothstep(0.2, 0.5, landHeight) * 0.5);
-    landColor = mix(landColor, peaks, smoothstep(0.88, 0.96, landHeight));
+    // Rocky outcrops where ridges are strong
+    landColor = mix(landColor, exposedRock, mountainRidge * smoothstep(0.2, 0.5, landHeight) * 0.6);
+    // Snow/peak — latitude-dependent snowline
+    landColor = mix(landColor, peaks, smoothstep(snowLine, snowLine + 0.06, landHeight));
 
-    // Surface texture variation
-    landColor *= 0.95 + 0.08 * microNoise;
+    // Surface texture variation (subtle)
+    landColor *= 0.96 + 0.06 * microNoise;
 
     vec3 surfaceColor = mix(oceanColor, landColor, isLand);
 
