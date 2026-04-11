@@ -595,7 +595,10 @@ const Planet = ({ data, starData, starRef }) => {
 
     // Sync glow positions with orbiting planet
     if (glowRef.current) glowRef.current.position.copy(ref.current.position);
-    if (cloudRef.current) cloudRef.current.position.copy(ref.current.position);
+    if (cloudRef.current) {
+      cloudRef.current.position.copy(ref.current.position);
+      cloudRef.current.rotation.copy(ref.current.rotation);
+    }
     if (ringRef.current && ringData) {
       ringRef.current.position.copy(ref.current.position);
       const rm = ringRef.current.material;
