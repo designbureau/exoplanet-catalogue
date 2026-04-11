@@ -1121,22 +1121,27 @@ const cloudFragmentShader = `
     float hemisphereBlend = smoothstep(-0.12 + equatorNoise, 0.12 + equatorNoise, signedLat);
     float coriolisSign = mix(-1.0, 1.0, hemisphereBlend);
     float coriolisStrength = smoothstep(0.0, 0.5, absLat + equatorNoise * 0.5);
-    float swirlAngle = coriolisSign * coriolisStrength * u_cloudSwirl + t * windSpeed * 0.15;
-    float cs = cos(swirlAngle * 0.08);
-    float sn = sin(swirlAngle * 0.08);
+    // Swirl: Coriolis-like rotation — stronger at high latitudes
+    float swirlAngle = coriolisSign * coriolisStrength * u_cloudSwirl * 3.0 + t * windSpeed * 0.3;
+    float cs = cos(swirlAngle);
+    float sn = sin(swirlAngle);
     cloudBase.xz = mat2(cs, -sn, sn, cs) * cloudBase.xz;
 
+    // Domain warping for organic cloud shapes
     float warp1 = cloudNoise(cloudBase * 0.4, 1.2, u_seed.x * 100.0);
     float warp2 = noise3d(cloudBase * 0.6 + vec3(43.0));
-    vec3 warpedP = cloudBase + vec3(warp1 * u_cloudWarp + warp2 * (u_cloudWarp * 0.4), t * 0.4, warp1 * (u_cloudWarp * 0.7));
+    float warpScale = u_cloudWarp * 2.5;
+    vec3 warpedP = cloudBase + vec3(warp1 * warpScale + warp2 * (warpScale * 0.4), t * 0.4, warp1 * (warpScale * 0.7));
 
     float c1 = cloudNoise_lod(warpedP + vec3(t * 0.15), 1.2);
     float c2 = cloudNoise_lod(warpedP * 0.6 + vec3(t * 0.08, 20.0, 0.0), 0.8);
     float clouds = c1 * 0.6 + c2 * 0.4;
 
-    float bands = sin(vPosition.y * u_cloudBands + warp1 * 1.5) * 0.06 + 0.5;
+    // Latitude banding: creates horizontal cloud belts like Earth's Hadley cells
+    float bandFreq = u_cloudBands * 6.2832; // full wave cycles across sphere
+    float bands = sin(vPosition.y * bandFreq + warp1 * 2.5) * 0.25 + 0.5;
     clouds *= bands;
-    clouds = smoothstep(u_cloudCoverage, u_cloudCoverage + 0.3, clouds);
+    clouds = smoothstep(u_cloudCoverage, u_cloudCoverage + 0.25, clouds);
 
     // Lighting
     float diff = dot(vWorldNormal, u_sunDirection) * u_wrapRange + u_wrapRange;
