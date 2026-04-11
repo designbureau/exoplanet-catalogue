@@ -33,52 +33,40 @@ const terrestrialVertexShader = `
   uniform float u_seaLevel;
   uniform float u_coastDetail;
   uniform float u_landContrast;
-  uniform float u_vertLOD;   // 0=off, 1=basic, 2=full
+  uniform float u_vertLOD;
   uniform float scale;
 
-  // ── Inline noise (self-contained, matches noiseLib) ──────────────
-  float hash3v(vec3 p) {
-    return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453123);
-  }
-  float vnoise(vec3 p) {
-    vec3 i = floor(p);
-    vec3 f = fract(p);
-    vec3 u = f * f * (3.0 - 2.0 * f);
-    return mix(
-      mix(mix(hash3v(i), hash3v(i + vec3(1,0,0)), u.x),
-          mix(hash3v(i + vec3(0,1,0)), hash3v(i + vec3(1,1,0)), u.x), u.y),
-      mix(mix(hash3v(i + vec3(0,0,1)), hash3v(i + vec3(1,0,1)), u.x),
-          mix(hash3v(i + vec3(0,1,1)), hash3v(i + vec3(1,1,1)), u.x), u.y), u.z);
-  }
+  // ── Perlin noise (same as fragment — must match exactly) ──
+  ${perlinNoise3D}
 
-  // ── Vertex noise: must exactly match fragment hi* functions ──
+  // ── Vertex noise: exact mirrors of fragment hi* functions ──
 
-  // Cloud noise: 6-octave sin-modulated — matches fragment hiCloud
+  // Cloud noise: 10-octave sin-modulated — matches fragment hiCloud
   float vCloud(vec3 pos, float frq, float sd) {
     float n = 0.0, amp = 0.5;
     vec3 p = pos * frq + vec3(sd);
-    for (int i = 0; i < 6; i++) {
-      float s = vnoise(p);
+    for (int i = 0; i < 10; i++) {
+      float s = pnoise3d(p);
       s = sin(s * 5.0) * 0.5 + 0.5;
       n += s * amp;
       p = p * 2.02 + vec3(float(i) * 31.7, float(i) * 17.3, float(i) * 53.1);
-      amp *= 0.45;
+      amp *= 0.5;
     }
     return clamp(n, 0.0, 1.0);
   }
 
-  // Ridged: 6-octave ridge-folded — matches fragment hiRidged
+  // Ridged: 10-octave ridge-folded — matches fragment hiRidged
   float vRidged(vec3 pos, float frq, float sd) {
     float n = 0.0, amp = 0.5;
     vec3 p = pos * frq + vec3(sd);
-    for (int i = 0; i < 6; i++) {
-      float s = vnoise(p);
+    for (int i = 0; i < 10; i++) {
+      float s = pnoise3d(p);
       s = 2.0 * (0.5 - abs(0.5 - s));
       n += s * amp;
       p = p * 2.03 + vec3(float(i) * 13.7, float(i) * 7.3, float(i) * 19.1);
-      amp *= 0.45;
+      amp *= 0.5;
     }
-    return pow(clamp(n, 0.0, 1.0), 3.0);
+    return pow(clamp(n, 0.0, 1.0), 4.0);
   }
 
   // ── Height: exact mirror of fragment computeContinent ───────
@@ -146,10 +134,79 @@ const terrestrialVertexShader = `
   }
 `;
 
+// Gustavson classic 3D Perlin noise (MIT license) — smooth at all frequencies
+// Returns [-1,1]. Wrapped as pnoise3d() returning [0,1] for our pipeline.
+const perlinNoise3D = `
+  vec3 mod289v3(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+  vec4 mod289v4(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+  vec4 permute(vec4 x) { return mod289v4(((x*34.0)+10.0)*x); }
+  vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+  vec3 fade(vec3 t) { return t*t*t*(t*(t*6.0-15.0)+10.0); }
+
+  float cnoise(vec3 P) {
+    vec3 Pi0 = floor(P);
+    vec3 Pi1 = Pi0 + vec3(1.0);
+    Pi0 = mod289v3(Pi0);
+    Pi1 = mod289v3(Pi1);
+    vec3 Pf0 = fract(P);
+    vec3 Pf1 = Pf0 - vec3(1.0);
+    vec4 ix = vec4(Pi0.x, Pi1.x, Pi0.x, Pi1.x);
+    vec4 iy = vec4(Pi0.yy, Pi1.yy);
+    vec4 iz0 = Pi0.zzzz;
+    vec4 iz1 = Pi1.zzzz;
+    vec4 ixy = permute(permute(ix) + iy);
+    vec4 ixy0 = permute(ixy + iz0);
+    vec4 ixy1 = permute(ixy + iz1);
+    vec4 gx0 = ixy0 * (1.0 / 7.0);
+    vec4 gy0 = fract(floor(gx0) * (1.0 / 7.0)) - 0.5;
+    gx0 = fract(gx0);
+    vec4 gz0 = vec4(0.5) - abs(gx0) - abs(gy0);
+    vec4 sz0 = step(gz0, vec4(0.0));
+    gx0 -= sz0 * (step(0.0, gx0) - 0.5);
+    gy0 -= sz0 * (step(0.0, gy0) - 0.5);
+    vec4 gx1 = ixy1 * (1.0 / 7.0);
+    vec4 gy1 = fract(floor(gx1) * (1.0 / 7.0)) - 0.5;
+    gx1 = fract(gx1);
+    vec4 gz1 = vec4(0.5) - abs(gx1) - abs(gy1);
+    vec4 sz1 = step(gz1, vec4(0.0));
+    gx1 -= sz1 * (step(0.0, gx1) - 0.5);
+    gy1 -= sz1 * (step(0.0, gy1) - 0.5);
+    vec3 g000 = vec3(gx0.x,gy0.x,gz0.x);
+    vec3 g100 = vec3(gx0.y,gy0.y,gz0.y);
+    vec3 g010 = vec3(gx0.z,gy0.z,gz0.z);
+    vec3 g110 = vec3(gx0.w,gy0.w,gz0.w);
+    vec3 g001 = vec3(gx1.x,gy1.x,gz1.x);
+    vec3 g101 = vec3(gx1.y,gy1.y,gz1.y);
+    vec3 g011 = vec3(gx1.z,gy1.z,gz1.z);
+    vec3 g111 = vec3(gx1.w,gy1.w,gz1.w);
+    vec4 norm0 = taylorInvSqrt(vec4(dot(g000,g000), dot(g010,g010), dot(g100,g100), dot(g110,g110)));
+    vec4 norm1 = taylorInvSqrt(vec4(dot(g001,g001), dot(g011,g011), dot(g101,g101), dot(g111,g111)));
+    float n000 = norm0.x * dot(g000, Pf0);
+    float n010 = norm0.y * dot(g010, vec3(Pf0.x, Pf1.y, Pf0.z));
+    float n100 = norm0.z * dot(g100, vec3(Pf1.x, Pf0.yz));
+    float n110 = norm0.w * dot(g110, vec3(Pf1.xy, Pf0.z));
+    float n001 = norm1.x * dot(g001, vec3(Pf0.xy, Pf1.z));
+    float n011 = norm1.y * dot(g011, vec3(Pf0.x, Pf1.yz));
+    float n101 = norm1.z * dot(g101, vec3(Pf1.x, Pf0.y, Pf1.z));
+    float n111 = norm1.w * dot(g111, Pf1);
+    vec3 fade_xyz = fade(Pf0);
+    vec4 n_z = mix(vec4(n000, n100, n010, n110), vec4(n001, n101, n011, n111), fade_xyz.z);
+    vec2 n_yz = mix(n_z.xy, n_z.zw, fade_xyz.y);
+    float n_xyz = mix(n_yz.x, n_yz.y, fade_xyz.x);
+    return 2.2 * n_xyz;
+  }
+
+  // [0,1] wrapper for pipeline compatibility
+  float pnoise3d(vec3 p) { return cnoise(p) * 0.5 + 0.5; }
+`;
+
 // Shared noise functions used by all planet types
 const noiseLib = `
   uniform vec3 u_seed;
 
+  ${perlinNoise3D}
+
+  // Legacy hash-based value noise (kept for 2D noise, voronoi, etc.)
   float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
   }
@@ -166,16 +223,8 @@ const noiseLib = `
                mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
   }
 
-  float noise3d(vec3 p) {
-    vec3 i = floor(p);
-    vec3 f = fract(p);
-    vec3 u = f * f * (3.0 - 2.0 * f);
-    return mix(
-      mix(mix(hash3(i), hash3(i + vec3(1,0,0)), u.x),
-          mix(hash3(i + vec3(0,1,0)), hash3(i + vec3(1,1,0)), u.x), u.y),
-      mix(mix(hash3(i + vec3(0,0,1)), hash3(i + vec3(1,0,1)), u.x),
-          mix(hash3(i + vec3(0,1,1)), hash3(i + vec3(1,1,1)), u.x), u.y), u.z);
-  }
+  // noise3d now uses Perlin noise — smooth at all frequencies
+  float noise3d(vec3 p) { return pnoise3d(p); }
 
   float fbm(vec2 p) {
     float v = 0.0, a = 0.5;
@@ -198,35 +247,33 @@ const noiseLib = `
     return v;
   }
 
-  // ── High-detail noise (ColorDodge-inspired, adapted for value noise) ──
-  // Value noise (hash-based) becomes static above ~5 octaves unlike simplex.
-  // We use 6 octaves with steeper amplitude decay (0.45) to suppress
-  // high-frequency aliasing while preserving detail at useful scales.
+  // ── High-detail noise (Perlin-based, 10 octaves — matching ColorDodge) ──
+  // With proper gradient noise we can now push to 10+ octaves cleanly.
 
-  // Base FBM: 6-octave, contrast-boosted
+  // Base FBM: 10-octave, contrast-boosted
   float hiFBM(vec3 pos, float frq, float sd) {
     float n = 0.0, amp = 0.5;
     vec3 p = pos * frq + vec3(sd);
-    for (int i = 0; i < 6; i++) {
-      n += noise3d(p) * amp;
+    for (int i = 0; i < 10; i++) {
+      n += pnoise3d(p) * amp;
       p = p * 2.03 + vec3(float(i) * 13.7, float(i) * 7.3, float(i) * 19.1);
-      amp *= 0.45;
+      amp *= 0.5;
     }
-    return clamp((n - 0.5) * 1.6 + 0.5, 0.0, 1.0);
+    return clamp((n - 0.5) * 2.0 + 0.5, 0.0, 1.0);
   }
 
-  // Ridged: 6-octave, ridge-folded, pow3 sharpened
+  // Ridged: 10-octave, ridge-folded, pow4 sharpened
   float hiRidged(vec3 pos, float frq, float sd) {
     float n = 0.0, amp = 0.5;
     vec3 p = pos * frq + vec3(sd);
-    for (int i = 0; i < 6; i++) {
-      float s = noise3d(p);
+    for (int i = 0; i < 10; i++) {
+      float s = pnoise3d(p);
       s = 2.0 * (0.5 - abs(0.5 - s));
       n += s * amp;
       p = p * 2.03 + vec3(float(i) * 13.7, float(i) * 7.3, float(i) * 19.1);
-      amp *= 0.45;
+      amp *= 0.5;
     }
-    return pow(clamp(n, 0.0, 1.0), 3.0);
+    return pow(clamp(n, 0.0, 1.0), 4.0);
   }
 
   // Inverted ridged: valleys instead of peaks
@@ -234,16 +281,16 @@ const noiseLib = `
     return 1.0 - hiRidged(pos, frq, sd);
   }
 
-  // Cloud noise: 6-octave sin-modulated for organic shapes
+  // Cloud noise: 10-octave sin-modulated for organic shapes
   float hiCloud(vec3 pos, float frq, float sd) {
     float n = 0.0, amp = 0.5;
     vec3 p = pos * frq + vec3(sd);
-    for (int i = 0; i < 6; i++) {
-      float s = noise3d(p);
+    for (int i = 0; i < 10; i++) {
+      float s = pnoise3d(p);
       s = sin(s * 5.0) * 0.5 + 0.5;
       n += s * amp;
       p = p * 2.02 + vec3(float(i) * 31.7, float(i) * 17.3, float(i) * 53.1);
-      amp *= 0.45;
+      amp *= 0.5;
     }
     return clamp(n, 0.0, 1.0);
   }
@@ -742,7 +789,7 @@ const terrestrialFragment = `
       float hzp = computeContinent(p + vec3(0.0, 0.0, eps));
       float hzn = computeContinent(p - vec3(0.0, 0.0, eps));
       vec3 grad = vec3(hxp - hxn, hyp - hyn, hzp - hzn) / (2.0 * eps);
-      float strength = (u_displace > 0.0) ? u_bumpStrength * 0.6 : u_bumpStrength;
+      float strength = (u_displace > 0.0) ? u_bumpStrength * 0.5 : u_bumpStrength;
       bumpNormal = normalize(vNormal - grad * strength);
       // Flatten water normals
       bumpNormal = mix(vNormal, bumpNormal, isLand * 0.95 + 0.05);
@@ -1105,7 +1152,7 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_wrapPower: { value: 3.9 },
       u_displace: { value: 0 },
       u_vertLOD: { value: 0 },
-      u_bumpStrength: { value: 0.35 },
+      u_bumpStrength: { value: 0.6 },
       u_sunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
       u_atmosDayColor: { value: params.atmosDayColor || new THREE.Color(0x00aaff) },
       u_atmosTwilightColor: { value: params.atmosTwilightColor || new THREE.Color(0xff6600) },
