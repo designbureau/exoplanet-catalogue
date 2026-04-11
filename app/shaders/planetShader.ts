@@ -1068,7 +1068,44 @@ const cloudFragmentShader = `
   varying vec3 vNormal;
   varying vec3 vWorldNormal;
 
-  ${noiseLib}
+  // Inline noise functions for cloud shader
+  float hash3c(vec3 p) {
+    return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453123);
+  }
+  float noise3d(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    vec3 u = f * f * (3.0 - 2.0 * f);
+    return mix(
+      mix(mix(hash3c(i), hash3c(i + vec3(1,0,0)), u.x),
+          mix(hash3c(i + vec3(0,1,0)), hash3c(i + vec3(1,1,0)), u.x), u.y),
+      mix(mix(hash3c(i + vec3(0,0,1)), hash3c(i + vec3(1,0,1)), u.x),
+          mix(hash3c(i + vec3(0,1,1)), hash3c(i + vec3(1,1,1)), u.x), u.y), u.z);
+  }
+  float cloudNoise(vec3 p, float freq, float seed) {
+    float v = 0.0, a = 0.5;
+    p = p * freq + vec3(seed);
+    for (int i = 0; i < 5; i++) {
+      float n = noise3d(p);
+      v += a * (sin(n * 6.2831) * 0.5 + 0.5);
+      p = p * 2.02 + vec3(31.7, 17.3, 53.1);
+      a *= 0.5;
+    }
+    return v;
+  }
+  float cloudNoise_lod(vec3 p, float freq) {
+    float v = 0.0, a = 0.5;
+    p = p * freq;
+    int oct = (u_lod > 0.5) ? 5 : 3;
+    for (int i = 0; i < 5; i++) {
+      if (i >= oct) break;
+      float n = noise3d(p);
+      v += a * (sin(n * 6.2831) * 0.5 + 0.5);
+      p = p * 2.02 + vec3(31.7, 17.3, 53.1);
+      a *= 0.5;
+    }
+    return v;
+  }
 
   void main() {
     vec3 p = vPosition + u_seed * 50.0;
