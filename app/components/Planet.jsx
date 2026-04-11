@@ -12,7 +12,7 @@ function getLodSphereGeo(radius, segments) {
 // LOD tiers: [maxDistMultiplier, planetSegs, atmosSegs, vertLOD]
 // vertLOD: 0=no displacement, 2=full displacement + normals
 const LOD_TIERS = [
-  [Infinity, 256, 64, 2],  // always full detail for now
+  [Infinity, 512, 64, 2],  // always full detail for now
 ];
 
 // Shared annular ring geometry for soft glow — 128 segments, inner=0 outer=1
