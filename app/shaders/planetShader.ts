@@ -733,51 +733,46 @@ const terrestrialFragment = `
 
   ${noiseLib}
 
-  // Compute continental height — high-octave noise with ridged terrain
-  // Uses the proven layer structure but with 8-octave noise for detail.
+  // ── Terrain height: ColorDodge architecture ──
+  // 3 sub-noise layers domain-warped into a final layer.
+  // Mixes cloud noise (organic continental shapes) with ridged noise
+  // (mountain peaks) blended by a spatial mixing layer.
   float computeContinent(vec3 p) {
+    float sd = u_seed.x * 100.0 + u_seed.y * 37.0;
+    // Frequency: u_continentFreq ~0.15 controls overall feature size
+    float f1 = u_continentFreq * 1.5;   // primary
+    float f2 = u_continentFreq * 2.5;   // secondary
+    float f3 = u_continentFreq * 0.8;   // mixing (large scale)
+
     if (u_lod > 0.5) {
-      // ── High-LOD: 8-octave noise with domain warping ──
+      // Sub 1: cloud noise — organic wispy continent shapes
+      float sub1 = hiCloud(p, f1, sd + 11.4);
+      // Sub 2: ridged — mountain ranges and sharp features
+      float sub2 = hiRidged(p, f2, sd + 29.4);
+      // Sub 3: cloud — large-scale blending/mixing control
+      float sub3 = hiCloud(p, f3, sd + 53.0);
 
-      // Domain warp at continent scale
-      vec3 wp = p + u_terrWarp * vec3(
-        hiFBM(p, 0.2, u_seed.x * 50.0),
-        hiFBM(p, 0.2, u_seed.y * 50.0 + 5.2),
-        hiFBM(p, 0.2, u_seed.z * 50.0 + 9.7)
+      // Domain warp: sub-layers distort the final sampling position
+      // This creates spatially-varying terrain character
+      vec3 warp = vec3(
+        (sub1 - 0.5) * u_terrWarp * 0.3,
+        (sub2 - 0.5) * u_terrWarp * 0.2,
+        (sub3 - 0.5) * u_terrWarp * 0.15
       );
+      float base = hiCloud(p + warp, f1 * 0.7, sd + 78.2);
 
-      // Continental base: 8-octave cloud noise for organic shapes
-      float h1 = hiCloud(wp, u_continentFreq, u_seed.x * 100.0);
-      float h1b = hiCloud(wp, u_continentFreq * 0.67, u_seed.y * 100.0 + 42.0) * 0.3;
+      // Mix ridged peaks into organic base using sub3 as spatial mask
+      float ridgeMix = smoothstep(0.35, 0.65, sub3);
+      float n = mix(base, base * 0.5 + sub2 * 0.5, ridgeMix * 0.6);
 
-      // Coastline detail: 8-octave cloud noise at higher freq
-      float h2 = hiCloud(wp, u_coastDetail, u_seed.z * 100.0 + 77.0) * 0.2;
+      // Add inverted ridges for valley systems in low areas
+      float valleys = hiInvRidged(p + warp * 0.5, f2 * 1.3, sd + 49.7);
+      n = mix(n, n * 0.8 + valleys * 0.2, (1.0 - ridgeMix) * 0.4);
 
-      // Mountain ridges: 8-octave ridged multifractal
-      float h3 = hiRidged(wp + vec3(h1 * 0.5), 0.8, u_seed.x * 80.0 + 11.0) * 0.1;
-
-      // Secondary domain warp for mid-frequency detail
-      vec3 wp2 = wp + 0.08 * vec3(
-        noise3d(wp * 1.5 + vec3(17.0)),
-        noise3d(wp * 1.5 + vec3(31.0)),
-        noise3d(wp * 1.5 + vec3(47.0))
-      );
-      float h4 = hiFBM(wp2, 1.2, u_seed.y * 80.0 + 23.0) * 0.06;
-
-      // Mountain range chains: ridged at higher freq
-      float ridgeWarp = noise3d(wp * 0.6 + vec3(83.0)) * 0.3;
-      float h5 = hiRidged(wp + vec3(ridgeWarp, 0.0, ridgeWarp * 0.7), 1.5, u_seed.z * 80.0 + 37.0) * 0.06;
-
-      // Valleys: inverted ridges
-      float h6 = (1.0 - hiRidged(wp, 3.0, u_seed.x * 80.0 + 49.0)) * 0.015;
-      // Erosion detail
-      float h7 = hiFBM(wp + vec3(h3 * 2.0), 4.0, u_seed.y * 80.0 + 61.0) * 0.02;
-
-      float raw = (h1 + h1b) * 0.5 + h2 + h3 + h4 + h5 + h7 - h6;
-      return enhanceContrast(raw, 0.48, u_landContrast);
+      return enhanceContrast(n, 0.48, u_landContrast);
 
     } else {
-      // ── Low-LOD: cheap single-octave approximation ──
+      // Low-LOD: cheap approximation
       vec3 wp = p + 0.3 * vec3(
         noise3d(p * 0.2),
         noise3d(p * 0.2 + vec3(5.2)),
@@ -785,8 +780,7 @@ const terrestrialFragment = `
       );
       float h1 = noise3d(wp * u_continentFreq);
       float h1b = noise3d(wp * u_continentFreq * 0.67 + vec3(42.0)) * 0.3;
-      float h2 = noise3d(wp * u_coastDetail) * 0.2;
-      float raw = (h1 + h1b) * 0.5 + h2;
+      float raw = (h1 + h1b) * 0.5;
       return enhanceContrast(raw, 0.48, u_landContrast);
     }
   }
