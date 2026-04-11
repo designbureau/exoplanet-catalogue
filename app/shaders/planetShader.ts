@@ -16,6 +16,80 @@ const vertexShader = `
   }
 `;
 
+// Vertex shader with displacement for terrestrial planets at high LOD
+const terrestrialVertexShader = `
+  varying vec3 vPosition;
+  varying vec3 vNormal;
+  varying vec3 vWorldNormal;
+  varying vec3 vWorldPosition;
+
+  uniform vec3 u_seed;
+  uniform float u_displace;      // 0 = no displacement, >0 = displacement scale
+  uniform float u_continentFreq;
+  uniform float u_terrWarp;
+  uniform float u_seaLevel;
+
+  // Inline noise for vertex shader (must be self-contained)
+  float hash3v(vec3 p) {
+    return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453123);
+  }
+  float vnoise(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    vec3 u = f * f * (3.0 - 2.0 * f);
+    return mix(
+      mix(mix(hash3v(i), hash3v(i + vec3(1,0,0)), u.x),
+          mix(hash3v(i + vec3(0,1,0)), hash3v(i + vec3(1,1,0)), u.x), u.y),
+      mix(mix(hash3v(i + vec3(0,0,1)), hash3v(i + vec3(1,0,1)), u.x),
+          mix(hash3v(i + vec3(0,1,1)), hash3v(i + vec3(1,1,1)), u.x), u.y), u.z);
+  }
+  // Simplified FBM for vertex displacement (3 octaves — cheaper than fragment)
+  float vfbm(vec3 p) {
+    float v = 0.0, a = 0.5, f = 1.0;
+    for (int i = 0; i < 3; i++) {
+      v += a * vnoise(p * f);
+      f *= 2.0; a *= 0.5;
+    }
+    return v;
+  }
+
+  float computeHeight(vec3 p) {
+    vec3 sp = p + u_seed * 100.0;
+    // Domain warp
+    vec3 wp = sp + u_terrWarp * 0.3 * vec3(
+      vnoise(sp * 0.2),
+      vnoise(sp * 0.2 + vec3(5.2)),
+      vnoise(sp * 0.2 + vec3(9.7))
+    );
+    // Continental base
+    float h = vnoise(wp * u_continentFreq);
+    h += vnoise(wp * u_continentFreq * 0.67 + vec3(42.0)) * 0.3;
+    h *= 0.55;
+    // FBM detail
+    h += vfbm(wp * 0.8) * 0.15;
+    // Clamp to land only (above sea level)
+    float land = max(h - u_seaLevel, 0.0) / (1.0 - u_seaLevel);
+    return land;
+  }
+
+  void main() {
+    vec3 dir = normalize(position);
+    vPosition = dir;
+
+    // Displacement: push vertices outward along normal based on terrain height
+    vec3 displacedPos = position;
+    if (u_displace > 0.0) {
+      float height = computeHeight(dir * 10.0); // scale=10 matches fragment
+      displacedPos = position + normal * height * u_displace;
+    }
+
+    vNormal = normalize(normalMatrix * normal);
+    vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+    vWorldPosition = (modelMatrix * vec4(displacedPos, 1.0)).xyz;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(displacedPos, 1.0);
+  }
+`;
+
 // Shared noise functions used by all planet types
 const noiseLib = `
   uniform vec3 u_seed;
@@ -997,11 +1071,13 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_lavaAmbient: { value: 0.08 },
       u_wrapRange: { value: 0.45 },
       u_wrapPower: { value: 3.9 },
+      u_displace: { value: 0 }, // vertex displacement scale (0 = off, set by LOD)
       u_sunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
       u_atmosDayColor: { value: params.atmosDayColor || new THREE.Color(0x00aaff) },
       u_atmosTwilightColor: { value: params.atmosTwilightColor || new THREE.Color(0xff6600) },
     },
-    vertexShader,
+    vertexShader: (params.type === PlanetType.TEMPERATE || params.type === PlanetType.WATER_WORLD)
+      ? terrestrialVertexShader : vertexShader,
     fragmentShader: selectFragmentShader(params.type),
   });
 }

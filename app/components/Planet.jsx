@@ -9,11 +9,12 @@ function getLodSphereGeo(radius, segments) {
   _lodSphereCache[key] = geo;
   return geo;
 }
-// LOD tiers: [maxDistance, planetSegs, atmosSegs]
+// LOD tiers: [maxDistance, planetSegs, atmosSegs, displace]
 const LOD_TIERS = [
-  [80,   128, 64],   // close-up: full detail
-  [400,  64,  48],   // mid-range
-  [Infinity, 32, 48] // far away: atmos needs more segments to avoid banding
+  [30,   256, 64, true],   // ultra close: vertex displacement + high tessellation
+  [80,   128, 64, false],  // close-up: full fragment detail
+  [400,  64,  48, false],  // mid-range
+  [Infinity, 32, 48, false] // far away
 ];
 
 // Shared annular ring geometry for soft glow — 128 segments, inner=0 outer=1
@@ -513,13 +514,17 @@ const Planet = ({ data, starData, starRef }) => {
     if (ref.current) {
       ref.current.getWorldPosition(_camUp);
       const camDist = state.camera.position.distanceTo(_camUp);
-      for (const [maxDist, pSegs, aSegs] of LOD_TIERS) {
+      for (const [maxDist, pSegs, aSegs, displace] of LOD_TIERS) {
         if (camDist < maxDist || maxDist === Infinity) {
           const newGeo = getLodSphereGeo(scale, pSegs);
           if (ref.current.geometry !== newGeo) ref.current.geometry = newGeo;
           if (glowRef.current) {
             const newAtmosGeo = getLodSphereGeo(scale * atmosScale, aSegs);
             if (glowRef.current.geometry !== newAtmosGeo) glowRef.current.geometry = newAtmosGeo;
+          }
+          // Enable vertex displacement at ultra-close LOD for terrestrial planets
+          if (shaderMaterial.uniforms.u_displace) {
+            shaderMaterial.uniforms.u_displace.value = displace ? scale * 0.02 : 0;
           }
           break;
         }
