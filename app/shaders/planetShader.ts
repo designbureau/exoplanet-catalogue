@@ -1054,7 +1054,6 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
 // Cloud layer material — separate sphere slightly above planet surface
 const cloudFragmentShader = `
   uniform float u_time;
-  uniform vec3 u_seed;
   uniform float u_cloudCoverage;
   uniform float u_cloudOpacity;
   uniform float u_cloudSwirl;
@@ -1065,10 +1064,11 @@ const cloudFragmentShader = `
   uniform float u_wrapRange;
   uniform float u_wrapPower;
   varying vec3 vPosition;
+  varying vec3 vSphereDir;
   varying vec3 vNormal;
   varying vec3 vWorldNormal;
 
-  ${noiseLib.split('uniform vec3 u_seed;')[1]} // reuse noise functions without redeclaring u_seed
+  ${noiseLib}
 
   void main() {
     vec3 p = vPosition + u_seed * 50.0;
