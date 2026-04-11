@@ -807,59 +807,72 @@ const terrestrialFragment = `
       bumpNormal = mix(vNormal, bumpNormal, isLand * 0.95 + 0.05);
     }
 
-    // ── Original biome coloring system ──
-    // Noise layers for colour variation
+    // ── Biome coloring — aridity-aware ──
+    float aridity = 1.0 - smoothstep(0.15, 0.55, seaLevel); // 1=dry (Mars), 0=wet (Earth)
     float moisture = (u_lod > 0.5) ? cloudNoise(p * 0.5 + vec3(33.0), 1.0) : noise3d(p * 0.5 + vec3(33.0));
     float mountainRidge = (u_lod > 0.5) ? ridgedNoise(p, 2.0) : 0.0;
     float microNoise = noise3d(p * 4.0);
     float warpNoise = noise3d(p * 3.0 + vec3(77.0));
 
-    // Ocean: deep abyss → mid → narrow shelf at shore
-    vec3 deepOcean = color1 * 0.3;
-    vec3 midOcean = color1 * 0.6;
-    vec3 shallowOcean = color1 * 0.95 + vec3(0.01, 0.02, 0.015);
+    // Ocean / basins: on arid planets, "ocean" is dark dusty lowland, not water
+    vec3 deepWater = color1 * 0.3;
+    vec3 midWater = color1 * 0.6;
+    vec3 shallowWater = color1 * 0.95 + vec3(0.01, 0.02, 0.015);
+    // Arid basins: dark rusty lowlands instead of blue water
+    vec3 deepBasin = color3 * 0.25 + vec3(0.01, 0.005, 0.0);
+    vec3 midBasin = color3 * 0.45 + vec3(0.02, 0.01, 0.0);
+    vec3 shallowBasin = color3 * 0.6;
+    // Blend between water and arid basin based on aridity
+    vec3 deepOcean = mix(deepWater, deepBasin, aridity);
+    vec3 midOcean = mix(midWater, midBasin, aridity);
+    vec3 shallowOcean = mix(shallowWater, shallowBasin, aridity);
+
     float oceanDepth = smoothstep(0.0, seaLevel, continent);
     vec3 oceanColor = mix(deepOcean, midOcean, smoothstep(0.0, 0.5, oceanDepth));
-    // Shallow zone only in the last 8% before shore — tight around continents
     oceanColor = mix(oceanColor, shallowOcean, smoothstep(0.92, 0.99, oceanDepth));
-    oceanColor += vec3(-0.006, 0.006, 0.01) * microNoise;
+    oceanColor += vec3(-0.006, 0.006, 0.01) * microNoise * (1.0 - aridity);
 
-    // Coastal shelf: very narrow band hugging shoreline
+    // Coastal shelf
     float coastalBand = smoothstep(seaLevel - 0.015, seaLevel - 0.003, continent) * (1.0 - isLand);
     vec3 coastalColor = mix(color2, color3, 0.5) * 0.75 + vec3(0.04, 0.04, 0.01);
-    oceanColor = mix(oceanColor, coastalColor, coastalBand * 0.4);
+    oceanColor = mix(oceanColor, coastalColor, coastalBand * 0.4 * (1.0 - aridity * 0.7));
 
-    // Land: multi-zone biome system with height + moisture + latitude
+    // Land zones
     float landHeight = (continent - seaLevel) / (1.0 - seaLevel);
     float latitude = abs(baseDir.y);
 
-    // Beach/shore zone
-    vec3 shoreColor = mix(color2, color3, 0.3) + vec3(0.08, 0.06, 0.02);
+    // Shore — on arid planets, no beach, just terrain edge
+    vec3 wetShore = mix(color2, color3, 0.3) + vec3(0.08, 0.06, 0.02);
+    vec3 dryShore = color3 * 0.7 + vec3(0.03, 0.015, 0.0);
+    vec3 shoreColor = mix(wetShore, dryShore, aridity);
 
-    // Lowland biomes driven by moisture AND latitude
+    // Lowland — on arid planets, force toward arid tones
     vec3 lowWet = color2 * 1.1 + vec3(-0.005, 0.015, -0.005);
     vec3 lowDry = mix(color2, color3, 0.4);
     vec3 lowArid = color3 * 0.9 + vec3(0.04, 0.02, -0.01);
     float latMoisture = moisture + smoothstep(0.0, 0.25, latitude) * 0.15 - smoothstep(0.5, 0.8, latitude) * 0.1;
+    // Aridity pushes moisture down — arid planets have drier lowlands everywhere
+    latMoisture = latMoisture * (1.0 - aridity * 0.6);
     vec3 lowland = mix(lowArid, lowDry, smoothstep(0.25, 0.4, latMoisture));
     lowland = mix(lowland, lowWet, smoothstep(0.4, 0.6, latMoisture));
     lowland += vec3(0.015, -0.008, -0.015) * warpNoise;
 
-    // Highland with ridge influence
+    // Highland — on arid planets, skip tundra, stay rocky
     vec3 highland = color3 * 0.9;
     highland += vec3(0.02, 0.008, -0.015) * mountainRidge;
     vec3 tundra = mix(color3 * 0.75, color4 * 0.6, 0.4) + vec3(-0.02, -0.01, 0.02);
-    highland = mix(highland, tundra, smoothstep(0.5, 0.8, latitude) * smoothstep(0.3, 0.6, landHeight));
+    float tundraBlend = smoothstep(0.5, 0.8, latitude) * smoothstep(0.3, 0.6, landHeight) * (1.0 - aridity);
+    highland = mix(highland, tundra, tundraBlend);
 
-    // Exposed rock on steep slopes
+    // Exposed rock
     vec3 exposedRock = color3 * 0.65 + color4 * 0.35;
+    // On arid planets, rock is more rusty
+    exposedRock = mix(exposedRock, color3 * 0.55 + vec3(0.04, 0.02, 0.0), aridity);
 
-    // Peak/snow zone — aridity-aware
-    // On dry/arid planets (low sea level) peaks are dusty rock, not snow
-    float aridity = 1.0 - smoothstep(0.15, 0.55, seaLevel); // 1=dry (Mars), 0=wet (Earth)
+    // Peaks — dusty rock on arid, snow on wet
     float baseSnowLine = mix(0.92, 0.7, smoothstep(0.4, 0.8, latitude));
-    float snowLine = mix(baseSnowLine, 1.1, aridity * 0.8); // 1.1 = above max = no snow on Mars
-    vec3 dustyPeak = mix(color3, color4, 0.3) * 0.8 + vec3(0.03, 0.01, -0.01); // rocky/rusty
+    float snowLine = mix(baseSnowLine, 1.5, aridity); // far above max on Mars = no snow
+    vec3 dustyPeak = color3 * 0.65 + vec3(0.05, 0.025, 0.005);
     vec3 peaks = mix(color4, dustyPeak, aridity);
 
     // Blend terrain zones
