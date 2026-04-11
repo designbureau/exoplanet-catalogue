@@ -597,7 +597,8 @@ const Planet = ({ data, starData, starRef }) => {
     if (glowRef.current) glowRef.current.position.copy(ref.current.position);
     if (cloudRef.current) {
       cloudRef.current.position.copy(ref.current.position);
-      cloudRef.current.rotation.copy(ref.current.rotation);
+      cloudRef.current.rotation.x = ref.current.rotation.x;
+      cloudRef.current.rotation.y += 0.0009;
     }
     if (ringRef.current && ringData) {
       ringRef.current.position.copy(ref.current.position);
