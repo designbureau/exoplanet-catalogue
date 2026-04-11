@@ -793,8 +793,8 @@ const terrestrialFragment = `
       vec3 cloudBase = seededPos(cloudDir, 50.0) * 4.0;
       float t = u_time * 0.002;
 
-      // Signed latitude for hemisphere-aware Coriolis
-      float signedLat = vPosition.y;
+      // Signed latitude for hemisphere-aware Coriolis (use undisplaced direction)
+      float signedLat = cloudDir.y;
       float absLat = abs(signedLat);
       float windSpeed = (1.0 - absLat * 0.6);
 
@@ -822,7 +822,7 @@ const terrestrialFragment = `
       clouds = c1 * 0.6 + c2 * 0.4;
 
       // Soft band structure
-      float bands = sin(vPosition.y * u_cloudBands + warp1 * 1.5) * 0.06 + 0.5;
+      float bands = sin(cloudDir.y * u_cloudBands + warp1 * 1.5) * 0.06 + 0.5;
       clouds *= bands;
 
       // Coverage threshold: lower = more clouds
