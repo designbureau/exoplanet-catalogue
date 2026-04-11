@@ -732,76 +732,44 @@ const terrestrialFragment = `
 
   ${noiseLib}
 
-  // ── ColorDodge flowNoiseMap.frag — exact reproduction ──
-  // Each planet gets a noise type (0-3) derived from seed.
-  // 3 sub-noises at different frequencies → domain-warped final.
-  // res1/res2/resMix randomised per-planet from seed.
+  // ── ColorDodge-style terrain with value-noise-safe frequencies ──
+  // ColorDodge uses simplex noise with arbitrary frequencies up to 5.0.
+  // Our value noise aliases above freq ~1.5 with 6 octaves (highest
+  // octave at 1.5 * 32 = 48x). So we keep base frequencies low.
 
-  // Per-planet randomised frequencies (ColorDodge: randRange(0.01, 5.0))
-  // We derive deterministically from seed instead of random.
-  float seedRand(float sd) {
-    return fract(sin(sd * 127.1) * 43758.5453);
-  }
-
-  float cdNoise(vec3 pos, float frq, float sd, int noiseType) {
-    // Exact ColorDodge noise dispatcher
-    if (noiseType == 0) return hiCloud(pos, frq, sd);
-    else if (noiseType == 1) return hiRidged(pos, frq, sd);
-    else if (noiseType == 2) return hiInvRidged(pos, frq, sd);
-    else {
-      // Type 3: flow field — domain warp via spherical coords
-      float sub1 = hiFBM(pos, frq, sd + 52.3);
-      float sub2 = hiFBM(pos, frq * 0.8, sd + 137.9);
-      float sub3 = hiFBM(pos, frq * 1.2, sd + 37.2);
-      float alpha = sub1 * 6.2832;
-      float beta = sub2 * 6.2832;
-      float fx = cos(alpha) * cos(beta);
-      float fz = sin(alpha) * cos(beta);
-      float fy = sin(beta);
-      return hiFBM(pos + vec3(fx, fy, fz) * sub3, 1.0, sd + 28.6);
-    }
-  }
-
-  // Height map: exact ColorDodge main() from flowNoiseMap.frag
   float computeContinent(vec3 p) {
-    float sd = u_seed.x * 1000.0;
-    // Deterministic per-planet params from seed (ColorDodge: randRange)
-    float res1 = 0.01 + seedRand(sd + 1.0) * 4.99;
-    float res2 = 0.01 + seedRand(sd + 2.0) * 4.99;
-    float resMix = 0.01 + seedRand(sd + 3.0) * 4.99;
-    float mixScale = 0.5 + seedRand(sd + 4.0) * 0.5;
-    int noiseType = int(floor(seedRand(sd + 5.0) * 4.0));
+    float sd = u_seed.x * 100.0;
 
     if (u_lod > 0.5) {
-      float sub1 = cdNoise(p, res1, sd + 11.4, noiseType);
-      float sub2 = cdNoise(p, res2, sd + 93.5, noiseType);
-      float sub3 = cdNoise(p, resMix, sd + 23.7, noiseType);
-      float n = cdNoise(p + vec3((sub1 / max(sub3, 0.05)) * 0.1), mixScale + sub2, sd + 78.2, noiseType);
+      // 3 sub-layers (ColorDodge architecture) at safe frequencies
+      float sub1 = hiCloud(p, u_continentFreq * 1.0, sd + 11.4);
+      float sub2 = hiRidged(p, u_continentFreq * 1.5, sd + 29.4);
+      float sub3 = hiCloud(p, u_continentFreq * 0.6, sd + 53.0);
+
+      // Domain warp: sub-layers distort final sampling (ColorDodge key technique)
+      vec3 warp = vec3(sub1 - 0.5, sub2 - 0.5, sub3 - 0.5) * u_terrWarp * 0.4;
+      float n = hiCloud(p + warp, u_continentFreq * 0.8, sd + 78.2);
+
+      // Blend ridged peaks via spatial mask
+      float mask = smoothstep(0.3, 0.7, sub3);
+      n = mix(n, n * 0.6 + sub2 * 0.4, mask * 0.5);
+
       return n;
     } else {
-      // Low-LOD cheap fallback
-      float h = noise3d(p * res1 + sd);
-      h += noise3d(p * res2 + sd + 42.0) * 0.3;
-      return clamp(h * 0.6 + 0.2, 0.0, 1.0);
+      vec3 wp = p + 0.3 * vec3(noise3d(p * 0.2), noise3d(p * 0.2 + vec3(5.2)), noise3d(p * 0.2 + vec3(9.7)));
+      return noise3d(wp * u_continentFreq) * 0.65 + noise3d(wp * u_continentFreq * 0.67 + vec3(42.0)) * 0.15 + 0.1;
     }
   }
 
-  // Moisture map: same architecture, different seed, higher frequencies
+  // Moisture: separate noise, higher frequency for climate variation
   float computeMoisture(vec3 p) {
-    float sd = u_seed.y * 1000.0 + 392.253;
-    float resMod = 3.0 + seedRand(sd + 10.0) * 7.0;
-    float res1 = (0.01 + seedRand(sd + 1.0) * 4.99) * resMod;
-    float res2 = (0.01 + seedRand(sd + 2.0) * 4.99) * resMod;
-    float resMix = (0.01 + seedRand(sd + 3.0) * 4.99) * resMod;
-    float mixScale = 0.5 + seedRand(sd + 4.0) * 0.5;
-    int noiseType = int(floor(seedRand(sd + 5.0) * 4.0));
-
+    float sd = u_seed.y * 100.0 + 392.0;
     if (u_lod > 0.5) {
-      float sub1 = cdNoise(p, res1, sd + 49.7, noiseType);
-      float sub2 = cdNoise(p, res2, sd + 136.3, noiseType);
-      float sub3 = cdNoise(p, resMix, sd + 3.6, noiseType);
-      float n = cdNoise(p + vec3((sub1 / max(sub3, 0.05)) * 0.1), mixScale + sub2, sd + 33.3, noiseType);
-      return n;
+      float sub1 = hiCloud(p, u_continentFreq * 3.0, sd + 49.7);
+      float sub2 = hiFBM(p, u_continentFreq * 5.0, sd + 136.3);
+      float sub3 = hiCloud(p, u_continentFreq * 2.0, sd + 3.6);
+      vec3 warp = vec3(sub1 - 0.5, sub2 - 0.5, sub3 - 0.5) * 0.15;
+      return hiCloud(p + warp, u_continentFreq * 4.0, sd + 33.3);
     } else {
       return noise3d(p * 2.0 + sd) * 0.5 + 0.25;
     }
@@ -822,7 +790,7 @@ const terrestrialFragment = `
     // ── Normal mapping: Sobel-style on heightfield (ColorDodge: strength=0.8) ──
     vec3 bumpNormal = vNormal;
     if (u_lod > 0.5) {
-      float eps = 0.0006;
+      float eps = 0.002;
       // 3x3 Sobel kernel on heightfield (6-neighbor approximation in 3D)
       float hxp = computeContinent(p + vec3(eps, 0.0, 0.0));
       float hxn = computeContinent(p - vec3(eps, 0.0, 0.0));
