@@ -28,6 +28,10 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
     }
   }, [data, setActiveByName]);
 
+  // Position stars symmetrically around the binary center of mass
+  // If masses are known, weight the offset; otherwise split evenly
+  const stars = data.star || [];
+
   // Binary separation in scene units (adjustable via UI)
   const binaryDistanceScale = Constants.distance.au * binaryDistanceFactor;
   const rawSeparation =
@@ -41,10 +45,6 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
   const separation = Math.max(rawSeparation, minSeparation);
 
   const positionAngleDegrees = parseFloat(data.positionangle?.[0] ?? 0);
-
-  // Position stars symmetrically around the binary center of mass
-  // If masses are known, weight the offset; otherwise split evenly
-  const stars = data.star || [];
   let mass1 = stars[0] ? getMass({ data: stars[0] }) : 1;
   let mass2 = stars[1] ? getMass({ data: stars[1] }) : 1;
   // Default to equal masses if unknown
