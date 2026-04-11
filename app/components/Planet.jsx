@@ -94,7 +94,7 @@ import {
   getRadius,
 } from "../utils/helperFunctions";
 import { classifyPlanet, PlanetType } from "../utils/planetClassification";
-import { createPlanetMaterial } from "../shaders/planetShader";
+import { createPlanetMaterial, createCloudMaterial } from "../shaders/planetShader";
 import { getAtmosphereParams } from "../shaders/atmosphereShader";
 import { getScatteringPreset, createScatteringMaterial } from "../shaders/scatteringShader";
 
@@ -134,7 +134,7 @@ const Planet = ({ data, starData, starRef }) => {
   })();
 
   // Classify planet and create shader material + atmosphere ring
-  const { shaderMaterial, atmosParams, atmosMat, atmosScale, haloMat, planetType, hasAtmosphere, defaultShowRim, defaultShowShell, defaultShowHalo, rimIntensity, rimFalloff, shellIntensity, haloIntensity, haloScale, haloFalloff, haloWhiten, haloShadow, atmosDayColor, hasHzGradient, ringData } = useMemo(() => {
+  const { shaderMaterial, cloudMat, atmosParams, atmosMat, atmosScale, haloMat, planetType, hasAtmosphere, defaultShowRim, defaultShowShell, defaultShowHalo, rimIntensity, rimFalloff, shellIntensity, haloIntensity, haloScale, haloFalloff, haloWhiten, haloShadow, atmosDayColor, hasHzGradient, ringData } = useMemo(() => {
     const params = classifyPlanet({
       massJupiter: mass,
       radiusJupiter: radius,
@@ -146,6 +146,7 @@ const Planet = ({ data, starData, starRef }) => {
       hzRanges: hzPresets,
     });
     const shader = createPlanetMaterial(params);
+    const cloudMat = createCloudMaterial(params);
     // Atmosphere: use HZ-gradient params from classifier when available, fall back to type defaults
     const ap = getAtmosphereParams(params.type, starData?.temperature || 5500);
     const atmosDayCol = params.atmosDayColor || ap?.dayColor || new THREE.Color(0x00aaff);
@@ -285,6 +286,7 @@ const Planet = ({ data, starData, starRef }) => {
 
     return {
       shaderMaterial: shader,
+      cloudMat,
       atmosParams: ap,
       atmosMat,
       atmosScale: scatterPreset?.atmosphereScale || (1.0 + 0.04),
@@ -510,6 +512,16 @@ const Planet = ({ data, starData, starRef }) => {
     if (shaderMaterial.uniforms.u_lod) {
       shaderMaterial.uniforms.u_lod.value = isActive ? 1.0 : 0.0;
     }
+    // Sync cloud sphere uniforms
+    if (cloudMat) {
+      if (isActive) cloudMat.uniforms.u_time.value = elapsedTime;
+      cloudMat.uniforms.u_lod.value = isActive ? 1.0 : 0.0;
+      if (shaderMaterial.uniforms.u_sunDirection) {
+        cloudMat.uniforms.u_sunDirection.value.copy(shaderMaterial.uniforms.u_sunDirection.value);
+      }
+      cloudMat.uniforms.u_wrapRange.value = shaderMaterial.uniforms.u_wrapRange?.value ?? 0.45;
+      cloudMat.uniforms.u_wrapPower.value = shaderMaterial.uniforms.u_wrapPower?.value ?? 3.9;
+    }
 
     // Geometry LOD — swap sphere resolution based on camera distance
     if (ref.current) {
@@ -661,6 +673,11 @@ const Planet = ({ data, starData, starRef }) => {
       )}
       <mesh ref={ref} name={name} onClick={handleClick} material={shaderMaterial}
         geometry={getLodSphereGeo(scale, 32)} />
+      {cloudMat && (
+        <mesh material={cloudMat} frustumCulled={false}>
+          <sphereGeometry args={[scale * 1.005, 64, 32]} />
+        </mesh>
+      )}
       {ringData && (
         <mesh
           ref={ringRef}

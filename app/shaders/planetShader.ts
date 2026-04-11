@@ -785,52 +785,7 @@ const terrestrialFragment = `
     surfaceColor = mix(surfaceColor, mix(surfaceColor, iceColor, 0.4), iceFringe);
     surfaceColor = mix(surfaceColor, iceColor, iceCap);
 
-    // Cloud layer: swirling cyclonic patterns (skip at low LOD)
-    // Use vSphereDir (undisplaced) so clouds don't shift with terrain displacement
-    vec3 cloudDir = length(vSphereDir) > 0.01 ? vSphereDir : vPosition; // fallback for non-displacement shader
-    float clouds = 0.0;
-    if (u_lod > 0.5) {
-      vec3 cloudBase = seededPos(cloudDir, 50.0) * 4.0;
-      float t = u_time * 0.002;
-
-      // Signed latitude for hemisphere-aware Coriolis (use undisplaced direction)
-      float signedLat = cloudDir.y;
-      float absLat = abs(signedLat);
-      float windSpeed = (1.0 - absLat * 0.6);
-
-      // Coriolis: opposing rotation per hemisphere, smooth blend at equator
-      // Use noise to break up the equatorial seam
-      float equatorNoise = noise3d(cloudBase * 0.8 + vec3(17.0)) * 0.15;
-      float hemisphereBlend = smoothstep(-0.12 + equatorNoise, 0.12 + equatorNoise, signedLat);
-      float coriolisSign = mix(-1.0, 1.0, hemisphereBlend);
-
-      // Strength increases with latitude (zero at equator, max at poles)
-      float coriolisStrength = smoothstep(0.0, 0.5, absLat + equatorNoise * 0.5);
-      float swirlAngle = coriolisSign * coriolisStrength * u_cloudSwirl + t * windSpeed * 0.15;
-      float cs = cos(swirlAngle * 0.08);
-      float sn = sin(swirlAngle * 0.08);
-      cloudBase.xz = mat2(cs, -sn, sn, cs) * cloudBase.xz;
-
-      // Domain warp for organic shapes (cloud noise for warp, fbm for mass)
-      float warp1 = cloudNoise(cloudBase * 0.4, 1.2);
-      float warp2 = noise3d(cloudBase * 0.6 + vec3(43.0));
-      vec3 warpedP = cloudBase + vec3(warp1 * u_cloudWarp + warp2 * (u_cloudWarp * 0.4), t * 0.4, warp1 * (u_cloudWarp * 0.7));
-
-      // Streaky wispy clouds (sin-modulated cloud noise only)
-      float c1 = cloudNoise_lod(warpedP + vec3(t * 0.15), 1.2);
-      float c2 = cloudNoise_lod(warpedP * 0.6 + vec3(t * 0.08, 20.0, 0.0), 0.8);
-      clouds = c1 * 0.6 + c2 * 0.4;
-
-      // Soft band structure
-      float bands = sin(cloudDir.y * u_cloudBands + warp1 * 1.5) * 0.06 + 0.5;
-      clouds *= bands;
-
-      // Coverage threshold: lower = more clouds
-      clouds = smoothstep(u_cloudCoverage, u_cloudCoverage + 0.3, clouds);
-      // Slight blue-white tint, not pure white
-      vec3 cloudColor = mix(vec3(0.88, 0.9, 0.94), vec3(0.96, 0.97, 0.98), clouds);
-      surfaceColor = mix(surfaceColor, cloudColor, clouds * u_cloudOpacity);
-    }
+    // Clouds removed — rendered on separate sphere to avoid displacement artefacts
 
     // Lighting with bump normal (land only; ocean is smooth)
     vec3 effectiveNormal = mix(vNormal, bumpNormal, isLand);
@@ -842,7 +797,7 @@ const terrestrialFragment = `
     vec3 reflectDir = reflect(-u_sunDirection, vWorldNormal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
     float specShadow = wrapDiffuse(vWorldNormal, u_sunDirection);
-    surfaceColor += vec3(0.3) * spec * specShadow * (1.0 - isLand) * (1.0 - clouds);
+    surfaceColor += vec3(0.3) * spec * specShadow * (1.0 - isLand);
 
     // Atmospheric rim (uses shared applyAtmosphere with shadow)
     surfaceColor = applyAtmosphere(surfaceColor, vWorldNormal, vWorldPosition);
@@ -1093,5 +1048,91 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
     vertexShader: (params.type === PlanetType.TEMPERATE || params.type === PlanetType.WATER_WORLD)
       ? terrestrialVertexShader : vertexShader,
     fragmentShader: selectFragmentShader(params.type),
+  });
+}
+
+// Cloud layer material — separate sphere slightly above planet surface
+const cloudFragmentShader = `
+  uniform float u_time;
+  uniform vec3 u_seed;
+  uniform float u_cloudCoverage;
+  uniform float u_cloudOpacity;
+  uniform float u_cloudSwirl;
+  uniform float u_cloudBands;
+  uniform float u_cloudWarp;
+  uniform float u_lod;
+  uniform vec3 u_sunDirection;
+  uniform float u_wrapRange;
+  uniform float u_wrapPower;
+  varying vec3 vPosition;
+  varying vec3 vNormal;
+  varying vec3 vWorldNormal;
+
+  ${noiseLib.split('uniform vec3 u_seed;')[1]} // reuse noise functions without redeclaring u_seed
+
+  void main() {
+    vec3 p = vPosition + u_seed * 50.0;
+    vec3 cloudBase = p * 4.0;
+    float t = u_time * 0.002;
+
+    float signedLat = vPosition.y;
+    float absLat = abs(signedLat);
+    float windSpeed = (1.0 - absLat * 0.6);
+
+    float equatorNoise = noise3d(cloudBase * 0.8 + vec3(17.0)) * 0.15;
+    float hemisphereBlend = smoothstep(-0.12 + equatorNoise, 0.12 + equatorNoise, signedLat);
+    float coriolisSign = mix(-1.0, 1.0, hemisphereBlend);
+    float coriolisStrength = smoothstep(0.0, 0.5, absLat + equatorNoise * 0.5);
+    float swirlAngle = coriolisSign * coriolisStrength * u_cloudSwirl + t * windSpeed * 0.15;
+    float cs = cos(swirlAngle * 0.08);
+    float sn = sin(swirlAngle * 0.08);
+    cloudBase.xz = mat2(cs, -sn, sn, cs) * cloudBase.xz;
+
+    float warp1 = cloudNoise(cloudBase * 0.4, 1.2);
+    float warp2 = noise3d(cloudBase * 0.6 + vec3(43.0));
+    vec3 warpedP = cloudBase + vec3(warp1 * u_cloudWarp + warp2 * (u_cloudWarp * 0.4), t * 0.4, warp1 * (u_cloudWarp * 0.7));
+
+    float c1 = cloudNoise_lod(warpedP + vec3(t * 0.15), 1.2);
+    float c2 = cloudNoise_lod(warpedP * 0.6 + vec3(t * 0.08, 20.0, 0.0), 0.8);
+    float clouds = c1 * 0.6 + c2 * 0.4;
+
+    float bands = sin(vPosition.y * u_cloudBands + warp1 * 1.5) * 0.06 + 0.5;
+    clouds *= bands;
+    clouds = smoothstep(u_cloudCoverage, u_cloudCoverage + 0.3, clouds);
+
+    // Lighting
+    float diff = dot(vWorldNormal, u_sunDirection) * u_wrapRange + u_wrapRange;
+    diff = clamp(pow(diff, u_wrapPower), 0.0, 1.0);
+
+    vec3 cloudColor = mix(vec3(0.88, 0.9, 0.94), vec3(0.96, 0.97, 0.98), clouds);
+    float alpha = clouds * u_cloudOpacity * diff;
+    if (alpha < 0.01) discard;
+    gl_FragColor = vec4(cloudColor * diff, alpha);
+  }
+`;
+
+export function createCloudMaterial(params: ShaderParams): THREE.ShaderMaterial | null {
+  if (params.type !== PlanetType.TEMPERATE && params.type !== PlanetType.WATER_WORLD) return null;
+  if (!params.cloudCoverage && !params.cloudOpacity) return null;
+
+  return new THREE.ShaderMaterial({
+    vertexShader,  // standard flat vertex shader — no displacement
+    fragmentShader: cloudFragmentShader,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.FrontSide,
+    uniforms: {
+      u_time: { value: 0 },
+      u_seed: { value: params.seed },
+      u_lod: { value: 0 },
+      u_cloudCoverage: { value: params.cloudCoverage ?? 0.35 },
+      u_cloudOpacity: { value: params.cloudOpacity ?? 0.6 },
+      u_cloudSwirl: { value: params.cloudSwirl ?? 0.8 },
+      u_cloudBands: { value: params.cloudBands ?? 5.0 },
+      u_cloudWarp: { value: params.cloudWarp ?? 0.35 },
+      u_sunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
+      u_wrapRange: { value: 0.45 },
+      u_wrapPower: { value: 3.9 },
+    },
   });
 }
