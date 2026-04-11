@@ -155,7 +155,7 @@ const sunFlaresVS = `
     return p;
   }
 
-  #define hue(v) ( .6 + .6 * cos( 6.3*(v) + vec3(0.0,23.0,21.0) ) )
+  uniform vec3 uFlareColor;
 
   void main() {
     vUVY = aPos.z;
@@ -180,7 +180,9 @@ const sunFlaresVS = `
     vOpacity = smoothstep(R, R * 1.03, lenW);
     vOpacity *= (1.0 - animPhase);
     vOpacity *= uOpacity;
-    vColor = hue(aWireRandom.w * uHueSpread + uHue);
+    // Temperature-matched colour with subtle per-wire variation
+    float variation = aWireRandom.w * uHueSpread;
+    vColor = uFlareColor * (0.85 + variation * 0.3);
 
     gl_Position = projectionMatrix * viewMatrix * vec4(pW, 1.0);
   }
@@ -369,14 +371,10 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
   // Blackbody colour from chroma.js
   const glowColor = useMemo(() => chroma.temperature(temperature).hex('rgb'), [temperature]);
 
-  // Base colour for rays/flares based on star temperature
+  // Base colour for rays from chroma.js blackbody
   const baseColor = useMemo(() => {
-    if (temperature > 15000) return new THREE.Color(0.7, 0.8, 1.0);    // blue-white
-    if (temperature > 8000) return new THREE.Color(0.9, 0.85, 1.0);    // white-blue
-    if (temperature > 6000) return new THREE.Color(1.0, 0.9, 0.7);     // warm white
-    if (temperature > 5000) return new THREE.Color(1.0, 0.75, 0.4);    // yellow-orange (Sun)
-    if (temperature > 3700) return new THREE.Color(1.0, 0.5, 0.2);     // orange
-    return new THREE.Color(1.0, 0.3, 0.1);                              // red
+    const [r, g, b] = chroma.temperature(temperature).gl();
+    return new THREE.Color(r, g, b);
   }, [temperature]);
 
   // Hue for rays spectrum function
@@ -443,7 +441,7 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
         uOpacity: { value: flareOpacity },
         uAlphaBlended: { value: 0.65 },
         uHueSpread: { value: 0.16 },
-        uHue: { value: hue },
+        uFlareColor: { value: new THREE.Color(glowColor) },
         uNoiseFrequency: { value: 4.0 },
         uNoiseAmplitude: { value: 0.2 },
       },
