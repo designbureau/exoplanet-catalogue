@@ -12,10 +12,11 @@ function getLodSphereGeo(radius, segments) {
 // LOD tiers: [maxDistMultiplier, planetSegs, atmosSegs, vertLOD]
 // vertLOD: 0=no displacement, 1=basic, 2=full displacement + normals
 const LOD_TIERS = [
-  [3,    512, 64, 2],     // ultra close: full displacement + normals
-  [8,    256, 64, 1],     // close: basic displacement
-  [25,   128, 64, 0],     // mid-close: no displacement, full fragment
-  [60,   64,  48, 0],     // mid-range
+  [2,    1024, 64, 2],    // ultra close: max detail
+  [5,    512,  64, 2],    // close: full displacement + normals
+  [12,   256,  64, 1],    // mid-close: basic displacement
+  [30,   128,  64, 0],    // mid: no displacement, full fragment
+  [60,   64,   48, 0],    // mid-range
   [Infinity, 32, 48, 0],  // far
 ];
 
