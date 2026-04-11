@@ -70,6 +70,7 @@ export const EnvProvider = ({ children }) => {
   const [terrWarpStrength, setTerrWarpStrength] = useState(0.5);
   const [terrIceCapSize, setTerrIceCapSize] = useState(0.92);
   const [terrDisplaceScale, setTerrDisplaceScale] = useState(0.02);
+  const [terrBumpStrength, setTerrBumpStrength] = useState(0.35);
 
   // HZ terrestrial presets: 3 categories interpolated by hz position
   const [hzPresets, setHzPresets] = useState({
@@ -169,6 +170,7 @@ export const EnvProvider = ({ children }) => {
       terrWarpStrength, setTerrWarpStrength,
       terrIceCapSize, setTerrIceCapSize,
       terrDisplaceScale, setTerrDisplaceScale,
+      terrBumpStrength, setTerrBumpStrength,
       lavaWarp, setLavaWarp,
       lavaGlow, setLavaGlow,
       lavaHeightOffset, setLavaHeightOffset,

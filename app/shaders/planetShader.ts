@@ -682,6 +682,7 @@ const terrestrialFragment = `
   uniform float u_coastDetail;
   uniform float u_landContrast;
   uniform float u_displace;
+  uniform float u_bumpStrength;
   varying vec3 vPosition;
   varying vec3 vNormal;
   varying vec3 vWorldNormal;
@@ -741,7 +742,7 @@ const terrestrialFragment = `
       float hzp = computeContinent(p + vec3(0.0, 0.0, eps));
       float hzn = computeContinent(p - vec3(0.0, 0.0, eps));
       vec3 grad = vec3(hxp - hxn, hyp - hyn, hzp - hzn) / (2.0 * eps);
-      float strength = (u_displace > 0.0) ? 0.2 : 0.35;
+      float strength = (u_displace > 0.0) ? u_bumpStrength * 0.6 : u_bumpStrength;
       bumpNormal = normalize(vNormal - grad * strength);
       // Flatten water normals
       bumpNormal = mix(vNormal, bumpNormal, isLand * 0.95 + 0.05);
@@ -1103,7 +1104,8 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_wrapRange: { value: 0.45 },
       u_wrapPower: { value: 3.9 },
       u_displace: { value: 0 },
-      u_vertLOD: { value: 0 },  // vertex LOD: 0=off, 1=basic displacement, 2=full
+      u_vertLOD: { value: 0 },
+      u_bumpStrength: { value: 0.35 },
       u_sunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
       u_atmosDayColor: { value: params.atmosDayColor || new THREE.Color(0x00aaff) },
       u_atmosTwilightColor: { value: params.atmosTwilightColor || new THREE.Color(0xff6600) },
