@@ -1052,7 +1052,7 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
 }
 
 // Cloud layer material — separate sphere slightly above planet surface
-const cloudFragmentShader = `
+const cloudFragmentShaderFull = `
   uniform float u_time;
   uniform float u_cloudCoverage;
   uniform float u_cloudOpacity;
@@ -1148,9 +1148,15 @@ const cloudFragmentShader = `
   }
 `;
 
+// DEBUG: simple red test shader
+const cloudFragmentShader = `
+  void main() {
+    gl_FragColor = vec4(1.0, 0.0, 0.0, 0.5);
+  }
+`;
+
 export function createCloudMaterial(params: ShaderParams): THREE.ShaderMaterial | null {
   if (params.type !== PlanetType.TEMPERATE && params.type !== PlanetType.WATER_WORLD) return null;
-  if (!params.cloudCoverage && !params.cloudOpacity) return null;
 
   return new THREE.ShaderMaterial({
     vertexShader,  // standard flat vertex shader — no displacement
