@@ -476,17 +476,15 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
       vertexShader: `
         attribute vec3 aPos;
         varying float vRadial;
-        varying vec3 vWorld;
         uniform float uRadius;
-        uniform vec3 uCamRight;
-        uniform vec3 uCamUp;
         void main() {
           vRadial = aPos.z;
-          vec3 p = aPos.x * uCamRight + aPos.y * uCamUp;
-          p *= 1.0 + aPos.z * uRadius;
-          vec4 world = modelMatrix * vec4(p, 1.0);
-          vWorld = world.xyz;
-          gl_Position = projectionMatrix * viewMatrix * world;
+          // Billboard via modelViewMatrix — always aligned, no lag
+          vec4 mvCenter = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+          float s = length(vec3(modelMatrix[0][0], modelMatrix[1][0], modelMatrix[2][0]));
+          float r = (1.0 + aPos.z * uRadius) * s;
+          vec3 viewPos = mvCenter.xyz + vec3(aPos.x * r, aPos.y * r, 0.0);
+          gl_Position = projectionMatrix * vec4(viewPos, 1.0);
         }
       `,
       fragmentShader: `
@@ -515,8 +513,6 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
         uBrightness: { value: glowBrightness },
         uFalloff: { value: glowFalloff },
         uFalloffColor: { value: 0.7 },
-        uCamRight: { value: new THREE.Vector3(1, 0, 0) },
-        uCamUp: { value: new THREE.Vector3(0, 1, 0) },
       },
     });
 
@@ -563,8 +559,6 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
         flaresMat.uniforms.uCamPos.value.copy(_camPos);
       }
       camera.matrixWorld.extractBasis(_camRight, _camUp, _camFwd);
-      glowMat.uniforms.uCamRight.value.copy(_camRight);
-      glowMat.uniforms.uCamUp.value.copy(_camUp);
     }
   });
 
