@@ -692,7 +692,7 @@ const Planet = ({ data, starData, starRef }) => {
         geometry={getLodSphereGeo(scale, 32)} />
       {cloudMat && (
         <mesh ref={cloudRef} material={cloudMat} frustumCulled={false}>
-          <sphereGeometry args={[scale * 1.005, 64, 32]} />
+          <sphereGeometry args={[scale * (1.0 + terrDisplaceScale + 0.006), 64, 32]} />
         </mesh>
       )}
       {ringData && (
