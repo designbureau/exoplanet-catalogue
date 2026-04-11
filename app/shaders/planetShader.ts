@@ -142,9 +142,9 @@ const terrestrialVertexShader = `
     vec3 sp = (p + u_seed * 100.0) * scale;
     float sd = u_seed.x * 100.0;
 
-    // 3 sub-layers — same as fragment computeContinent
+    // 3 sub-layers — must match fragment computeContinent exactly
     float sub1 = vCloud(sp, u_continentFreq * 1.0, sd + 11.4);
-    float sub2 = vRidged(sp, u_continentFreq * 1.5, sd + 29.4);
+    float sub2 = vRidged(sp, u_continentFreq * (1.0 + u_coastDetail * 3.0), sd + 29.4);
     float sub3 = vCloud(sp, u_continentFreq * 0.6, sd + 53.0);
 
     // Domain warp
@@ -153,7 +153,8 @@ const terrestrialVertexShader = `
 
     // Blend ridged peaks via spatial mask
     float mask = smoothstep(0.3, 0.7, sub3);
-    n = mix(n, n * 0.6 + sub2 * 0.4, mask * 0.5);
+    float ridgeMix = u_landContrast * 0.3;
+    n = mix(n, n * (1.0 - ridgeMix) + sub2 * ridgeMix, mask * 0.7);
 
     // Land only — ocean stays flat
     return max(n - u_seaLevel, 0.0) / (1.0 - u_seaLevel);
@@ -747,18 +748,21 @@ const terrestrialFragment = `
     float sd = u_seed.x * 100.0;
 
     if (u_lod > 0.5) {
-      // 3 sub-layers (ColorDodge architecture) at safe frequencies
+      // Sub 1: organic continental shapes
       float sub1 = hiCloud(p, u_continentFreq * 1.0, sd + 11.4);
-      float sub2 = hiRidged(p, u_continentFreq * 1.5, sd + 29.4);
+      // Sub 2: ridged mountains at higher frequency (u_coastDetail scales)
+      float sub2 = hiRidged(p, u_continentFreq * (1.0 + u_coastDetail * 3.0), sd + 29.4);
+      // Sub 3: large-scale mixing control
       float sub3 = hiCloud(p, u_continentFreq * 0.6, sd + 53.0);
 
-      // Domain warp: sub-layers distort final sampling (ColorDodge key technique)
+      // Domain warp (u_terrWarp controls strength)
       vec3 warp = vec3(sub1 - 0.5, sub2 - 0.5, sub3 - 0.5) * u_terrWarp * 0.4;
       float n = hiCloud(p + warp, u_continentFreq * 0.8, sd + 78.2);
 
-      // Blend ridged peaks via spatial mask
+      // Blend ridged peaks via spatial mask (u_landContrast controls mix amount)
       float mask = smoothstep(0.3, 0.7, sub3);
-      n = mix(n, n * 0.6 + sub2 * 0.4, mask * 0.5);
+      float ridgeMix = u_landContrast * 0.3;
+      n = mix(n, n * (1.0 - ridgeMix) + sub2 * ridgeMix, mask * 0.7);
 
       return n;
     } else {

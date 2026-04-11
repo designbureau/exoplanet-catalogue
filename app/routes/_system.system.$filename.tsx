@@ -322,6 +322,8 @@ const App = ({ data }: any) => {
     terrContinentFreq, setTerrContinentFreq,
     terrWarpStrength, setTerrWarpStrength,
     terrIceCapSize, setTerrIceCapSize,
+    terrCoastDetail, setTerrCoastDetail,
+    terrLandContrast, setTerrLandContrast,
     terrDisplaceScale, setTerrDisplaceScale,
     terrBumpStrength, setTerrBumpStrength,
     lavaWarp, setLavaWarp,
@@ -683,14 +685,16 @@ const App = ({ data }: any) => {
             <AtmosPresetSliders preset={hzPresets.frozen} cat="frozen" updatePreset={updatePreset} />
           </Accordion>
           <Accordion title="Global (non-HZ)" defaultOpen={false}>
-            <Slider label="Clouds" min={0.1} max={0.7} step={0.01} value={cloudCoverage} onChange={setCloudCoverage} />
-            <Slider label="Opacity" min={0} max={1} step={0.05} value={cloudOpacity} onChange={setCloudOpacity} />
-            <Slider label="Sea Lvl" min={0.3} max={0.7} step={0.01} value={terrSeaLevel} onChange={setTerrSeaLevel} />
-            <Slider label="Cont Freq" min={0.05} max={0.5} step={0.01} value={terrContinentFreq} onChange={setTerrContinentFreq} />
-            <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={terrWarpStrength} onChange={setTerrWarpStrength} />
+            <Slider label="Sea Lvl" min={0.2} max={0.8} step={0.01} value={terrSeaLevel} onChange={setTerrSeaLevel} />
+            <Slider label="Frequency" min={0.05} max={0.6} step={0.01} value={terrContinentFreq} onChange={setTerrContinentFreq} />
+            <Slider label="Warp" min={0.1} max={3.0} step={0.05} value={terrWarpStrength} onChange={setTerrWarpStrength} />
+            <Slider label="Ridge Freq" min={0.1} max={1.5} step={0.05} value={terrCoastDetail} onChange={setTerrCoastDetail} />
+            <Slider label="Ridge Mix" min={0.5} max={3.0} step={0.1} value={terrLandContrast} onChange={setTerrLandContrast} />
             <Slider label="Ice Cap" min={0.6} max={0.98} step={0.01} value={terrIceCapSize} onChange={setTerrIceCapSize} />
-            <Slider label="Displace" min={0.005} max={0.08} step={0.005} value={terrDisplaceScale} onChange={setTerrDisplaceScale} />
-            <Slider label="Normal" min={0.05} max={1.0} step={0.05} value={terrBumpStrength} onChange={setTerrBumpStrength} />
+            <Slider label="Displace" min={0.002} max={0.04} step={0.002} value={terrDisplaceScale} onChange={setTerrDisplaceScale} />
+            <Slider label="Normal" min={0.05} max={1.5} step={0.05} value={terrBumpStrength} onChange={setTerrBumpStrength} />
+            <Slider label="Clouds" min={0.1} max={0.7} step={0.01} value={cloudCoverage} onChange={setCloudCoverage} />
+            <Slider label="Cld Opacity" min={0} max={1} step={0.05} value={cloudOpacity} onChange={setCloudOpacity} />
           </Accordion>
         </Accordion>
 
