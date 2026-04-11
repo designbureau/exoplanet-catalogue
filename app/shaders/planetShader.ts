@@ -200,6 +200,7 @@ const terrestrialVertexShader = `
 // Shared noise functions used by all planet types
 const noiseLib = `
   uniform vec3 u_seed;
+  uniform float u_lod;
 
   ${perlinNoise3D}
 
@@ -431,8 +432,6 @@ const noiseLib = `
   }
 
   // LOD-aware noise: fewer octaves when u_lod is 0
-  uniform float u_lod;
-
   float fbm3d_lod(vec3 p) {
     float v = 0.0, a = 0.5;
     int octaves = (u_lod > 0.5) ? 4 : 2;
