@@ -241,36 +241,35 @@ const noiseLib = `
     return v;
   }
 
-  // ── High-octave noise (adapted from ColorDodge ProceduralPlanet) ──
-  // Our noise3d returns [0,1]. ColorDodge uses simplex [-1,1].
-  // We adapt by working in [0,1] space throughout.
-  // 8 octaves (10 caused high-freq static with value noise).
+  // ── High-detail noise (ColorDodge-inspired, adapted for value noise) ──
+  // Value noise (hash-based) becomes static above ~5 octaves unlike simplex.
+  // We use 6 octaves with steeper amplitude decay (0.45) to suppress
+  // high-frequency aliasing while preserving detail at useful scales.
 
-  // Base FBM: 8-octave, contrast-doubled
+  // Base FBM: 6-octave, contrast-boosted
   float hiFBM(vec3 pos, float frq, float sd) {
     float n = 0.0, amp = 0.5;
     vec3 p = pos * frq + vec3(sd);
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 6; i++) {
       n += noise3d(p) * amp;
       p = p * 2.03 + vec3(float(i) * 13.7, float(i) * 7.3, float(i) * 19.1);
-      amp *= 0.5;
+      amp *= 0.45;
     }
-    // Contrast doubling (ColorDodge: (n-0.5)*2+0.5)
-    return clamp((n - 0.5) * 2.0 + 0.5, 0.0, 1.0);
+    return clamp((n - 0.5) * 1.6 + 0.5, 0.0, 1.0);
   }
 
-  // Ridged: 8-octave, ridge-folded, pow4 sharpened
+  // Ridged: 6-octave, ridge-folded, pow3 sharpened
   float hiRidged(vec3 pos, float frq, float sd) {
     float n = 0.0, amp = 0.5;
     vec3 p = pos * frq + vec3(sd);
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 6; i++) {
       float s = noise3d(p);
-      s = 2.0 * (0.5 - abs(0.5 - s));  // ridge fold [0,1] → [0,1]
+      s = 2.0 * (0.5 - abs(0.5 - s));
       n += s * amp;
       p = p * 2.03 + vec3(float(i) * 13.7, float(i) * 7.3, float(i) * 19.1);
-      amp *= 0.5;
+      amp *= 0.45;
     }
-    return pow(clamp(n, 0.0, 1.0), 4.0);
+    return pow(clamp(n, 0.0, 1.0), 3.0);
   }
 
   // Inverted ridged: valleys instead of peaks
@@ -278,16 +277,16 @@ const noiseLib = `
     return 1.0 - hiRidged(pos, frq, sd);
   }
 
-  // Cloud noise: 8-octave sin-modulated for organic shapes
+  // Cloud noise: 6-octave sin-modulated for organic shapes
   float hiCloud(vec3 pos, float frq, float sd) {
     float n = 0.0, amp = 0.5;
     vec3 p = pos * frq + vec3(sd);
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 6; i++) {
       float s = noise3d(p);
-      s = sin(s * 5.0) * 0.5 + 0.5;  // sin modulation [0,1] → [0,1]
+      s = sin(s * 5.0) * 0.5 + 0.5;
       n += s * amp;
       p = p * 2.02 + vec3(float(i) * 31.7, float(i) * 17.3, float(i) * 53.1);
-      amp *= 0.5;
+      amp *= 0.45;
     }
     return clamp(n, 0.0, 1.0);
   }
@@ -832,8 +831,9 @@ const terrestrialFragment = `
       float hzp = computeContinent(p + vec3(0.0, 0.0, eps));
       float hzn = computeContinent(p - vec3(0.0, 0.0, eps));
       vec3 grad = vec3(hxp - hxn, hyp - hyn, hzp - hzn) / (2.0 * eps);
-      // ColorDodge strength = 0.8; we use similar
-      float strength = (u_displace > 0.0) ? 0.5 : 0.8;
+      // ColorDodge uses 0.8 on pre-filtered textures; raw per-pixel noise
+      // needs lower strength to avoid amplifying high-freq aliasing
+      float strength = (u_displace > 0.0) ? 0.2 : 0.35;
       bumpNormal = normalize(vNormal - grad * strength);
 
       // Water gets flattened normals (ColorDodge: factor=0.01 for water)
