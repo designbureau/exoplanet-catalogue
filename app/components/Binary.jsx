@@ -30,10 +30,15 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
 
   // Binary separation in scene units (adjustable via UI)
   const binaryDistanceScale = Constants.distance.au * binaryDistanceFactor;
-  const separation =
+  const rawSeparation =
     parseFloat(
       data.separation?.[0] ?? data.semimajoraxis?.[0] ?? 16
     ) * binaryDistanceScale;
+  // Minimum visual separation: at least 3x the largest star radius so they don't overlap
+  const star1Radius = (parseFloat(stars[0]?.radius?.[0] ?? stars[0]?.mass?.[0] ?? 1) || 1) * Constants.radius.sol * Constants.radius.scale;
+  const star2Radius = (parseFloat(stars[1]?.radius?.[0] ?? stars[1]?.mass?.[0] ?? 1) || 1) * Constants.radius.sol * Constants.radius.scale;
+  const minSeparation = Math.max(star1Radius, star2Radius) * 3;
+  const separation = Math.max(rawSeparation, minSeparation);
 
   const positionAngleDegrees = parseFloat(data.positionangle?.[0] ?? 0);
 
