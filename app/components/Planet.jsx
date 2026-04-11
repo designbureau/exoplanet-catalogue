@@ -10,9 +10,13 @@ function getLodSphereGeo(radius, segments) {
   return geo;
 }
 // LOD tiers: [maxDistMultiplier, planetSegs, atmosSegs, vertLOD]
-// vertLOD: 0=no displacement, 2=full displacement + normals
+// vertLOD: 0=no displacement, 1=basic, 2=full displacement + normals
 const LOD_TIERS = [
-  [Infinity, 512, 64, 2],  // always full detail for now
+  [3,    512, 64, 2],     // ultra close: full displacement + normals
+  [8,    256, 64, 1],     // close: basic displacement
+  [25,   128, 64, 0],     // mid-close: no displacement, full fragment
+  [60,   64,  48, 0],     // mid-range
+  [Infinity, 32, 48, 0],  // far
 ];
 
 // Shared annular ring geometry for soft glow — 128 segments, inner=0 outer=1
@@ -511,7 +515,7 @@ const Planet = ({ data, starData, starRef }) => {
       shaderMaterial.uniforms.u_time.value = elapsedTime;
     }
     if (shaderMaterial.uniforms.u_lod) {
-      shaderMaterial.uniforms.u_lod.value = 1.0; // always full detail for now
+      shaderMaterial.uniforms.u_lod.value = isActive ? 1.0 : 0.0;
     }
     // Sync cloud sphere uniforms
     if (cloudMat) {
