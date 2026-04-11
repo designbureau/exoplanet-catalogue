@@ -718,37 +718,22 @@ const terrestrialFragment = `
     }
   }
 
-  // Moisture: separate noise, higher frequency for climate variation
-  float computeMoisture(vec3 p) {
-    float sd = u_seed.y * 100.0 + 392.0;
-    if (u_lod > 0.5) {
-      float sub1 = hiCloud(p, u_continentFreq * 3.0, sd + 49.7);
-      float sub2 = hiFBM(p, u_continentFreq * 5.0, sd + 136.3);
-      float sub3 = hiCloud(p, u_continentFreq * 2.0, sd + 3.6);
-      vec3 warp = vec3(sub1 - 0.5, sub2 - 0.5, sub3 - 0.5) * 0.15;
-      return hiCloud(p + warp, u_continentFreq * 4.0, sd + 33.3);
-    } else {
-      return noise3d(p * 2.0 + sd) * 0.5 + 0.25;
-    }
-  }
+
 
   void main() {
     vec3 baseDir = (u_displace > 0.0) ? vSphereDir : vPosition;
     vec3 p = seededPos(baseDir, 100.0) * scale;
 
-    // ── Height & moisture (ColorDodge dual-noise architecture) ──
-    float height = computeContinent(p);
-    float moisture = (u_lod > 0.5) ? computeMoisture(p) : noise3d(p * 2.0 + u_seed.y * 100.0) * 0.5 + 0.25;
+    // ── Height ──
+    float continent = computeContinent(p);
 
     float seaLevel = u_seaLevel;
-    float isLand = smoothstep(seaLevel - 0.015, seaLevel + 0.015, height);
-    float landHeight = clamp((height - seaLevel) / (1.0 - seaLevel), 0.0, 1.0);
+    float isLand = smoothstep(seaLevel - 0.02, seaLevel + 0.02, continent);
 
-    // ── Normal mapping: Sobel-style on heightfield (ColorDodge: strength=0.8) ──
+    // ── Normal mapping: 6-neighbor central differences ──
     vec3 bumpNormal = vNormal;
     if (u_lod > 0.5) {
       float eps = 0.002;
-      // 3x3 Sobel kernel on heightfield (6-neighbor approximation in 3D)
       float hxp = computeContinent(p + vec3(eps, 0.0, 0.0));
       float hxn = computeContinent(p - vec3(eps, 0.0, 0.0));
       float hyp = computeContinent(p + vec3(0.0, eps, 0.0));
@@ -756,64 +741,73 @@ const terrestrialFragment = `
       float hzp = computeContinent(p + vec3(0.0, 0.0, eps));
       float hzn = computeContinent(p - vec3(0.0, 0.0, eps));
       vec3 grad = vec3(hxp - hxn, hyp - hyn, hzp - hzn) / (2.0 * eps);
-      // ColorDodge uses 0.8 on pre-filtered textures; raw per-pixel noise
-      // needs lower strength to avoid amplifying high-freq aliasing
       float strength = (u_displace > 0.0) ? 0.2 : 0.35;
       bumpNormal = normalize(vNormal - grad * strength);
-
-      // Water gets flattened normals (ColorDodge: factor=0.01 for water)
+      // Flatten water normals
       bumpNormal = mix(vNormal, bumpNormal, isLand * 0.95 + 0.05);
     }
 
-    // ── Biome coloring: height × moisture → color (ColorDodge 2D LUT) ──
-    // Procedural biome gradient instead of canvas texture
+    // ── Original biome coloring system ──
+    // Noise layers for colour variation
+    float moisture = (u_lod > 0.5) ? cloudNoise(p * 0.5 + vec3(33.0), 1.0) : noise3d(p * 0.5 + vec3(33.0));
+    float mountainRidge = (u_lod > 0.5) ? ridgedNoise(p, 2.0) : 0.0;
+    float microNoise = noise3d(p * 4.0);
+    float warpNoise = noise3d(p * 3.0 + vec3(77.0));
 
-    // Water: depth-based blue gradient
-    float oceanDepth = smoothstep(0.0, seaLevel, height);
-    vec3 deepWater = color1 * 0.4;
-    vec3 shallowWater = color1 * 1.0 + vec3(0.02, 0.04, 0.03);
-    vec3 waterColor = mix(deepWater, shallowWater, oceanDepth);
+    // Ocean: 3-zone depth with colour variation
+    vec3 deepOcean = color1 * 0.5;
+    vec3 midOcean = color1 * 0.85;
+    vec3 shallowOcean = color1 * 1.1 + vec3(0.02, 0.04, 0.03);
+    float oceanDepth = smoothstep(0.15, seaLevel, continent);
+    vec3 oceanColor = mix(deepOcean, midOcean, smoothstep(0.0, 0.5, oceanDepth));
+    oceanColor = mix(oceanColor, shallowOcean, smoothstep(0.6, 1.0, oceanDepth));
+    oceanColor += vec3(-0.01, 0.01, 0.015) * microNoise;
 
-    // Beach: narrow coastal band
-    float beachBand = smoothstep(0.0, 0.04, landHeight) * (1.0 - smoothstep(0.04, 0.08, landHeight));
-    vec3 beachColor = mix(color2, color3, 0.4) + vec3(0.1, 0.08, 0.03);
+    // Coastal zone: sand/reef tint where land meets water
+    float coastalBand = smoothstep(seaLevel - 0.04, seaLevel - 0.01, continent) * (1.0 - isLand);
+    vec3 coastalColor = mix(color2, color3, 0.5) * 0.8 + vec3(0.06, 0.05, 0.02);
+    oceanColor = mix(oceanColor, coastalColor, coastalBand * 0.6);
 
-    // Land biome: moisture on X axis, height on Y axis (like ColorDodge biome LUT)
-    // Low moisture + low height = desert/savanna
-    // High moisture + low height = forest/jungle
-    // Any moisture + high height = rock/mountain
-    // Very high = snow
+    // Land: multi-zone biome system with height + moisture + latitude
+    float landHeight = (continent - seaLevel) / (1.0 - seaLevel);
+    float latitude = abs(baseDir.y);
 
-    // Base land colors from moisture gradient
-    vec3 arid = color3 * 0.85 + vec3(0.05, 0.03, -0.01);      // desert/sand
-    vec3 dry = mix(color2, color3, 0.5);                         // grassland
-    vec3 temperate = color2 * 1.1;                                // forest
-    vec3 wet = color2 * 0.9 + vec3(-0.02, 0.03, -0.01);         // jungle
+    // Beach/shore zone
+    vec3 shoreColor = mix(color2, color3, 0.3) + vec3(0.08, 0.06, 0.02);
 
-    vec3 lowColor = mix(arid, dry, smoothstep(0.2, 0.4, moisture));
-    lowColor = mix(lowColor, temperate, smoothstep(0.4, 0.6, moisture));
-    lowColor = mix(lowColor, wet, smoothstep(0.6, 0.8, moisture));
+    // Lowland biomes driven by moisture AND latitude
+    vec3 lowWet = color2 * 1.1 + vec3(-0.005, 0.015, -0.005);
+    vec3 lowDry = mix(color2, color3, 0.4);
+    vec3 lowArid = color3 * 0.9 + vec3(0.04, 0.02, -0.01);
+    float latMoisture = moisture + smoothstep(0.0, 0.25, latitude) * 0.15 - smoothstep(0.5, 0.8, latitude) * 0.1;
+    vec3 lowland = mix(lowArid, lowDry, smoothstep(0.25, 0.4, latMoisture));
+    lowland = mix(lowland, lowWet, smoothstep(0.4, 0.6, latMoisture));
+    lowland += vec3(0.015, -0.008, -0.015) * warpNoise;
 
-    // Highland: darker, rockier
-    vec3 rockColor = color3 * 0.7 + color4 * 0.15;
-    vec3 highColor = mix(lowColor * 0.7, rockColor, smoothstep(0.3, 0.7, landHeight));
+    // Highland with ridge influence
+    vec3 highland = color3 * 0.9;
+    highland += vec3(0.02, 0.008, -0.015) * mountainRidge;
+    vec3 tundra = mix(color3 * 0.75, color4 * 0.6, 0.4) + vec3(-0.02, -0.01, 0.02);
+    highland = mix(highland, tundra, smoothstep(0.5, 0.8, latitude) * smoothstep(0.3, 0.6, landHeight));
 
-    // Snow/ice at peaks
-    vec3 snowColor = color4;
-    highColor = mix(highColor, snowColor, smoothstep(0.75, 0.9, landHeight));
+    // Exposed rock on steep slopes
+    vec3 exposedRock = color3 * 0.65 + color4 * 0.35;
 
-    // Combine height zones
-    vec3 landColor = mix(lowColor, highColor, smoothstep(0.1, 0.5, landHeight));
-    landColor = mix(landColor, beachColor, beachBand);
+    // Peak/snow zone — latitude-dependent snowline
+    float snowLine = mix(0.92, 0.7, smoothstep(0.4, 0.8, latitude));
+    vec3 peaks = color4;
 
-    // Surface noise variation (subtle texture)
-    float microNoise = noise3d(p * 6.0);
-    landColor *= 0.94 + 0.08 * microNoise;
+    // Blend terrain zones
+    vec3 landColor = mix(shoreColor, lowland, smoothstep(0.02, 0.12, landHeight));
+    float brownBlend = smoothstep(0.1, 0.55, landHeight) * (0.6 + 0.4 * (1.0 - latMoisture));
+    landColor = mix(landColor, highland, brownBlend);
+    landColor = mix(landColor, exposedRock, mountainRidge * smoothstep(0.2, 0.5, landHeight) * 0.6);
+    landColor = mix(landColor, peaks, smoothstep(snowLine, snowLine + 0.06, landHeight));
 
-    // Roughness: ColorDodge uses 0.75 water, 0.9 land
-    // (We don't have PBR roughness but can darken smooth ocean)
+    // Surface texture variation
+    landColor *= 0.96 + 0.06 * microNoise;
 
-    vec3 surfaceColor = mix(waterColor, landColor, isLand);
+    vec3 surfaceColor = mix(oceanColor, landColor, isLand);
 
     // Ice caps at poles
     float northLat = baseDir.y;
@@ -855,9 +849,10 @@ const terrestrialFragment = `
 
     // Clouds removed — rendered on separate sphere to avoid displacement artefacts
 
-    // Lighting — bumpNormal already has water flattening built in
+    // Lighting with bump normal (land only; ocean is smooth)
+    vec3 effectiveNormal = mix(vNormal, bumpNormal, isLand);
     vec3 V = normalize(cameraPosition - vWorldPosition);
-    surfaceColor = planetLighting(surfaceColor, bumpNormal, u_sunDirection, V, u_ambient);
+    surfaceColor = planetLighting(surfaceColor, vWorldNormal, u_sunDirection, V, u_ambient);
 
     // Specular on ocean — only on lit side
     vec3 viewDir = normalize(-vPosition);
