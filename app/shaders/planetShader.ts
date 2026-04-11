@@ -241,21 +241,65 @@ const noiseLib = `
     return v;
   }
 
-  // Ridged noise: sharp mountain ridges and valleys (from ProceduralPlanet)
+  // ── High-octave noise (ColorDodge-style: 10 octaves, gain*=2) ─────
+
+  // Base FBM: 10-octave standard noise, contrast-doubled
+  float hiFBM(vec3 pos, float frq, float sd) {
+    float n = 0.0, gain = 1.0;
+    for (int i = 0; i < 10; i++) {
+      n += noise3d(pos * gain / frq + sd + float(i) * 10.0) * 0.5 / gain;
+      gain *= 2.0;
+    }
+    return clamp((n - 0.5) * 2.0 + 0.5, 0.0, 1.0);
+  }
+
+  // Ridged: 10-octave, ridge-folded, pow4 sharpened
+  float hiRidged(vec3 pos, float frq, float sd) {
+    float n = 0.0, gain = 1.0;
+    for (int i = 0; i < 10; i++) {
+      float s = noise3d(pos * gain / frq + sd + float(i) * 10.0);
+      s = (s + 1.0) * 0.5; // not needed for our noise3d [0,1] but safe
+      s = 2.0 * (0.5 - abs(0.5 - s));
+      n += s * 0.5 / gain;
+      gain *= 2.0;
+    }
+    return pow(clamp(n, 0.0, 1.0), 4.0);
+  }
+
+  // Inverted ridged: valleys instead of peaks
+  float hiInvRidged(vec3 pos, float frq, float sd) {
+    return 1.0 - hiRidged(pos, frq, sd);
+  }
+
+  // Cloud noise: 10-octave sin-modulated for organic shapes
+  float hiCloud(vec3 pos, float frq, float sd) {
+    float n = 0.0, gain = 1.0;
+    for (int i = 0; i < 10; i++) {
+      float s = noise3d(pos * gain / frq + sd + float(i) * 10.0);
+      s = sin(s * 5.0) * 0.5 + 0.5;
+      n += s * 0.5 / gain;
+      gain *= 2.0;
+    }
+    return clamp(n, 0.0, 1.0);
+  }
+
+  // ── Legacy noise (used by non-terrestrial shaders, LOD paths) ────
+
+  // Ridged noise: 4-octave (cheaper, for bump layers)
   float ridgedNoise(vec3 p, float freq) {
     float v = 0.0, a = 0.5;
     p = p * freq;
     for (int i = 0; i < 4; i++) {
       float n = noise3d(p);
-      n = 2.0 * (0.5 - abs(0.5 - n)); // ridge fold
+      n = 2.0 * (0.5 - abs(0.5 - n));
       v += a * n;
       p = p * 2.03 + vec3(13.7, 29.3, 41.1);
       a *= 0.5;
     }
-    return pow(clamp(v, 0.0, 1.0), 3.0); // sharpen ridges
+    return pow(clamp(v, 0.0, 1.0), 3.0);
   }
 
-  // Cloud noise: sin-modulated for wispy organic shapes
+  // Cloud noise: 4-octave (cheaper, for bump/cloud layers)
   float cloudNoise(vec3 p, float freq) {
     float v = 0.0, a = 0.5;
     p = p * freq;
@@ -680,62 +724,61 @@ const terrestrialFragment = `
 
   ${noiseLib}
 
-  // Compute continental height using cloud noise + ridged terrain (LOD-aware)
+  // ── ColorDodge-style terrain: 3 sub-layers domain-warped into final ──
+  // Each sub-layer uses high-octave noise at different frequencies.
+  // The final height mixes ridged peaks with cloud-noise organic shapes,
+  // domain-warped by the sub-layers for geological variety.
   float computeContinent(vec3 p) {
-    // Domain warp at very low frequency for continent-scale distortion
-    vec3 wp;
+    // Seed offsets for each sub-layer (like ColorDodge's per-seed offsets)
+    float sd = u_seed.x * 100.0;
+
     if (u_lod > 0.5) {
-      wp = p + u_terrWarp * vec3(
-        fbm3d(p * 0.2),
-        fbm3d(p * 0.2 + vec3(5.2)),
-        fbm3d(p * 0.2 + vec3(9.7))
-      );
+      // ── High-LOD path: full ColorDodge-style layering ──
+
+      // Frequency controls (u_continentFreq scales the base, ~0.15 default)
+      float frq1 = 1.0 / (u_continentFreq * 8.0);  // primary freq (~0.83)
+      float frq2 = 1.0 / (u_continentFreq * 5.0);  // secondary (~0.53)
+      float frqMix = 1.0 / (u_continentFreq * 12.0); // mixing freq (~1.25)
+
+      // Sub-layer 1: ridged mountains (sharp peaks and trenches)
+      float sub1 = hiRidged(p, frq1, sd + 83.7);
+
+      // Sub-layer 2: cloud noise (organic wispy continental shapes)
+      float sub2 = hiCloud(p, frq2, sd + 29.4);
+
+      // Sub-layer 3: mixing noise (controls blending regions)
+      float sub3 = hiCloud(p, frqMix, sd + 53.0);
+
+      // Final height: domain-warped by sub-layers (ColorDodge technique)
+      // sub1/sub3 creates spatially varying warp, sub2 modulates frequency
+      float mixAmp = 0.8;  // mixScale equivalent
+      float n = hiCloud(p + vec3((sub1 / max(sub3, 0.01)) * 0.1), mixAmp + sub2, sd + 34.9);
+
+      // Blend ridged detail into organic base for geological variety
+      float ridgeMask = smoothstep(0.3, 0.7, sub3);
+      float ridgeDetail = hiRidged(p, frq2 * 0.7, sd + 11.4);
+      n = mix(n, n * 0.6 + ridgeDetail * 0.4, ridgeMask * 0.5);
+
+      // Domain-warped valleys (inverted ridges at different freq)
+      float valleys = hiInvRidged(p + vec3(sub2 * 0.05), frq1 * 1.5, sd + 49.7);
+      n = mix(n, n * 0.7 + valleys * 0.3, (1.0 - ridgeMask) * 0.3);
+
+      // Contrast enhancement
+      return enhanceContrast(n, 0.48, u_landContrast);
+
     } else {
-      wp = p + 0.3 * vec3(
+      // ── Low-LOD path: cheaper approximation ──
+      vec3 wp = p + 0.3 * vec3(
         noise3d(p * 0.2),
         noise3d(p * 0.2 + vec3(5.2)),
         noise3d(p * 0.2 + vec3(9.7))
       );
+      float h1 = noise3d(wp * u_continentFreq);
+      float h1b = noise3d(wp * u_continentFreq * 0.67 + vec3(42.0)) * 0.3;
+      float h2 = noise3d(wp * u_coastDetail) * 0.2;
+      float raw = (h1 + h1b) * 0.5 + h2;
+      return enhanceContrast(raw, 0.48, u_landContrast);
     }
-
-    // Very low frequency base: big clumped continents and wide ocean basins
-    float h1 = noise3d(wp * u_continentFreq);
-    // Secondary low-freq layer for continent grouping
-    float h1b = noise3d(wp * u_continentFreq * 0.67 + vec3(42.0)) * 0.3;
-
-    // Cloud noise for organic coastline detail (LOD-aware, lower freq)
-    float h2 = cloudNoise_lod(wp, u_coastDetail) * 0.2;
-
-    // Ridged noise + detail layers at high LOD
-    float h3 = 0.0;
-    float h4 = 0.0;
-    float h5 = 0.0; // mountain ridges
-    float h6 = 0.0; // micro-terrain
-    if (u_lod > 0.5) {
-      // Mountain ridges — sharp peaks from ridged noise
-      h3 = ridgedNoise(wp + vec3(h1 * 0.5), 0.8) * 0.1;
-
-      // Secondary domain warp for mid-frequency detail
-      vec3 wp2 = wp + 0.08 * vec3(
-        noise3d(wp * 1.5 + vec3(17.0)),
-        noise3d(wp * 1.5 + vec3(31.0)),
-        noise3d(wp * 1.5 + vec3(47.0))
-      );
-      h4 = noise3d(wp2 * 1.2) * 0.06;
-
-      // Mountain range chains — elongated ridged noise at medium frequency
-      float ridgeWarp = noise3d(wp * 0.6 + vec3(83.0)) * 0.3;
-      h5 = ridgedNoise(wp + vec3(ridgeWarp, 0.0, ridgeWarp * 0.7), 1.5) * 0.06;
-
-      // Micro-terrain: fine surface detail (valleys, hills, erosion patterns)
-      float erosion = noise3d(wp * 4.0 + vec3(h3 * 2.0)) * 0.02;
-      float valleys = (1.0 - ridgedNoise(wp, 3.0)) * 0.015; // inverted ridges = valleys
-      h6 = erosion - valleys;
-    }
-
-    // Base dominates, detail layers add complexity
-    float raw = (h1 + h1b) * 0.5 + h2 + h3 + h4 + h5 + h6;
-    return enhanceContrast(raw, 0.48, u_landContrast);
   }
 
   void main() {
@@ -750,56 +793,31 @@ const terrestrialFragment = `
     float seaLevel = u_seaLevel;
     float isLand = smoothstep(seaLevel - 0.02, seaLevel + 0.02, continent);
 
-    // Multi-layer bump normals — the primary source of terrain detail
-    // (ColorDodge-style: normal mapping carries most visual weight, not geometry)
+    // ── Normal mapping: primary source of terrain detail ──
+    // ColorDodge uses strength=0.8 Sobel on a high-octave heightmap.
+    // We compute gradient from computeContinent (which now has 10-octave
+    // noise with ridged/cloud/domain-warp layers) + extra detail layers.
     vec3 bumpNormal = vNormal;
     if (u_lod > 0.5) {
-      // Layer 1: Continental-scale bump from computeContinent
-      // When displaced, vertex normals already have large-scale slope,
-      // but we still add continent bump at reduced strength for detail
-      float eps = 0.001;
+      // Primary terrain normal from computeContinent (carries all the detail)
+      float eps = 0.0008;
       float cx = computeContinent(p + vec3(eps, 0.0, 0.0));
       float cy = computeContinent(p + vec3(0.0, eps, 0.0));
       float cz = computeContinent(p + vec3(0.0, 0.0, eps));
       vec3 bumpGrad = vec3(continent - cx, continent - cy, continent - cz) / eps;
-      float bumpStr = (u_displace > 0.0) ? 0.08 : 0.20;
+      // Strong normal — this is where all the visual detail comes from
+      // (ColorDodge equivalent: strength = 0.8)
+      float bumpStr = (u_displace > 0.0) ? 0.25 : 0.40;
       bumpNormal = normalize(vNormal + bumpGrad * bumpStr);
 
-      // Layer 2: Ridged mountain detail — sharp terrain features
-      float re = 0.002;
-      float rx = ridgedNoise(p + vec3(re, 0.0, 0.0), 2.5);
-      float ry = ridgedNoise(p + vec3(0.0, re, 0.0), 2.5);
-      float rz = ridgedNoise(p + vec3(0.0, 0.0, re), 2.5);
-      float rc = ridgedNoise(p, 2.5);
-      vec3 ridgeGrad = vec3(rc - rx, rc - ry, rc - rz) / re;
-      bumpNormal = normalize(bumpNormal + ridgeGrad * 0.06 * isLand);
-
-      // Layer 3: Medium-frequency terrain detail (hills, plateaus)
-      float me = 0.002;
-      float mx = noise3d((p + vec3(me, 0.0, 0.0)) * 4.0);
-      float my = noise3d((p + vec3(0.0, me, 0.0)) * 4.0);
-      float mz = noise3d((p + vec3(0.0, 0.0, me)) * 4.0);
-      float mc = noise3d(p * 4.0);
-      vec3 midGrad = vec3(mc - mx, mc - my, mc - mz) / me;
-      bumpNormal = normalize(bumpNormal + midGrad * 0.04 * isLand);
-
-      // Layer 4: Fine micro-bump — surface roughness (rocks, texture)
+      // Extra: fine surface roughness at high frequency (rocks, texture)
       float fe = 0.003;
-      float fx = noise3d((p + vec3(fe, 0.0, 0.0)) * 8.0);
-      float fy = noise3d((p + vec3(0.0, fe, 0.0)) * 8.0);
-      float fz = noise3d((p + vec3(0.0, 0.0, fe)) * 8.0);
-      float fc = noise3d(p * 8.0);
+      float fx = noise3d((p + vec3(fe, 0.0, 0.0)) * 10.0);
+      float fy = noise3d((p + vec3(0.0, fe, 0.0)) * 10.0);
+      float fz = noise3d((p + vec3(0.0, 0.0, fe)) * 10.0);
+      float fc = noise3d(p * 10.0);
       vec3 fineGrad = vec3(fc - fx, fc - fy, fc - fz) / fe;
-      bumpNormal = normalize(bumpNormal + fineGrad * 0.025);
-
-      // Layer 5: Ultra-fine high-frequency detail
-      float ue = 0.004;
-      float ux = noise3d((p + vec3(ue, 0.0, 0.0)) * 16.0);
-      float uy = noise3d((p + vec3(0.0, ue, 0.0)) * 16.0);
-      float uz = noise3d((p + vec3(0.0, 0.0, ue)) * 16.0);
-      float uc = noise3d(p * 16.0);
-      vec3 ultraGrad = vec3(uc - ux, uc - uy, uc - uz) / ue;
-      bumpNormal = normalize(bumpNormal + ultraGrad * 0.015);
+      bumpNormal = normalize(bumpNormal + fineGrad * 0.03 * isLand);
     }
 
     // Noise layers for colour variation
