@@ -1052,7 +1052,7 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
 }
 
 // Cloud layer material — separate sphere slightly above planet surface
-const cloudFragmentShaderFull = `
+const cloudFragmentShader = `
   uniform float u_time;
   uniform float u_cloudCoverage;
   uniform float u_cloudOpacity;
@@ -1145,13 +1145,6 @@ const cloudFragmentShaderFull = `
     float alpha = clouds * u_cloudOpacity * diff;
     if (alpha < 0.01) discard;
     gl_FragColor = vec4(cloudColor * diff, alpha);
-  }
-`;
-
-// DEBUG: simple red test shader
-const cloudFragmentShader = `
-  void main() {
-    gl_FragColor = vec4(1.0, 0.0, 0.0, 0.5);
   }
 `;
 

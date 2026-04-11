@@ -148,7 +148,6 @@ const Planet = ({ data, starData, starRef }) => {
     });
     const shader = createPlanetMaterial(params);
     const cloudMat = createCloudMaterial(params);
-    console.log(`[CLOUD] ${name}: type=${params.type} cloudMat=${!!cloudMat}`);
     // Atmosphere: use HZ-gradient params from classifier when available, fall back to type defaults
     const ap = getAtmosphereParams(params.type, starData?.temperature || 5500);
     const atmosDayCol = params.atmosDayColor || ap?.dayColor || new THREE.Color(0x00aaff);
