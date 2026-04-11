@@ -1167,7 +1167,7 @@ export function createCloudMaterial(params: ShaderParams): THREE.ShaderMaterial 
     uniforms: {
       u_time: { value: 0 },
       u_seed: { value: params.seed },
-      u_lod: { value: 0 },
+      u_lod: { value: 1.0 },  // always full detail for cloud sphere
       u_cloudCoverage: { value: params.cloudCoverage ?? 0.35 },
       u_cloudOpacity: { value: params.cloudOpacity ?? 0.6 },
       u_cloudSwirl: { value: params.cloudSwirl ?? 0.8 },
