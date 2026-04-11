@@ -53,7 +53,7 @@ const Controls = ({ follow, autoRotate = false, viewAzimuth = 0, viewPolar = Mat
       const bbox = new THREE.Box3().setFromObject(activeRef.current);
       const sphere = new THREE.Sphere();
       bbox.getBoundingSphere(sphere);
-      cameraControlsRef.current.minDistance = sphere.radius * 1.02;
+      cameraControlsRef.current.minDistance = sphere.radius * 0.2;
 
       // Check if this is a binary group (has children with stars, not a mesh itself)
       const isBinary = !activeRef.current.geometry;
