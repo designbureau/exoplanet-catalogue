@@ -746,37 +746,56 @@ const terrestrialFragment = `
 
     float continent = computeContinent(p);
 
-    // Bump normals
+    // Multi-layer bump normals — the primary source of terrain detail
+    // (ColorDodge-style: normal mapping carries most visual weight, not geometry)
     vec3 bumpNormal = vNormal;
     if (u_lod > 0.5) {
-      if (u_displace > 0.0) {
-        // Vertex shader already computed terrain-slope normals via finite
-        // differences. Only add micro-bump for sub-vertex detail.
-        float me = 0.003;
-        float mx = noise3d((p + vec3(me, 0.0, 0.0)) * 6.0);
-        float my = noise3d((p + vec3(0.0, me, 0.0)) * 6.0);
-        float mz = noise3d((p + vec3(0.0, 0.0, me)) * 6.0);
-        float mc = noise3d(p * 6.0);
-        vec3 microGrad = vec3(mc - mx, mc - my, mc - mz) / me;
-        bumpNormal = normalize(vNormal + microGrad * 0.05);
-      } else {
-        // No displacement: full bump from computeContinent
-        float eps = 0.001;
-        float cx = computeContinent(p + vec3(eps, 0.0, 0.0));
-        float cy = computeContinent(p + vec3(0.0, eps, 0.0));
-        float cz = computeContinent(p + vec3(0.0, 0.0, eps));
-        vec3 bumpGrad = vec3(continent - cx, continent - cy, continent - cz) / eps;
-        bumpNormal = normalize(vNormal + bumpGrad * 0.15);
+      // Layer 1: Continental-scale bump from computeContinent
+      // When displaced, vertex normals already have large-scale slope,
+      // but we still add continent bump at reduced strength for detail
+      float eps = 0.001;
+      float cx = computeContinent(p + vec3(eps, 0.0, 0.0));
+      float cy = computeContinent(p + vec3(0.0, eps, 0.0));
+      float cz = computeContinent(p + vec3(0.0, 0.0, eps));
+      vec3 bumpGrad = vec3(continent - cx, continent - cy, continent - cz) / eps;
+      float bumpStr = (u_displace > 0.0) ? 0.08 : 0.20;
+      bumpNormal = normalize(vNormal + bumpGrad * bumpStr);
 
-        // Secondary micro-bump for surface roughness
-        float me = 0.003;
-        float mx = noise3d((p + vec3(me, 0.0, 0.0)) * 6.0);
-        float my = noise3d((p + vec3(0.0, me, 0.0)) * 6.0);
-        float mz = noise3d((p + vec3(0.0, 0.0, me)) * 6.0);
-        float mc = noise3d(p * 6.0);
-        vec3 microGrad = vec3(mc - mx, mc - my, mc - mz) / me;
-        bumpNormal = normalize(bumpNormal + microGrad * 0.03);
-      }
+      // Layer 2: Ridged mountain detail — sharp terrain features
+      float re = 0.002;
+      float rx = ridgedNoise(p + vec3(re, 0.0, 0.0), 2.5);
+      float ry = ridgedNoise(p + vec3(0.0, re, 0.0), 2.5);
+      float rz = ridgedNoise(p + vec3(0.0, 0.0, re), 2.5);
+      float rc = ridgedNoise(p, 2.5);
+      vec3 ridgeGrad = vec3(rc - rx, rc - ry, rc - rz) / re;
+      bumpNormal = normalize(bumpNormal + ridgeGrad * 0.06 * isLand);
+
+      // Layer 3: Medium-frequency terrain detail (hills, plateaus)
+      float me = 0.002;
+      float mx = noise3d((p + vec3(me, 0.0, 0.0)) * 4.0);
+      float my = noise3d((p + vec3(0.0, me, 0.0)) * 4.0);
+      float mz = noise3d((p + vec3(0.0, 0.0, me)) * 4.0);
+      float mc = noise3d(p * 4.0);
+      vec3 midGrad = vec3(mc - mx, mc - my, mc - mz) / me;
+      bumpNormal = normalize(bumpNormal + midGrad * 0.04 * isLand);
+
+      // Layer 4: Fine micro-bump — surface roughness (rocks, texture)
+      float fe = 0.003;
+      float fx = noise3d((p + vec3(fe, 0.0, 0.0)) * 8.0);
+      float fy = noise3d((p + vec3(0.0, fe, 0.0)) * 8.0);
+      float fz = noise3d((p + vec3(0.0, 0.0, fe)) * 8.0);
+      float fc = noise3d(p * 8.0);
+      vec3 fineGrad = vec3(fc - fx, fc - fy, fc - fz) / fe;
+      bumpNormal = normalize(bumpNormal + fineGrad * 0.025);
+
+      // Layer 5: Ultra-fine high-frequency detail
+      float ue = 0.004;
+      float ux = noise3d((p + vec3(ue, 0.0, 0.0)) * 16.0);
+      float uy = noise3d((p + vec3(0.0, ue, 0.0)) * 16.0);
+      float uz = noise3d((p + vec3(0.0, 0.0, ue)) * 16.0);
+      float uc = noise3d(p * 16.0);
+      vec3 ultraGrad = vec3(uc - ux, uc - uy, uc - uz) / ue;
+      bumpNormal = normalize(bumpNormal + ultraGrad * 0.015);
     }
 
     // Sea level threshold (higher = more ocean, fewer but bigger continents)
@@ -806,7 +825,7 @@ const terrestrialFragment = `
 
     // Land: multi-zone biome system with height + moisture + latitude
     float landHeight = (continent - seaLevel) / (1.0 - seaLevel);
-    float latitude = abs(vPosition.y); // 0 at equator, 1 at poles
+    float latitude = abs(baseDir.y); // 0 at equator, 1 at poles
 
     // Beach/shore zone
     vec3 shoreColor = mix(color2, color3, 0.3) + vec3(0.08, 0.06, 0.02);

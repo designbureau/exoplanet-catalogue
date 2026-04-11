@@ -688,7 +688,7 @@ const App = ({ data }: any) => {
             <Slider label="Cont Freq" min={0.05} max={0.5} step={0.01} value={terrContinentFreq} onChange={setTerrContinentFreq} />
             <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={terrWarpStrength} onChange={setTerrWarpStrength} />
             <Slider label="Ice Cap" min={0.6} max={0.98} step={0.01} value={terrIceCapSize} onChange={setTerrIceCapSize} />
-            <Slider label="Displace" min={0.05} max={0.5} step={0.01} value={terrDisplaceScale} onChange={setTerrDisplaceScale} />
+            <Slider label="Displace" min={0.005} max={0.08} step={0.005} value={terrDisplaceScale} onChange={setTerrDisplaceScale} />
           </Accordion>
         </Accordion>
 
