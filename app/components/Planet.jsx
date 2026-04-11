@@ -495,9 +495,9 @@ const Planet = ({ data, starData, starRef }) => {
     ref.current.position.x = kep.x;
     ref.current.position.y = kep.y;
 
-    // Update ribbon trail phase — normalised true anomaly to match orbit line parameterisation
+    // Update ribbon trail phase — normalised mean anomaly to match orbit line parameterisation
     if (orbitMat?.uniforms?.uPhase) {
-      orbitMat.uniforms.uPhase.value = ((kep.trueAnomaly % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2);
+      orbitMat.uniforms.uPhase.value = ((meanAnomaly % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2);
     }
 
     // Time + LOD — only animate active planet's clouds
@@ -603,12 +603,10 @@ const Planet = ({ data, starData, starRef }) => {
     }
     const geo = new THREE.BufferGeometry().setFromPoints(points);
 
-    // Store normalized true anomaly (0→1) per vertex for the shader taper
+    // Store normalized mean anomaly (0→1) per vertex — linear, no wrapping issues
     const tValues = new Float32Array(segments + 1);
     for (let i = 0; i <= segments; i++) {
-      const M = (i / segments) * Math.PI * 2;
-      const { trueAnomaly } = keplerPosition(M, eccentricity, semimajoraxis);
-      tValues[i] = ((trueAnomaly % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2);
+      tValues[i] = i / segments;
     }
     geo.setAttribute("aT", new THREE.BufferAttribute(tValues, 1));
 
