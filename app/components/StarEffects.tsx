@@ -368,14 +368,16 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
   const flaresRef = useRef<THREE.Mesh>(null);
   const { camera } = useThree();
 
-  // Blackbody colour from chroma.js
+  // Blackbody colours from chroma.js — graduated by layer
+  // Glow: photosphere colour (scattered light)
   const glowColor = useMemo(() => chroma.temperature(temperature).hex('rgb'), [temperature]);
-
-  // Base colour for rays from chroma.js blackbody
+  // Rays: slightly cooler (corona visible emission)
   const baseColor = useMemo(() => {
-    const [r, g, b] = chroma.temperature(temperature).gl();
+    const [r, g, b] = chroma.temperature(temperature * 0.85).gl();
     return new THREE.Color(r, g, b);
   }, [temperature]);
+  // Flares: cooler still (prominences)
+  const flareColor = useMemo(() => chroma.temperature(temperature * 0.75).hex('rgb'), [temperature]);
 
   // Hue for rays spectrum function
   const hue = useMemo(() => {
@@ -441,7 +443,7 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
         uOpacity: { value: flareOpacity },
         uAlphaBlended: { value: 0.65 },
         uHueSpread: { value: 0.16 },
-        uFlareColor: { value: new THREE.Color(glowColor) },
+        uFlareColor: { value: new THREE.Color(flareColor) },
         uNoiseFrequency: { value: 4.0 },
         uNoiseAmplitude: { value: 0.2 },
       },
