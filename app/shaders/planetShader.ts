@@ -21,18 +21,22 @@ const vertexShader = `
 // Vertex shader with displacement for terrestrial planets at high LOD
 const terrestrialVertexShader = `
   varying vec3 vPosition;
-  varying vec3 vSphereDir; // undisplaced sphere direction (for clouds)
+  varying vec3 vSphereDir;
   varying vec3 vNormal;
   varying vec3 vWorldNormal;
   varying vec3 vWorldPosition;
 
   uniform vec3 u_seed;
-  uniform float u_displace;      // 0 = no displacement, >0 = displacement scale
+  uniform float u_displace;
   uniform float u_continentFreq;
   uniform float u_terrWarp;
   uniform float u_seaLevel;
+  uniform float u_coastDetail;
+  uniform float u_landContrast;
+  uniform float u_vertLOD;   // 0=off, 1=basic, 2=full
+  uniform float scale;
 
-  // Inline noise for vertex shader (must be self-contained)
+  // ── Inline noise (self-contained, matches noiseLib) ──────────────
   float hash3v(vec3 p) {
     return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453123);
   }
@@ -46,56 +50,140 @@ const terrestrialVertexShader = `
       mix(mix(hash3v(i + vec3(0,0,1)), hash3v(i + vec3(1,0,1)), u.x),
           mix(hash3v(i + vec3(0,1,1)), hash3v(i + vec3(1,1,1)), u.x), u.y), u.z);
   }
-  // Simplified FBM for vertex displacement (3 octaves — cheaper than fragment)
+
+  // FBM: 5 octaves at full LOD, 3 at basic — matches noiseLib fbm3d
   float vfbm(vec3 p) {
-    float v = 0.0, a = 0.5, f = 1.0;
-    for (int i = 0; i < 3; i++) {
-      v += a * vnoise(p * f);
-      f *= 2.0; a *= 0.5;
+    float v = 0.0, a = 0.5;
+    int oct = (u_vertLOD > 1.5) ? 5 : 3;
+    for (int i = 0; i < 5; i++) {
+      if (i >= oct) break;
+      v += a * vnoise(p);
+      p = p * 2.01 + vec3(100.0);
+      a *= 0.5;
     }
     return v;
   }
 
-  uniform float scale; // noiseScale from fragment shader
-
-  float computeHeight(vec3 p) {
-    // Match fragment shader coordinate space: seededPos(normalize(position), 100.0) * scale
-    vec3 sp = (p + u_seed * 100.0) * scale;
-    // Domain warp
-    vec3 wp = sp + u_terrWarp * 0.3 * vec3(
-      vnoise(sp * 0.2),
-      vnoise(sp * 0.2 + vec3(5.2)),
-      vnoise(sp * 0.2 + vec3(9.7))
-    );
-    // Continental base
-    float h = vnoise(wp * u_continentFreq);
-    h += vnoise(wp * u_continentFreq * 0.67 + vec3(42.0)) * 0.3;
-    h *= 0.55;
-    // FBM detail
-    h += vfbm(wp * 0.8) * 0.15;
-    // Contrast enhancement to match fragment
-    h = clamp((h - 0.48) * 1.6 + 0.48, 0.0, 1.0);
-    // Clamp to land only (above sea level)
-    float land = max(h - u_seaLevel, 0.0) / (1.0 - u_seaLevel);
-    return land;
+  // Ridged noise: sharp mountain ridges — matches noiseLib ridgedNoise
+  float vRidgedNoise(vec3 p, float freq) {
+    float v = 0.0, a = 0.5;
+    p = p * freq;
+    int oct = (u_vertLOD > 1.5) ? 4 : 2;
+    for (int i = 0; i < 4; i++) {
+      if (i >= oct) break;
+      float n = vnoise(p);
+      n = 2.0 * (0.5 - abs(0.5 - n));
+      v += a * n;
+      p = p * 2.03 + vec3(13.7, 29.3, 41.1);
+      a *= 0.5;
+    }
+    return pow(clamp(v, 0.0, 1.0), 3.0);
   }
 
+  // Cloud noise: sin-modulated wispy shapes — matches noiseLib cloudNoise
+  float vCloudNoise(vec3 p, float freq) {
+    float v = 0.0, a = 0.5;
+    p = p * freq;
+    int oct = (u_vertLOD > 1.5) ? 4 : 2;
+    for (int i = 0; i < 4; i++) {
+      if (i >= oct) break;
+      float n = vnoise(p);
+      v += a * (sin(n * 5.0) * 0.5 + 0.5);
+      p = p * 2.02 + vec3(31.7, 17.3, 53.1);
+      a *= 0.5;
+    }
+    return v;
+  }
+
+  // ── Height computation — mirrors fragment computeContinent ───────
+  float computeHeight(vec3 p) {
+    vec3 sp = (p + u_seed * 100.0) * scale;
+
+    // Domain warp (fbm at full LOD, single noise at basic)
+    vec3 wp = sp + u_terrWarp * vec3(
+      vfbm(sp * 0.2),
+      vfbm(sp * 0.2 + vec3(5.2)),
+      vfbm(sp * 0.2 + vec3(9.7))
+    );
+
+    // Layer 1+2: continental base
+    float h1 = vnoise(wp * u_continentFreq);
+    float h1b = vnoise(wp * u_continentFreq * 0.67 + vec3(42.0)) * 0.3;
+
+    // Layer 3: cloud noise for organic coastline detail
+    float h2 = vCloudNoise(wp, u_coastDetail) * 0.2;
+
+    // Layer 4: ridged mountain peaks
+    float h3 = vRidgedNoise(wp + vec3(h1 * 0.5), 0.8) * 0.1;
+
+    // Layers 5-7: expensive detail — only at full LOD
+    float h4 = 0.0, h5 = 0.0, h6 = 0.0;
+    if (u_vertLOD > 1.5) {
+      // Secondary domain warp for mid-frequency detail
+      vec3 wp2 = wp + 0.08 * vec3(
+        vnoise(wp * 1.5 + vec3(17.0)),
+        vnoise(wp * 1.5 + vec3(31.0)),
+        vnoise(wp * 1.5 + vec3(47.0))
+      );
+      h4 = vnoise(wp2 * 1.2) * 0.06;
+
+      // Mountain range chains
+      float ridgeWarp = vnoise(wp * 0.6 + vec3(83.0)) * 0.3;
+      h5 = vRidgedNoise(wp + vec3(ridgeWarp, 0.0, ridgeWarp * 0.7), 1.5) * 0.06;
+
+      // Erosion + valleys
+      float erosion = vnoise(wp * 4.0 + vec3(h3 * 2.0)) * 0.02;
+      float valleys = (1.0 - vRidgedNoise(wp, 3.0)) * 0.015;
+      h6 = erosion - valleys;
+    }
+
+    // Combine all layers
+    float raw = (h1 + h1b) * 0.5 + h2 + h3 + h4 + h5 + h6;
+
+    // Contrast enhancement (matches fragment enhanceContrast)
+    float enhanced = clamp((raw - 0.48) * u_landContrast + 0.48, 0.0, 1.0);
+
+    // Land only — ocean stays flat at zero
+    return max(enhanced - u_seaLevel, 0.0) / (1.0 - u_seaLevel);
+  }
+
+  // ── Main — displacement + finite-difference normals ──────────────
   void main() {
     vec3 dir = normalize(position);
-    vSphereDir = dir; // undisplaced direction for clouds
-    vPosition = dir;
+    vSphereDir = dir;
 
-    // Displacement: push land vertices outward, ocean stays flat
     vec3 displacedPos = position;
+    vec3 displacedNormal = normal;
+
     if (u_displace > 0.0) {
       float height = computeHeight(dir);
       displacedPos = position + normal * height * u_displace;
-      // Update vPosition to displaced direction for terrain shading
+
+      // Finite-difference normal: build tangent frame on sphere
+      vec3 up = abs(dir.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+      vec3 tangent = normalize(cross(up, dir));
+      vec3 bitangent = cross(dir, tangent);
+
+      float eps = 0.002;
+      vec3 pxp = normalize(dir + tangent * eps);
+      vec3 pxn = normalize(dir - tangent * eps);
+      vec3 pyp = normalize(dir + bitangent * eps);
+      vec3 pyn = normalize(dir - bitangent * eps);
+
+      float r = length(position);
+      vec3 posXp = pxp * r + pxp * computeHeight(pxp) * u_displace;
+      vec3 posXn = pxn * r + pxn * computeHeight(pxn) * u_displace;
+      vec3 posYp = pyp * r + pyp * computeHeight(pyp) * u_displace;
+      vec3 posYn = pyn * r + pyn * computeHeight(pyn) * u_displace;
+
+      displacedNormal = normalize(cross(posXp - posXn, posYp - posYn));
       vPosition = normalize(displacedPos);
+    } else {
+      vPosition = dir;
     }
 
-    vNormal = normalize(normalMatrix * normal);
-    vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+    vNormal = normalize(normalMatrix * displacedNormal);
+    vWorldNormal = normalize((modelMatrix * vec4(displacedNormal, 0.0)).xyz);
     vWorldPosition = (modelMatrix * vec4(displacedPos, 1.0)).xyz;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(displacedPos, 1.0);
   }
@@ -584,6 +672,7 @@ const terrestrialFragment = `
   uniform float u_iceDetail;
   uniform float u_coastDetail;
   uniform float u_landContrast;
+  uniform float u_displace;
   varying vec3 vPosition;
   varying vec3 vNormal;
   varying vec3 vWorldNormal;
@@ -650,29 +739,44 @@ const terrestrialFragment = `
   }
 
   void main() {
-    vec3 p = seededPos(vPosition, 100.0) * scale;
+    // When vertex displacement is active, sample noise from the undisplaced
+    // sphere direction so painted texture aligns with geometric displacement
+    vec3 baseDir = (u_displace > 0.0) ? vSphereDir : vPosition;
+    vec3 p = seededPos(baseDir, 100.0) * scale;
 
     float continent = computeContinent(p);
 
-    // Bump normal: only compute at high LOD
+    // Bump normals
     vec3 bumpNormal = vNormal;
     if (u_lod > 0.5) {
-      // Fine bump from continent height
-      float eps = 0.001;
-      float cx = computeContinent(p + vec3(eps, 0.0, 0.0));
-      float cy = computeContinent(p + vec3(0.0, eps, 0.0));
-      float cz = computeContinent(p + vec3(0.0, 0.0, eps));
-      vec3 bumpGrad = vec3(continent - cx, continent - cy, continent - cz) / eps;
-      bumpNormal = normalize(vNormal + bumpGrad * 0.15);
+      if (u_displace > 0.0) {
+        // Vertex shader already computed terrain-slope normals via finite
+        // differences. Only add micro-bump for sub-vertex detail.
+        float me = 0.003;
+        float mx = noise3d((p + vec3(me, 0.0, 0.0)) * 6.0);
+        float my = noise3d((p + vec3(0.0, me, 0.0)) * 6.0);
+        float mz = noise3d((p + vec3(0.0, 0.0, me)) * 6.0);
+        float mc = noise3d(p * 6.0);
+        vec3 microGrad = vec3(mc - mx, mc - my, mc - mz) / me;
+        bumpNormal = normalize(vNormal + microGrad * 0.05);
+      } else {
+        // No displacement: full bump from computeContinent
+        float eps = 0.001;
+        float cx = computeContinent(p + vec3(eps, 0.0, 0.0));
+        float cy = computeContinent(p + vec3(0.0, eps, 0.0));
+        float cz = computeContinent(p + vec3(0.0, 0.0, eps));
+        vec3 bumpGrad = vec3(continent - cx, continent - cy, continent - cz) / eps;
+        bumpNormal = normalize(vNormal + bumpGrad * 0.15);
 
-      // Secondary micro-bump for surface roughness (higher frequency)
-      float me = 0.003;
-      float mx = noise3d((p + vec3(me, 0.0, 0.0)) * 6.0);
-      float my = noise3d((p + vec3(0.0, me, 0.0)) * 6.0);
-      float mz = noise3d((p + vec3(0.0, 0.0, me)) * 6.0);
-      float mc = noise3d(p * 6.0);
-      vec3 microGrad = vec3(mc - mx, mc - my, mc - mz) / me;
-      bumpNormal = normalize(bumpNormal + microGrad * 0.03);
+        // Secondary micro-bump for surface roughness
+        float me = 0.003;
+        float mx = noise3d((p + vec3(me, 0.0, 0.0)) * 6.0);
+        float my = noise3d((p + vec3(0.0, me, 0.0)) * 6.0);
+        float mz = noise3d((p + vec3(0.0, 0.0, me)) * 6.0);
+        float mc = noise3d(p * 6.0);
+        vec3 microGrad = vec3(mc - mx, mc - my, mc - mz) / me;
+        bumpNormal = normalize(bumpNormal + microGrad * 0.03);
+      }
     }
 
     // Sea level threshold (higher = more ocean, fewer but bigger continents)
@@ -747,9 +851,9 @@ const terrestrialFragment = `
 
     vec3 surfaceColor = mix(oceanColor, landColor, isLand);
 
-    // Ice caps at poles: organic continent-like shapes with swirly sharp edges
-    float northLat = vPosition.y;
-    float southLat = -vPosition.y;
+    // Ice caps at poles: use undisplaced direction for stable latitude
+    float northLat = baseDir.y;
+    float southLat = -baseDir.y;
 
     // Domain-warped noise for organic, fractal ice boundaries
     // First warp pass: large-scale continental lobes
@@ -1040,7 +1144,8 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_lavaAmbient: { value: 0.08 },
       u_wrapRange: { value: 0.45 },
       u_wrapPower: { value: 3.9 },
-      u_displace: { value: 0 }, // vertex displacement scale (0 = off, set by LOD)
+      u_displace: { value: 0 },
+      u_vertLOD: { value: 0 },  // vertex LOD: 0=off, 1=basic displacement, 2=full
       u_sunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
       u_atmosDayColor: { value: params.atmosDayColor || new THREE.Color(0x00aaff) },
       u_atmosTwilightColor: { value: params.atmosTwilightColor || new THREE.Color(0xff6600) },

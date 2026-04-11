@@ -9,13 +9,14 @@ function getLodSphereGeo(radius, segments) {
   _lodSphereCache[key] = geo;
   return geo;
 }
-// LOD tiers: [maxDistMultiplier, planetSegs, atmosSegs, displace]
-// Distances are multiplied by planet scale at runtime
+// LOD tiers: [maxDistMultiplier, planetSegs, atmosSegs, vertLOD]
+// vertLOD: 0=no displacement, 1=basic (fewer octaves), 2=full (all layers + normals)
 const LOD_TIERS = [
-  [3,    256, 64, true],   // ultra close (<3x radius): vertex displacement
-  [12,   128, 64, false],  // close-up: full fragment detail
-  [60,   64,  48, false],  // mid-range
-  [Infinity, 32, 48, false] // far away
+  [3,    256, 64, 2],     // ultra close: full displacement + finite-diff normals
+  [8,    192, 64, 1],     // close: basic displacement (skip detail layers)
+  [20,   128, 64, 0],     // mid-close: no displacement, full fragment detail
+  [60,   64,  48, 0],     // mid-range
+  [Infinity, 32, 48, 0],  // far away
 ];
 
 // Shared annular ring geometry for soft glow — 128 segments, inner=0 outer=1
@@ -108,7 +109,7 @@ const Planet = ({ data, starData, starRef }) => {
   const cloudRef = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, wrapRange, wrapPower, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, showOrbits, hzPresets } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, terrDisplaceScale, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, wrapRange, wrapPower, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, showOrbits, hzPresets } = useContext(EnvContext);
 
   // Pre-allocated vectors for per-frame camera updates
   const _camRight = useMemo(() => new THREE.Vector3(), []);
@@ -536,7 +537,7 @@ const Planet = ({ data, starData, starRef }) => {
     if (ref.current) {
       ref.current.getWorldPosition(_camUp);
       const camDist = state.camera.position.distanceTo(_camUp);
-      for (const [maxDistMult, pSegs, aSegs, displace] of LOD_TIERS) {
+      for (const [maxDistMult, pSegs, aSegs, vertLOD] of LOD_TIERS) {
         const maxDist = maxDistMult === Infinity ? Infinity : maxDistMult * scale;
         if (camDist < maxDist || maxDist === Infinity) {
           const newGeo = getLodSphereGeo(scale, pSegs);
@@ -545,9 +546,12 @@ const Planet = ({ data, starData, starRef }) => {
             const newAtmosGeo = getLodSphereGeo(scale * atmosScale, aSegs);
             if (glowRef.current.geometry !== newAtmosGeo) glowRef.current.geometry = newAtmosGeo;
           }
-          // Enable vertex displacement at ultra-close LOD for terrestrial planets
+          // Vertex displacement: scale + LOD level for terrestrial planets
           if (shaderMaterial.uniforms.u_displace) {
-            shaderMaterial.uniforms.u_displace.value = displace ? scale * 0.1 : 0;
+            shaderMaterial.uniforms.u_displace.value = vertLOD > 0 ? scale * terrDisplaceScale : 0;
+          }
+          if (shaderMaterial.uniforms.u_vertLOD) {
+            shaderMaterial.uniforms.u_vertLOD.value = vertLOD;
           }
           break;
         }
