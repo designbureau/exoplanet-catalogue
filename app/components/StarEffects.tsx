@@ -497,7 +497,8 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
         uniform float uFalloff;
         uniform float uFalloffColor;
         void main() {
-          float alpha = pow(1.0 - vRadial, uFalloff);
+          float alpha = (1.0 - vRadial);
+          alpha *= alpha; // squared falloff — softer inner edge
           float brightness = 1.0 + alpha * uFalloffColor;
           vec3 col = uColor * brightness * uBrightness * alpha;
           gl_FragColor = vec4(col, alpha);
@@ -509,7 +510,7 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
       blending: THREE.AdditiveBlending,
       side: THREE.DoubleSide,
       uniforms: {
-        uRadius: { value: glowScale * 0.15 },
+        uRadius: { value: 0.4 },
         uColor: { value: new THREE.Color(glowColor) },
         uBrightness: { value: glowBrightness },
         uFalloff: { value: glowFalloff },
@@ -539,7 +540,7 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
     }
 
     // Update glow controls
-    glowMat.uniforms.uRadius.value = glowScale * 0.15;
+    glowMat.uniforms.uRadius.value = 0.4;
     glowMat.uniforms.uBrightness.value = glowBrightness;
     glowMat.uniforms.uFalloff.value = glowFalloff;
     glowMat.uniforms.uColor.value.set(glowColor);
