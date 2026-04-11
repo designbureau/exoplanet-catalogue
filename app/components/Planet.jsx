@@ -105,6 +105,7 @@ const Planet = ({ data, starData, starRef }) => {
   const glowRef = useRef();
   const softGlowRef = useRef();
   const ringRef = useRef();
+  const cloudRef = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
   const { Constants, planetDistanceFactor, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, wrapRange, wrapPower, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, showOrbits, hzPresets } = useContext(EnvContext);
@@ -587,6 +588,7 @@ const Planet = ({ data, starData, starRef }) => {
 
     // Sync glow positions with orbiting planet
     if (glowRef.current) glowRef.current.position.copy(ref.current.position);
+    if (cloudRef.current) cloudRef.current.position.copy(ref.current.position);
     if (ringRef.current && ringData) {
       ringRef.current.position.copy(ref.current.position);
       const rm = ringRef.current.material;
@@ -675,7 +677,7 @@ const Planet = ({ data, starData, starRef }) => {
       <mesh ref={ref} name={name} onClick={handleClick} material={shaderMaterial}
         geometry={getLodSphereGeo(scale, 32)} />
       {cloudMat && (
-        <mesh material={cloudMat} frustumCulled={false}>
+        <mesh ref={cloudRef} material={cloudMat} frustumCulled={false}>
           <sphereGeometry args={[scale * 1.005, 64, 32]} />
         </mesh>
       )}
