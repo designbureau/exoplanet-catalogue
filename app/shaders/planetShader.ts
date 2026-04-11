@@ -53,8 +53,11 @@ const terrestrialVertexShader = `
     return v;
   }
 
+  uniform float scale; // noiseScale from fragment shader
+
   float computeHeight(vec3 p) {
-    vec3 sp = p + u_seed * 100.0;
+    // Match fragment shader coordinate space: seededPos(normalize(position), 100.0) * scale
+    vec3 sp = (p + u_seed * 100.0) * scale;
     // Domain warp
     vec3 wp = sp + u_terrWarp * 0.3 * vec3(
       vnoise(sp * 0.2),
@@ -67,6 +70,8 @@ const terrestrialVertexShader = `
     h *= 0.55;
     // FBM detail
     h += vfbm(wp * 0.8) * 0.15;
+    // Contrast enhancement to match fragment
+    h = clamp((h - 0.48) * 1.6 + 0.48, 0.0, 1.0);
     // Clamp to land only (above sea level)
     float land = max(h - u_seaLevel, 0.0) / (1.0 - u_seaLevel);
     return land;
@@ -79,7 +84,7 @@ const terrestrialVertexShader = `
     // Displacement: push vertices outward along normal based on terrain height
     vec3 displacedPos = position;
     if (u_displace > 0.0) {
-      float height = computeHeight(dir * 10.0); // scale=10 matches fragment
+      float height = computeHeight(dir);
       displacedPos = position + normal * height * u_displace;
     }
 

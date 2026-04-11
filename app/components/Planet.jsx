@@ -526,7 +526,7 @@ const Planet = ({ data, starData, starRef }) => {
           }
           // Enable vertex displacement at ultra-close LOD for terrestrial planets
           if (shaderMaterial.uniforms.u_displace) {
-            shaderMaterial.uniforms.u_displace.value = displace ? scale * 0.3 : 0;
+            shaderMaterial.uniforms.u_displace.value = displace ? scale * 0.1 : 0;
           }
           break;
         }
