@@ -1069,8 +1069,8 @@ const cloudFragmentShader = `
   varying vec3 vNormal;
   varying vec3 vWorldNormal;
 
-  // Inline noise functions for cloud shader
-  float hash3c(vec3 p) {
+  // Inline noise — matches noiseLib exactly for identical cloud patterns
+  float hash3(vec3 p) {
     return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453123);
   }
   float noise3d(vec3 p) {
@@ -1078,30 +1078,32 @@ const cloudFragmentShader = `
     vec3 f = fract(p);
     vec3 u = f * f * (3.0 - 2.0 * f);
     return mix(
-      mix(mix(hash3c(i), hash3c(i + vec3(1,0,0)), u.x),
-          mix(hash3c(i + vec3(0,1,0)), hash3c(i + vec3(1,1,0)), u.x), u.y),
-      mix(mix(hash3c(i + vec3(0,0,1)), hash3c(i + vec3(1,0,1)), u.x),
-          mix(hash3c(i + vec3(0,1,1)), hash3c(i + vec3(1,1,1)), u.x), u.y), u.z);
+      mix(mix(hash3(i), hash3(i + vec3(1,0,0)), u.x),
+          mix(hash3(i + vec3(0,1,0)), hash3(i + vec3(1,1,0)), u.x), u.y),
+      mix(mix(hash3(i + vec3(0,0,1)), hash3(i + vec3(1,0,1)), u.x),
+          mix(hash3(i + vec3(0,1,1)), hash3(i + vec3(1,1,1)), u.x), u.y), u.z);
   }
-  float cloudNoise(vec3 p, float freq, float seed) {
+  // cloudNoise: matches noiseLib cloudNoise(p, freq) — sin(n*5.0), 4 octaves
+  float cloudNoise(vec3 p, float freq) {
     float v = 0.0, a = 0.5;
-    p = p * freq + vec3(seed);
-    for (int i = 0; i < 5; i++) {
+    p = p * freq;
+    for (int i = 0; i < 4; i++) {
       float n = noise3d(p);
-      v += a * (sin(n * 6.2831) * 0.5 + 0.5);
+      v += a * (sin(n * 5.0) * 0.5 + 0.5);
       p = p * 2.02 + vec3(31.7, 17.3, 53.1);
       a *= 0.5;
     }
     return v;
   }
+  // cloudNoise_lod: matches noiseLib — sin(n*5.0), 4/2 octaves by LOD
   float cloudNoise_lod(vec3 p, float freq) {
     float v = 0.0, a = 0.5;
     p = p * freq;
-    int oct = (u_lod > 0.5) ? 5 : 3;
-    for (int i = 0; i < 5; i++) {
-      if (i >= oct) break;
+    int octaves = (u_lod > 0.5) ? 4 : 2;
+    for (int i = 0; i < 4; i++) {
+      if (i >= octaves) break;
       float n = noise3d(p);
-      v += a * (sin(n * 6.2831) * 0.5 + 0.5);
+      v += a * (sin(n * 5.0) * 0.5 + 0.5);
       p = p * 2.02 + vec3(31.7, 17.3, 53.1);
       a *= 0.5;
     }
@@ -1121,24 +1123,24 @@ const cloudFragmentShader = `
     float hemisphereBlend = smoothstep(-0.12 + equatorNoise, 0.12 + equatorNoise, signedLat);
     float coriolisSign = mix(-1.0, 1.0, hemisphereBlend);
     float coriolisStrength = smoothstep(0.0, 0.5, absLat + equatorNoise * 0.5);
-    // Swirl: Coriolis-like rotation per hemisphere
+    // Swirl: Coriolis rotation per hemisphere (matches old integrated shader)
     float swirlAngle = coriolisSign * coriolisStrength * u_cloudSwirl + t * windSpeed * 0.15;
-    float cs = cos(swirlAngle * 0.5);
-    float sn = sin(swirlAngle * 0.5);
+    float cs = cos(swirlAngle * 0.08);
+    float sn = sin(swirlAngle * 0.08);
     cloudBase.xz = mat2(cs, -sn, sn, cs) * cloudBase.xz;
 
-    // Domain warp for organic shapes
-    float warp1 = cloudNoise(cloudBase * 0.4, 1.2, u_seed.x * 100.0);
+    // Domain warp for organic shapes (matches noiseLib cloudNoise signature)
+    float warp1 = cloudNoise(cloudBase * 0.4, 1.2);
     float warp2 = noise3d(cloudBase * 0.6 + vec3(43.0));
     vec3 warpedP = cloudBase + vec3(warp1 * u_cloudWarp + warp2 * (u_cloudWarp * 0.4), t * 0.4, warp1 * (u_cloudWarp * 0.7));
 
-    // Streaky wispy clouds
+    // Streaky wispy clouds (sin-modulated cloud noise)
     float c1 = cloudNoise_lod(warpedP + vec3(t * 0.15), 1.2);
     float c2 = cloudNoise_lod(warpedP * 0.6 + vec3(t * 0.08, 20.0, 0.0), 0.8);
     float clouds = c1 * 0.6 + c2 * 0.4;
 
-    // Soft band structure — Hadley-cell latitude belts
-    float bands = sin(vPosition.y * u_cloudBands + warp1 * 1.5) * 0.15 + 0.5;
+    // Soft band structure
+    float bands = sin(vPosition.y * u_cloudBands + warp1 * 1.5) * 0.06 + 0.5;
     clouds *= bands;
     clouds = smoothstep(u_cloudCoverage, u_cloudCoverage + 0.3, clouds);
 
