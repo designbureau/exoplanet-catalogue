@@ -74,6 +74,8 @@ export interface ShaderParams {
   coastDetail?: number;
   landContrast?: number;
   continentFreq?: number;
+  bumpStrength?: number;
+  displaceScale?: number;
 }
 
 // Deterministic string hash for seeding planet noise
@@ -541,6 +543,10 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.iceWarp = lerpPreset('iceWarp');
       base.iceDetail = lerpPreset('iceDetail');
       base.continentFreq = lerpPreset('continentFreq');
+      base.coastDetail = lerpPreset('ridgeFreq');
+      base.landContrast = lerpPreset('ridgeMix');
+      base.bumpStrength = lerpPreset('bump');
+      base.displaceScale = lerpPreset('displace');
 
       // --- Star-type colour palettes (unchanged) ---
       type CPalette = [THREE.Color, THREE.Color, THREE.Color, THREE.Color];

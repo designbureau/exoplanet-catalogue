@@ -136,7 +136,7 @@ const Planet = ({ data, starData, starRef }) => {
   })();
 
   // Classify planet and create shader material + atmosphere ring
-  const { shaderMaterial, cloudMat, atmosParams, atmosMat, atmosScale, haloMat, planetType, hasAtmosphere, defaultShowRim, defaultShowShell, defaultShowHalo, rimIntensity, rimFalloff, shellIntensity, haloIntensity, haloScale, haloFalloff, haloWhiten, haloShadow, atmosDayColor, hasHzGradient, ringData } = useMemo(() => {
+  const { shaderMaterial, cloudMat, atmosParams, atmosMat, atmosScale, haloMat, planetType, hasAtmosphere, defaultShowRim, defaultShowShell, defaultShowHalo, rimIntensity, rimFalloff, shellIntensity, haloIntensity, haloScale, haloFalloff, haloWhiten, haloShadow, atmosDayColor, hasHzGradient, paramDisplaceScale, ringData } = useMemo(() => {
     const params = classifyPlanet({
       massJupiter: mass,
       radiusJupiter: radius,
@@ -308,6 +308,7 @@ const Planet = ({ data, starData, starRef }) => {
       haloShadow: params.haloShadow,
       atmosDayColor: params.atmosDayColor?.clone(),
       hasHzGradient: params.hasHzGradient,
+      paramDisplaceScale: params.displaceScale,
       ringData: ringParams ? { params: ringParams, material: ringMat } : null,
     };
   }, [mass, radius, rawSMA, starData?.temperature, starData?.mass, starData?.radius, name, hzPresets]);
@@ -423,8 +424,9 @@ const Planet = ({ data, starData, starRef }) => {
       u.u_gasBands.value = isIce ? iceBands : gasBands;
       u.u_gasEdgeNoise.value = isIce ? iceEdgeNoise : gasEdgeNoise;
     }
-    // Terrestrial: global sliders always apply (no HZ guard)
-    if (u.u_seaLevel) {
+    // Terrestrial: HZ planets get values from preset (via useMemo material creation);
+    // non-HZ planets use global sliders as fallback
+    if (u.u_seaLevel && !hasHzGradient) {
       u.u_seaLevel.value = terrSeaLevel;
       u.u_continentFreq.value = terrContinentFreq;
       u.u_terrWarp.value = terrWarpStrength;
@@ -552,7 +554,8 @@ const Planet = ({ data, starData, starRef }) => {
           }
           // Vertex displacement: only for active (selected) planet
           if (shaderMaterial.uniforms.u_displace) {
-            shaderMaterial.uniforms.u_displace.value = (isActive && vertLOD > 0) ? scale * terrDisplaceScale : 0;
+            const dScale = hasHzGradient && paramDisplaceScale != null ? paramDisplaceScale : terrDisplaceScale;
+            shaderMaterial.uniforms.u_displace.value = (isActive && vertLOD > 0) ? scale * dScale : 0;
           }
           if (shaderMaterial.uniforms.u_vertLOD) {
             shaderMaterial.uniforms.u_vertLOD.value = isActive ? vertLOD : 0;
@@ -697,7 +700,7 @@ const Planet = ({ data, starData, starRef }) => {
         geometry={getLodSphereGeo(scale, 32)} />
       {cloudMat && (
         <mesh ref={cloudRef} material={cloudMat} frustumCulled={false}>
-          <sphereGeometry args={[scale * (1.0 + terrDisplaceScale + 0.006), 64, 32]} />
+          <sphereGeometry args={[scale * (1.0 + (hasHzGradient && paramDisplaceScale != null ? paramDisplaceScale : terrDisplaceScale) + 0.006), 64, 32]} />
         </mesh>
       )}
       {ringData && (

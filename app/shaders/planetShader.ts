@@ -1153,7 +1153,7 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_wrapPower: { value: 3.9 },
       u_displace: { value: 0 },
       u_vertLOD: { value: 0 },
-      u_bumpStrength: { value: 0.6 },
+      u_bumpStrength: { value: params.bumpStrength ?? 0.6 },
       u_sunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
       u_atmosDayColor: { value: params.atmosDayColor || new THREE.Color(0x00aaff) },
       u_atmosTwilightColor: { value: params.atmosTwilightColor || new THREE.Color(0xff6600) },

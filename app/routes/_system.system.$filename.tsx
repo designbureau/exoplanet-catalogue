@@ -601,7 +601,11 @@ const App = ({ data }: any) => {
             <Slider label="Ice Warp" min={0} max={1} step={0.05} value={hzPresets.mars.iceWarp} onChange={(v: number) => updatePreset('mars', 'iceWarp', v)} />
             <Slider label="Ice Detail" min={0.5} max={4} step={0.1} value={hzPresets.mars.iceDetail} onChange={(v: number) => updatePreset('mars', 'iceDetail', v)} />
             <Slider label="Land" min={0.05} max={0.4} step={0.01} value={hzPresets.mars.continentFreq} onChange={(v: number) => updatePreset('mars', 'continentFreq', v)} />
-            <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={hzPresets.mars.warp} onChange={(v: number) => updatePreset('mars', 'warp', v)} />
+            <Slider label="Warp" min={0.1} max={3.0} step={0.05} value={hzPresets.mars.warp} onChange={(v: number) => updatePreset('mars', 'warp', v)} />
+            <Slider label="Ridge Frq" min={0.1} max={1.5} step={0.05} value={hzPresets.mars.ridgeFreq} onChange={(v: number) => updatePreset('mars', 'ridgeFreq', v)} />
+            <Slider label="Ridge Mix" min={0.5} max={3.0} step={0.1} value={hzPresets.mars.ridgeMix} onChange={(v: number) => updatePreset('mars', 'ridgeMix', v)} />
+            <Slider label="Bump" min={0.05} max={1.5} step={0.05} value={hzPresets.mars.bump} onChange={(v: number) => updatePreset('mars', 'bump', v)} />
+            <Slider label="Displace" min={0.002} max={0.04} step={0.002} value={hzPresets.mars.displace} onChange={(v: number) => updatePreset('mars', 'displace', v)} />
             <div className="border-t border-white/10 my-0.5" />
             <Slider label="Rim" min={0} max={1} step={0.01} value={hzPresets.mars.rim} onChange={(v: number) => updatePreset('mars', 'rim', v)} />
             <Slider label="Rim Fall" min={0.3} max={3} step={0.1} value={hzPresets.mars.rimFalloff} onChange={(v: number) => updatePreset('mars', 'rimFalloff', v)} />
@@ -631,7 +635,11 @@ const App = ({ data }: any) => {
             <Slider label="Ice Warp" min={0} max={1} step={0.05} value={hzPresets.earth.iceWarp} onChange={(v: number) => updatePreset('earth', 'iceWarp', v)} />
             <Slider label="Ice Detail" min={0.5} max={4} step={0.1} value={hzPresets.earth.iceDetail} onChange={(v: number) => updatePreset('earth', 'iceDetail', v)} />
             <Slider label="Land" min={0.05} max={0.4} step={0.01} value={hzPresets.earth.continentFreq} onChange={(v: number) => updatePreset('earth', 'continentFreq', v)} />
-            <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={hzPresets.earth.warp} onChange={(v: number) => updatePreset('earth', 'warp', v)} />
+            <Slider label="Warp" min={0.1} max={3.0} step={0.05} value={hzPresets.earth.warp} onChange={(v: number) => updatePreset('earth', 'warp', v)} />
+            <Slider label="Ridge Frq" min={0.1} max={1.5} step={0.05} value={hzPresets.earth.ridgeFreq} onChange={(v: number) => updatePreset('earth', 'ridgeFreq', v)} />
+            <Slider label="Ridge Mix" min={0.5} max={3.0} step={0.1} value={hzPresets.earth.ridgeMix} onChange={(v: number) => updatePreset('earth', 'ridgeMix', v)} />
+            <Slider label="Bump" min={0.05} max={1.5} step={0.05} value={hzPresets.earth.bump} onChange={(v: number) => updatePreset('earth', 'bump', v)} />
+            <Slider label="Displace" min={0.002} max={0.04} step={0.002} value={hzPresets.earth.displace} onChange={(v: number) => updatePreset('earth', 'displace', v)} />
             <div className="border-t border-white/10 my-0.5" />
             <Slider label="Rim" min={0} max={1} step={0.01} value={hzPresets.earth.rim} onChange={(v: number) => updatePreset('earth', 'rim', v)} />
             <Slider label="Rim Fall" min={0.3} max={3} step={0.1} value={hzPresets.earth.rimFalloff} onChange={(v: number) => updatePreset('earth', 'rimFalloff', v)} />
@@ -661,7 +669,11 @@ const App = ({ data }: any) => {
             <Slider label="Ice Warp" min={0} max={1} step={0.05} value={hzPresets.warm.iceWarp} onChange={(v: number) => updatePreset('warm', 'iceWarp', v)} />
             <Slider label="Ice Detail" min={0.5} max={4} step={0.1} value={hzPresets.warm.iceDetail} onChange={(v: number) => updatePreset('warm', 'iceDetail', v)} />
             <Slider label="Land" min={0.05} max={0.4} step={0.01} value={hzPresets.warm.continentFreq} onChange={(v: number) => updatePreset('warm', 'continentFreq', v)} />
-            <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={hzPresets.warm.warp} onChange={(v: number) => updatePreset('warm', 'warp', v)} />
+            <Slider label="Warp" min={0.1} max={3.0} step={0.05} value={hzPresets.warm.warp} onChange={(v: number) => updatePreset('warm', 'warp', v)} />
+            <Slider label="Ridge Frq" min={0.1} max={1.5} step={0.05} value={hzPresets.warm.ridgeFreq} onChange={(v: number) => updatePreset('warm', 'ridgeFreq', v)} />
+            <Slider label="Ridge Mix" min={0.5} max={3.0} step={0.1} value={hzPresets.warm.ridgeMix} onChange={(v: number) => updatePreset('warm', 'ridgeMix', v)} />
+            <Slider label="Bump" min={0.05} max={1.5} step={0.05} value={hzPresets.warm.bump} onChange={(v: number) => updatePreset('warm', 'bump', v)} />
+            <Slider label="Displace" min={0.002} max={0.04} step={0.002} value={hzPresets.warm.displace} onChange={(v: number) => updatePreset('warm', 'displace', v)} />
             <div className="border-t border-white/10 my-0.5" />
             <Slider label="Rim" min={0} max={1} step={0.01} value={hzPresets.warm.rim} onChange={(v: number) => updatePreset('warm', 'rim', v)} />
             <Slider label="Rim Fall" min={0.3} max={3} step={0.1} value={hzPresets.warm.rimFalloff} onChange={(v: number) => updatePreset('warm', 'rimFalloff', v)} />
@@ -702,9 +714,11 @@ const App = ({ data }: any) => {
           <Accordion title="Water World" defaultOpen={false}>
             <Slider label="Sea Lvl" min={0.5} max={0.95} step={0.01} value={hzPresets.waterWorld.seaLevel} onChange={(v: number) => updatePreset('waterWorld', 'seaLevel', v)} />
             <Slider label="Land" min={0.02} max={0.2} step={0.01} value={hzPresets.waterWorld.continentFreq} onChange={(v: number) => updatePreset('waterWorld', 'continentFreq', v)} />
-            <Slider label="Coast" min={0.1} max={1.0} step={0.05} value={hzPresets.waterWorld.coastDetail} onChange={(v: number) => updatePreset('waterWorld', 'coastDetail', v)} />
-            <Slider label="Contrast" min={0.5} max={4.0} step={0.1} value={hzPresets.waterWorld.landContrast} onChange={(v: number) => updatePreset('waterWorld', 'landContrast', v)} />
-            <Slider label="Warp" min={0.1} max={2.0} step={0.05} value={hzPresets.waterWorld.warp} onChange={(v: number) => updatePreset('waterWorld', 'warp', v)} />
+            <Slider label="Warp" min={0.1} max={3.0} step={0.05} value={hzPresets.waterWorld.warp} onChange={(v: number) => updatePreset('waterWorld', 'warp', v)} />
+            <Slider label="Ridge Frq" min={0.1} max={1.5} step={0.05} value={hzPresets.waterWorld.ridgeFreq} onChange={(v: number) => updatePreset('waterWorld', 'ridgeFreq', v)} />
+            <Slider label="Ridge Mix" min={0.5} max={3.0} step={0.1} value={hzPresets.waterWorld.ridgeMix} onChange={(v: number) => updatePreset('waterWorld', 'ridgeMix', v)} />
+            <Slider label="Bump" min={0.05} max={1.5} step={0.05} value={hzPresets.waterWorld.bump} onChange={(v: number) => updatePreset('waterWorld', 'bump', v)} />
+            <Slider label="Displace" min={0.002} max={0.04} step={0.002} value={hzPresets.waterWorld.displace} onChange={(v: number) => updatePreset('waterWorld', 'displace', v)} />
             <Slider label="Ice Cap" min={0.5} max={1.1} step={0.01} value={hzPresets.waterWorld.iceCap} onChange={(v: number) => updatePreset('waterWorld', 'iceCap', v)} />
             <Slider label="Ice Edge" min={0.01} max={0.1} step={0.005} value={hzPresets.waterWorld.iceEdge} onChange={(v: number) => updatePreset('waterWorld', 'iceEdge', v)} />
             <Slider label="Ice Warp" min={0} max={1} step={0.05} value={hzPresets.waterWorld.iceWarp} onChange={(v: number) => updatePreset('waterWorld', 'iceWarp', v)} />
