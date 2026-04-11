@@ -241,27 +241,34 @@ const noiseLib = `
     return v;
   }
 
-  // ── High-octave noise (ColorDodge-style: 10 octaves, gain*=2) ─────
+  // ── High-octave noise (adapted from ColorDodge ProceduralPlanet) ──
+  // Our noise3d returns [0,1]. ColorDodge uses simplex [-1,1].
+  // We adapt by working in [0,1] space throughout.
+  // 8 octaves (10 caused high-freq static with value noise).
 
-  // Base FBM: 10-octave standard noise, contrast-doubled
+  // Base FBM: 8-octave, contrast-doubled
   float hiFBM(vec3 pos, float frq, float sd) {
-    float n = 0.0, gain = 1.0;
-    for (int i = 0; i < 10; i++) {
-      n += noise3d(pos * gain / frq + sd + float(i) * 10.0) * 0.5 / gain;
-      gain *= 2.0;
+    float n = 0.0, amp = 0.5;
+    vec3 p = pos * frq + vec3(sd);
+    for (int i = 0; i < 8; i++) {
+      n += noise3d(p) * amp;
+      p = p * 2.03 + vec3(float(i) * 13.7, float(i) * 7.3, float(i) * 19.1);
+      amp *= 0.5;
     }
+    // Contrast doubling (ColorDodge: (n-0.5)*2+0.5)
     return clamp((n - 0.5) * 2.0 + 0.5, 0.0, 1.0);
   }
 
-  // Ridged: 10-octave, ridge-folded, pow4 sharpened
+  // Ridged: 8-octave, ridge-folded, pow4 sharpened
   float hiRidged(vec3 pos, float frq, float sd) {
-    float n = 0.0, gain = 1.0;
-    for (int i = 0; i < 10; i++) {
-      float s = noise3d(pos * gain / frq + sd + float(i) * 10.0);
-      s = (s + 1.0) * 0.5; // not needed for our noise3d [0,1] but safe
-      s = 2.0 * (0.5 - abs(0.5 - s));
-      n += s * 0.5 / gain;
-      gain *= 2.0;
+    float n = 0.0, amp = 0.5;
+    vec3 p = pos * frq + vec3(sd);
+    for (int i = 0; i < 8; i++) {
+      float s = noise3d(p);
+      s = 2.0 * (0.5 - abs(0.5 - s));  // ridge fold [0,1] → [0,1]
+      n += s * amp;
+      p = p * 2.03 + vec3(float(i) * 13.7, float(i) * 7.3, float(i) * 19.1);
+      amp *= 0.5;
     }
     return pow(clamp(n, 0.0, 1.0), 4.0);
   }
@@ -271,14 +278,16 @@ const noiseLib = `
     return 1.0 - hiRidged(pos, frq, sd);
   }
 
-  // Cloud noise: 10-octave sin-modulated for organic shapes
+  // Cloud noise: 8-octave sin-modulated for organic shapes
   float hiCloud(vec3 pos, float frq, float sd) {
-    float n = 0.0, gain = 1.0;
-    for (int i = 0; i < 10; i++) {
-      float s = noise3d(pos * gain / frq + sd + float(i) * 10.0);
-      s = sin(s * 5.0) * 0.5 + 0.5;
-      n += s * 0.5 / gain;
-      gain *= 2.0;
+    float n = 0.0, amp = 0.5;
+    vec3 p = pos * frq + vec3(sd);
+    for (int i = 0; i < 8; i++) {
+      float s = noise3d(p);
+      s = sin(s * 5.0) * 0.5 + 0.5;  // sin modulation [0,1] → [0,1]
+      n += s * amp;
+      p = p * 2.02 + vec3(float(i) * 31.7, float(i) * 17.3, float(i) * 53.1);
+      amp *= 0.5;
     }
     return clamp(n, 0.0, 1.0);
   }
@@ -724,50 +733,51 @@ const terrestrialFragment = `
 
   ${noiseLib}
 
-  // ── ColorDodge-style terrain: 3 sub-layers domain-warped into final ──
-  // Each sub-layer uses high-octave noise at different frequencies.
-  // The final height mixes ridged peaks with cloud-noise organic shapes,
-  // domain-warped by the sub-layers for geological variety.
+  // Compute continental height — high-octave noise with ridged terrain
+  // Uses the proven layer structure but with 8-octave noise for detail.
   float computeContinent(vec3 p) {
-    // Seed offsets for each sub-layer (like ColorDodge's per-seed offsets)
-    float sd = u_seed.x * 100.0;
-
     if (u_lod > 0.5) {
-      // ── High-LOD path: full ColorDodge-style layering ──
+      // ── High-LOD: 8-octave noise with domain warping ──
 
-      // Frequency controls (u_continentFreq scales the base, ~0.15 default)
-      float frq1 = 1.0 / (u_continentFreq * 8.0);  // primary freq (~0.83)
-      float frq2 = 1.0 / (u_continentFreq * 5.0);  // secondary (~0.53)
-      float frqMix = 1.0 / (u_continentFreq * 12.0); // mixing freq (~1.25)
+      // Domain warp at continent scale
+      vec3 wp = p + u_terrWarp * vec3(
+        hiFBM(p, 0.2, u_seed.x * 50.0),
+        hiFBM(p, 0.2, u_seed.y * 50.0 + 5.2),
+        hiFBM(p, 0.2, u_seed.z * 50.0 + 9.7)
+      );
 
-      // Sub-layer 1: ridged mountains (sharp peaks and trenches)
-      float sub1 = hiRidged(p, frq1, sd + 83.7);
+      // Continental base: 8-octave cloud noise for organic shapes
+      float h1 = hiCloud(wp, u_continentFreq, u_seed.x * 100.0);
+      float h1b = hiCloud(wp, u_continentFreq * 0.67, u_seed.y * 100.0 + 42.0) * 0.3;
 
-      // Sub-layer 2: cloud noise (organic wispy continental shapes)
-      float sub2 = hiCloud(p, frq2, sd + 29.4);
+      // Coastline detail: 8-octave cloud noise at higher freq
+      float h2 = hiCloud(wp, u_coastDetail, u_seed.z * 100.0 + 77.0) * 0.2;
 
-      // Sub-layer 3: mixing noise (controls blending regions)
-      float sub3 = hiCloud(p, frqMix, sd + 53.0);
+      // Mountain ridges: 8-octave ridged multifractal
+      float h3 = hiRidged(wp + vec3(h1 * 0.5), 0.8, u_seed.x * 80.0 + 11.0) * 0.1;
 
-      // Final height: domain-warped by sub-layers (ColorDodge technique)
-      // sub1/sub3 creates spatially varying warp, sub2 modulates frequency
-      float mixAmp = 0.8;  // mixScale equivalent
-      float n = hiCloud(p + vec3((sub1 / max(sub3, 0.01)) * 0.1), mixAmp + sub2, sd + 34.9);
+      // Secondary domain warp for mid-frequency detail
+      vec3 wp2 = wp + 0.08 * vec3(
+        noise3d(wp * 1.5 + vec3(17.0)),
+        noise3d(wp * 1.5 + vec3(31.0)),
+        noise3d(wp * 1.5 + vec3(47.0))
+      );
+      float h4 = hiFBM(wp2, 1.2, u_seed.y * 80.0 + 23.0) * 0.06;
 
-      // Blend ridged detail into organic base for geological variety
-      float ridgeMask = smoothstep(0.3, 0.7, sub3);
-      float ridgeDetail = hiRidged(p, frq2 * 0.7, sd + 11.4);
-      n = mix(n, n * 0.6 + ridgeDetail * 0.4, ridgeMask * 0.5);
+      // Mountain range chains: ridged at higher freq
+      float ridgeWarp = noise3d(wp * 0.6 + vec3(83.0)) * 0.3;
+      float h5 = hiRidged(wp + vec3(ridgeWarp, 0.0, ridgeWarp * 0.7), 1.5, u_seed.z * 80.0 + 37.0) * 0.06;
 
-      // Domain-warped valleys (inverted ridges at different freq)
-      float valleys = hiInvRidged(p + vec3(sub2 * 0.05), frq1 * 1.5, sd + 49.7);
-      n = mix(n, n * 0.7 + valleys * 0.3, (1.0 - ridgeMask) * 0.3);
+      // Valleys: inverted ridges
+      float h6 = (1.0 - hiRidged(wp, 3.0, u_seed.x * 80.0 + 49.0)) * 0.015;
+      // Erosion detail
+      float h7 = hiFBM(wp + vec3(h3 * 2.0), 4.0, u_seed.y * 80.0 + 61.0) * 0.02;
 
-      // Contrast enhancement
-      return enhanceContrast(n, 0.48, u_landContrast);
+      float raw = (h1 + h1b) * 0.5 + h2 + h3 + h4 + h5 + h7 - h6;
+      return enhanceContrast(raw, 0.48, u_landContrast);
 
     } else {
-      // ── Low-LOD path: cheaper approximation ──
+      // ── Low-LOD: cheap single-octave approximation ──
       vec3 wp = p + 0.3 * vec3(
         noise3d(p * 0.2),
         noise3d(p * 0.2 + vec3(5.2)),
