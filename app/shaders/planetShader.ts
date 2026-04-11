@@ -746,6 +746,10 @@ const terrestrialFragment = `
 
     float continent = computeContinent(p);
 
+    // Sea level threshold — needed before bump for land masking
+    float seaLevel = u_seaLevel;
+    float isLand = smoothstep(seaLevel - 0.02, seaLevel + 0.02, continent);
+
     // Multi-layer bump normals — the primary source of terrain detail
     // (ColorDodge-style: normal mapping carries most visual weight, not geometry)
     vec3 bumpNormal = vNormal;
@@ -797,10 +801,6 @@ const terrestrialFragment = `
       vec3 ultraGrad = vec3(uc - ux, uc - uy, uc - uz) / ue;
       bumpNormal = normalize(bumpNormal + ultraGrad * 0.015);
     }
-
-    // Sea level threshold (higher = more ocean, fewer but bigger continents)
-    float seaLevel = u_seaLevel;
-    float isLand = smoothstep(seaLevel - 0.02, seaLevel + 0.02, continent);
 
     // Noise layers for colour variation
     float moisture = (u_lod > 0.5) ? cloudNoise(p * 0.5 + vec3(33.0), 1.0) : noise3d(p * 0.5 + vec3(33.0));
