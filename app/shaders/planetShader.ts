@@ -51,100 +51,57 @@ const terrestrialVertexShader = `
           mix(hash3v(i + vec3(0,1,1)), hash3v(i + vec3(1,1,1)), u.x), u.y), u.z);
   }
 
-  // FBM: 5 octaves at full LOD, 3 at basic — matches noiseLib fbm3d
-  float vfbm(vec3 p) {
-    float v = 0.0, a = 0.5;
-    int oct = (u_vertLOD > 1.5) ? 5 : 3;
-    for (int i = 0; i < 5; i++) {
-      if (i >= oct) break;
-      v += a * vnoise(p);
-      p = p * 2.01 + vec3(100.0);
-      a *= 0.5;
+  // ── Vertex noise: must exactly match fragment hi* functions ──
+
+  // Cloud noise: 6-octave sin-modulated — matches fragment hiCloud
+  float vCloud(vec3 pos, float frq, float sd) {
+    float n = 0.0, amp = 0.5;
+    vec3 p = pos * frq + vec3(sd);
+    for (int i = 0; i < 6; i++) {
+      float s = vnoise(p);
+      s = sin(s * 5.0) * 0.5 + 0.5;
+      n += s * amp;
+      p = p * 2.02 + vec3(float(i) * 31.7, float(i) * 17.3, float(i) * 53.1);
+      amp *= 0.45;
     }
-    return v;
+    return clamp(n, 0.0, 1.0);
   }
 
-  // Ridged noise: sharp mountain ridges — matches noiseLib ridgedNoise
-  float vRidgedNoise(vec3 p, float freq) {
-    float v = 0.0, a = 0.5;
-    p = p * freq;
-    int oct = (u_vertLOD > 1.5) ? 4 : 2;
-    for (int i = 0; i < 4; i++) {
-      if (i >= oct) break;
-      float n = vnoise(p);
-      n = 2.0 * (0.5 - abs(0.5 - n));
-      v += a * n;
-      p = p * 2.03 + vec3(13.7, 29.3, 41.1);
-      a *= 0.5;
+  // Ridged: 6-octave ridge-folded — matches fragment hiRidged
+  float vRidged(vec3 pos, float frq, float sd) {
+    float n = 0.0, amp = 0.5;
+    vec3 p = pos * frq + vec3(sd);
+    for (int i = 0; i < 6; i++) {
+      float s = vnoise(p);
+      s = 2.0 * (0.5 - abs(0.5 - s));
+      n += s * amp;
+      p = p * 2.03 + vec3(float(i) * 13.7, float(i) * 7.3, float(i) * 19.1);
+      amp *= 0.45;
     }
-    return pow(clamp(v, 0.0, 1.0), 3.0);
+    return pow(clamp(n, 0.0, 1.0), 3.0);
   }
 
-  // Cloud noise: sin-modulated wispy shapes — matches noiseLib cloudNoise
-  float vCloudNoise(vec3 p, float freq) {
-    float v = 0.0, a = 0.5;
-    p = p * freq;
-    int oct = (u_vertLOD > 1.5) ? 4 : 2;
-    for (int i = 0; i < 4; i++) {
-      if (i >= oct) break;
-      float n = vnoise(p);
-      v += a * (sin(n * 5.0) * 0.5 + 0.5);
-      p = p * 2.02 + vec3(31.7, 17.3, 53.1);
-      a *= 0.5;
-    }
-    return v;
-  }
-
-  // ── Height computation — mirrors fragment computeContinent ───────
+  // ── Height: exact mirror of fragment computeContinent ───────
   float computeHeight(vec3 p) {
+    // Same coordinate space as fragment: seededPos(dir, 100.0) * scale
     vec3 sp = (p + u_seed * 100.0) * scale;
+    float sd = u_seed.x * 100.0;
 
-    // Domain warp (fbm at full LOD, single noise at basic)
-    vec3 wp = sp + u_terrWarp * vec3(
-      vfbm(sp * 0.2),
-      vfbm(sp * 0.2 + vec3(5.2)),
-      vfbm(sp * 0.2 + vec3(9.7))
-    );
+    // 3 sub-layers — same as fragment computeContinent
+    float sub1 = vCloud(sp, u_continentFreq * 1.0, sd + 11.4);
+    float sub2 = vRidged(sp, u_continentFreq * 1.5, sd + 29.4);
+    float sub3 = vCloud(sp, u_continentFreq * 0.6, sd + 53.0);
 
-    // Layer 1+2: continental base
-    float h1 = vnoise(wp * u_continentFreq);
-    float h1b = vnoise(wp * u_continentFreq * 0.67 + vec3(42.0)) * 0.3;
+    // Domain warp
+    vec3 warp = vec3(sub1 - 0.5, sub2 - 0.5, sub3 - 0.5) * u_terrWarp * 0.4;
+    float n = vCloud(sp + warp, u_continentFreq * 0.8, sd + 78.2);
 
-    // Layer 3: cloud noise for organic coastline detail
-    float h2 = vCloudNoise(wp, u_coastDetail) * 0.2;
+    // Blend ridged peaks via spatial mask
+    float mask = smoothstep(0.3, 0.7, sub3);
+    n = mix(n, n * 0.6 + sub2 * 0.4, mask * 0.5);
 
-    // Layer 4: ridged mountain peaks
-    float h3 = vRidgedNoise(wp + vec3(h1 * 0.5), 0.8) * 0.1;
-
-    // Layers 5-7: expensive detail — only at full LOD
-    float h4 = 0.0, h5 = 0.0, h6 = 0.0;
-    if (u_vertLOD > 1.5) {
-      // Secondary domain warp for mid-frequency detail
-      vec3 wp2 = wp + 0.08 * vec3(
-        vnoise(wp * 1.5 + vec3(17.0)),
-        vnoise(wp * 1.5 + vec3(31.0)),
-        vnoise(wp * 1.5 + vec3(47.0))
-      );
-      h4 = vnoise(wp2 * 1.2) * 0.06;
-
-      // Mountain range chains
-      float ridgeWarp = vnoise(wp * 0.6 + vec3(83.0)) * 0.3;
-      h5 = vRidgedNoise(wp + vec3(ridgeWarp, 0.0, ridgeWarp * 0.7), 1.5) * 0.06;
-
-      // Erosion + valleys
-      float erosion = vnoise(wp * 4.0 + vec3(h3 * 2.0)) * 0.02;
-      float valleys = (1.0 - vRidgedNoise(wp, 3.0)) * 0.015;
-      h6 = erosion - valleys;
-    }
-
-    // Combine all layers
-    float raw = (h1 + h1b) * 0.5 + h2 + h3 + h4 + h5 + h6;
-
-    // Contrast enhancement (matches fragment enhanceContrast)
-    float enhanced = clamp((raw - 0.48) * u_landContrast + 0.48, 0.0, 1.0);
-
-    // Land only — ocean stays flat at zero
-    return max(enhanced - u_seaLevel, 0.0) / (1.0 - u_seaLevel);
+    // Land only — ocean stays flat
+    return max(n - u_seaLevel, 0.0) / (1.0 - u_seaLevel);
   }
 
   // ── Main — displacement + finite-difference normals ──────────────
