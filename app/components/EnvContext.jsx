@@ -66,7 +66,7 @@ export const EnvProvider = ({ children }) => {
 
   // Terrestrial controls
   const [terrSeaLevel, setTerrSeaLevel] = useState(0.50);
-  const [terrContinentFreq, setTerrContinentFreq] = useState(0.15);
+  const [terrContinentFreq, setTerrContinentFreq] = useState(0.11);
   const [terrWarpStrength, setTerrWarpStrength] = useState(0.5);
   const [terrIceCapSize, setTerrIceCapSize] = useState(0.92);
   const [terrCoastDetail, setTerrCoastDetail] = useState(0.35);
