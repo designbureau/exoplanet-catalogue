@@ -522,6 +522,14 @@ const Planet = ({ data, starData, starRef }) => {
       }
       cloudMat.uniforms.u_wrapRange.value = shaderMaterial.uniforms.u_wrapRange?.value ?? 0.45;
       cloudMat.uniforms.u_wrapPower.value = shaderMaterial.uniforms.u_wrapPower?.value ?? 3.9;
+      // Sync cloud params from planet shader (set by preset system)
+      if (shaderMaterial.uniforms.u_cloudCoverage) {
+        cloudMat.uniforms.u_cloudCoverage.value = shaderMaterial.uniforms.u_cloudCoverage.value;
+        cloudMat.uniforms.u_cloudOpacity.value = shaderMaterial.uniforms.u_cloudOpacity.value;
+        cloudMat.uniforms.u_cloudSwirl.value = shaderMaterial.uniforms.u_cloudSwirl.value;
+        cloudMat.uniforms.u_cloudBands.value = shaderMaterial.uniforms.u_cloudBands.value;
+        cloudMat.uniforms.u_cloudWarp.value = shaderMaterial.uniforms.u_cloudWarp.value;
+      }
     }
 
     // Geometry LOD — swap sphere resolution based on camera distance
