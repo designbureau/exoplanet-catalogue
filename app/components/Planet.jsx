@@ -9,11 +9,12 @@ function getLodSphereGeo(radius, segments) {
   _lodSphereCache[key] = geo;
   return geo;
 }
-// LOD tiers: [maxDistance, planetSegs, atmosSegs, displace]
+// LOD tiers: [maxDistMultiplier, planetSegs, atmosSegs, displace]
+// Distances are multiplied by planet scale at runtime
 const LOD_TIERS = [
-  [30,   256, 64, true],   // ultra close: vertex displacement + high tessellation
-  [80,   128, 64, false],  // close-up: full fragment detail
-  [400,  64,  48, false],  // mid-range
+  [3,    256, 64, true],   // ultra close (<3x radius): vertex displacement
+  [12,   128, 64, false],  // close-up: full fragment detail
+  [60,   64,  48, false],  // mid-range
   [Infinity, 32, 48, false] // far away
 ];
 
@@ -514,7 +515,8 @@ const Planet = ({ data, starData, starRef }) => {
     if (ref.current) {
       ref.current.getWorldPosition(_camUp);
       const camDist = state.camera.position.distanceTo(_camUp);
-      for (const [maxDist, pSegs, aSegs, displace] of LOD_TIERS) {
+      for (const [maxDistMult, pSegs, aSegs, displace] of LOD_TIERS) {
+        const maxDist = maxDistMult === Infinity ? Infinity : maxDistMult * scale;
         if (camDist < maxDist || maxDist === Infinity) {
           const newGeo = getLodSphereGeo(scale, pSegs);
           if (ref.current.geometry !== newGeo) ref.current.geometry = newGeo;
@@ -524,7 +526,7 @@ const Planet = ({ data, starData, starRef }) => {
           }
           // Enable vertex displacement at ultra-close LOD for terrestrial planets
           if (shaderMaterial.uniforms.u_displace) {
-            shaderMaterial.uniforms.u_displace.value = displace ? scale * 0.02 : 0;
+            shaderMaterial.uniforms.u_displace.value = displace ? scale * 0.08 : 0;
           }
           break;
         }
