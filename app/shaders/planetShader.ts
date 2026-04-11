@@ -854,9 +854,13 @@ const terrestrialFragment = `
     // Exposed rock on steep slopes
     vec3 exposedRock = color3 * 0.65 + color4 * 0.35;
 
-    // Peak/snow zone — latitude-dependent snowline
-    float snowLine = mix(0.92, 0.7, smoothstep(0.4, 0.8, latitude));
-    vec3 peaks = color4;
+    // Peak/snow zone — aridity-aware
+    // On dry/arid planets (low sea level) peaks are dusty rock, not snow
+    float aridity = 1.0 - smoothstep(0.15, 0.55, seaLevel); // 1=dry (Mars), 0=wet (Earth)
+    float baseSnowLine = mix(0.92, 0.7, smoothstep(0.4, 0.8, latitude));
+    float snowLine = mix(baseSnowLine, 1.1, aridity * 0.8); // 1.1 = above max = no snow on Mars
+    vec3 dustyPeak = mix(color3, color4, 0.3) * 0.8 + vec3(0.03, 0.01, -0.01); // rocky/rusty
+    vec3 peaks = mix(color4, dustyPeak, aridity);
 
     // Blend terrain zones
     vec3 landColor = mix(shoreColor, lowland, smoothstep(0.02, 0.12, landHeight));
