@@ -593,7 +593,7 @@ const Planet = ({ data, starData, starRef }) => {
   const orbitLine = useRef();
   const { orbitGeo, orbitMat } = useMemo(() => {
     const circumference = Math.PI * (ellipse.xRadius + ellipse.yRadius);
-    const segments = Math.max(128, Math.min(2048, Math.round(circumference * 2.0)));
+    const segments = Math.max(256, Math.min(8192, Math.round(circumference * 4.0)));
     // Generate orbit from Kepler positions so line matches planet motion
     const points = [];
     for (let i = 0; i <= segments; i++) {
