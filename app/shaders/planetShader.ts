@@ -156,6 +156,11 @@ const terrestrialVertexShader = `
     float ridgeMix = u_landContrast * 0.3;
     n = mix(n, n * (1.0 - ridgeMix) + sub2 * ridgeMix, mask * 0.7);
 
+    // Contrast push — must match fragment computeContinent
+    float c = n - u_seaLevel;
+    n = u_seaLevel + c * (1.0 + abs(c) * 2.0);
+    n = clamp(n, 0.0, 1.0);
+
     // Land only — ocean stays flat
     return max(n - u_seaLevel, 0.0) / (1.0 - u_seaLevel);
   }
@@ -764,6 +769,12 @@ const terrestrialFragment = `
       float ridgeMix = u_landContrast * 0.3;
       n = mix(n, n * (1.0 - ridgeMix) + sub2 * ridgeMix, mask * 0.7);
 
+      // Contrast push: clusters landmasses, widens oceans
+      // S-curve centered at sea level — steepens the land/ocean transition
+      float c = n - u_seaLevel;
+      n = u_seaLevel + c * (1.0 + abs(c) * 2.0);
+      n = clamp(n, 0.0, 1.0);
+
       return n;
     } else {
       vec3 wp = p + 0.3 * vec3(noise3d(p * 0.2), noise3d(p * 0.2 + vec3(5.2)), noise3d(p * 0.2 + vec3(9.7)));
@@ -781,7 +792,7 @@ const terrestrialFragment = `
     float continent = computeContinent(p);
 
     float seaLevel = u_seaLevel;
-    float isLand = smoothstep(seaLevel - 0.02, seaLevel + 0.02, continent);
+    float isLand = smoothstep(seaLevel - 0.008, seaLevel + 0.008, continent);
 
     // ── Normal mapping: 3-neighbor forward differences (4 total calls) ──
     vec3 bumpNormal = vNormal;
@@ -803,19 +814,20 @@ const terrestrialFragment = `
     float microNoise = noise3d(p * 4.0);
     float warpNoise = noise3d(p * 3.0 + vec3(77.0));
 
-    // Ocean: 3-zone depth with colour variation
-    vec3 deepOcean = color1 * 0.5;
-    vec3 midOcean = color1 * 0.85;
-    vec3 shallowOcean = color1 * 1.1 + vec3(0.02, 0.04, 0.03);
-    float oceanDepth = smoothstep(0.15, seaLevel, continent);
-    vec3 oceanColor = mix(deepOcean, midOcean, smoothstep(0.0, 0.5, oceanDepth));
-    oceanColor = mix(oceanColor, shallowOcean, smoothstep(0.6, 1.0, oceanDepth));
-    oceanColor += vec3(-0.01, 0.01, 0.015) * microNoise;
+    // Ocean: deep abyss → mid → shelf → coastal
+    vec3 deepOcean = color1 * 0.3;  // darker abyss
+    vec3 midOcean = color1 * 0.65;
+    vec3 shallowOcean = color1 * 1.05 + vec3(0.01, 0.03, 0.02);
+    // Depth: how far below sea level (0=deep, 1=shore)
+    float oceanDepth = smoothstep(0.0, seaLevel, continent);
+    vec3 oceanColor = mix(deepOcean, midOcean, smoothstep(0.0, 0.4, oceanDepth));
+    oceanColor = mix(oceanColor, shallowOcean, smoothstep(0.5, 0.95, oceanDepth));
+    oceanColor += vec3(-0.008, 0.008, 0.012) * microNoise;
 
-    // Coastal zone: sand/reef tint where land meets water
-    float coastalBand = smoothstep(seaLevel - 0.04, seaLevel - 0.01, continent) * (1.0 - isLand);
+    // Coastal shelf: narrow bright band right at shore
+    float coastalBand = smoothstep(seaLevel - 0.025, seaLevel - 0.005, continent) * (1.0 - isLand);
     vec3 coastalColor = mix(color2, color3, 0.5) * 0.8 + vec3(0.06, 0.05, 0.02);
-    oceanColor = mix(oceanColor, coastalColor, coastalBand * 0.6);
+    oceanColor = mix(oceanColor, coastalColor, coastalBand * 0.5);
 
     // Land: multi-zone biome system with height + moisture + latitude
     float landHeight = (continent - seaLevel) / (1.0 - seaLevel);
