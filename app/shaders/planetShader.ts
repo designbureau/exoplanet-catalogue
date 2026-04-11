@@ -3,12 +3,14 @@ import { PlanetType, type ShaderParams } from "~/utils/planetClassification";
 
 const vertexShader = `
   varying vec3 vPosition;
+  varying vec3 vSphereDir;
   varying vec3 vNormal;
   varying vec3 vWorldNormal;
   varying vec3 vWorldPosition;
 
   void main() {
     vPosition = normalize(position);
+    vSphereDir = vPosition; // no displacement, same as vPosition
     vNormal = normalize(normalMatrix * normal);
     vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
     vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
@@ -19,6 +21,7 @@ const vertexShader = `
 // Vertex shader with displacement for terrestrial planets at high LOD
 const terrestrialVertexShader = `
   varying vec3 vPosition;
+  varying vec3 vSphereDir; // undisplaced sphere direction (for clouds)
   varying vec3 vNormal;
   varying vec3 vWorldNormal;
   varying vec3 vWorldPosition;
@@ -79,13 +82,16 @@ const terrestrialVertexShader = `
 
   void main() {
     vec3 dir = normalize(position);
+    vSphereDir = dir; // undisplaced direction for clouds
     vPosition = dir;
 
-    // Displacement: push vertices outward along normal based on terrain height
+    // Displacement: push land vertices outward, ocean stays flat
     vec3 displacedPos = position;
     if (u_displace > 0.0) {
       float height = computeHeight(dir);
       displacedPos = position + normal * height * u_displace;
+      // Update vPosition to displaced direction for terrain shading
+      vPosition = normalize(displacedPos);
     }
 
     vNormal = normalize(normalMatrix * normal);
@@ -559,6 +565,7 @@ const rockyFragment = `
 
 // Earth-like fragment shader (oceans, continents, clouds, ice caps, bump normals)
 const terrestrialFragment = `
+  varying vec3 vSphereDir; // undisplaced sphere direction for clouds
   uniform float u_time;
   uniform float scale;
   uniform vec3 color1, color2, color3, color4;
@@ -779,9 +786,11 @@ const terrestrialFragment = `
     surfaceColor = mix(surfaceColor, iceColor, iceCap);
 
     // Cloud layer: swirling cyclonic patterns (skip at low LOD)
+    // Use vSphereDir (undisplaced) so clouds don't shift with terrain displacement
+    vec3 cloudDir = length(vSphereDir) > 0.01 ? vSphereDir : vPosition; // fallback for non-displacement shader
     float clouds = 0.0;
     if (u_lod > 0.5) {
-      vec3 cloudBase = seededPos(vPosition, 50.0) * 4.0;
+      vec3 cloudBase = seededPos(cloudDir, 50.0) * 4.0;
       float t = u_time * 0.002;
 
       // Signed latitude for hemisphere-aware Coriolis
