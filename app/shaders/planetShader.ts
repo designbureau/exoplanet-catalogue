@@ -978,21 +978,50 @@ const terrestrialFragment = `
     surfaceColor = mix(surfaceColor, iceColor, iceCap);
 
     // ── Cloud shadows on surface ──
-    // Uses the noiseLib cloudNoise (same as cloud shader's base pattern) for matching shadows
+    // Replicates the cloud shader's EXACT coordinate chain so shadows align with clouds.
+    // Uses same: p seed offset, weatherP warp, Coriolis swirl, cumulus warp, coverage threshold.
     if (u_lod > 0.5 && u_cloudOpacity > 0.01) {
-      vec3 csP = (baseDir + u_seed * 50.0) * 2.0;
-      // Weather warp (matches cloud shader)
-      float cwx = pnoise3d(csP * 0.3 + vec3(11.0));
-      float cwz = pnoise3d(csP * 0.3 + vec3(47.0));
-      csP += vec3(cwx - 0.5, 0.0, cwz - 0.5) * u_cloudWarp * 3.0;
-      // Cloud density using same cloudNoise as noiseLib (sin-modulated, 4 octaves)
-      float csDensity = cloudNoise(csP + vec3(u_time * 0.001 * 0.08), 1.2);
-      float csFronts = ridgedNoise(csP * 0.7, 1.5) * 0.2;
-      float csCloud = csDensity * 0.55 + csFronts;
-      csCloud = smoothstep(u_cloudCoverage, u_cloudCoverage + 0.15, csCloud);
-      // Strong shadow: up to 40% darkening on sunlit side
+      // Match cloud shader: p = vPosition + u_seed * 50.0
+      // But surface uses baseDir (undisplaced sphere dir) as the cloud sphere does
+      vec3 csP = baseDir + u_seed * 50.0;
+      float csT = u_time * 0.001;
+      float csLat = baseDir.y;
+      float csAbsLat = abs(csLat);
+
+      // Weather system (exact copy of cloud shader lines)
+      vec3 csWeatherP = csP * 2.0;
+      float csWX = pnoise3d(csWeatherP * 0.3 + vec3(11.0));
+      float csWZ = pnoise3d(csWeatherP * 0.3 + vec3(47.0));
+      csWeatherP += vec3(csWX - 0.5, 0.0, csWZ - 0.5) * u_cloudWarp * 3.0;
+
+      // Coriolis (exact copy)
+      float csEqN = pnoise3d(csP * 3.0 + vec3(17.0)) * 0.12;
+      float csCorSign = mix(-1.0, 1.0, smoothstep(-0.1 + csEqN, 0.1 + csEqN, csLat));
+      float csCorStr = smoothstep(0.0, 0.4, csAbsLat);
+      float csWind = 1.0 - csAbsLat * 0.5;
+      float csWCell = cloudNoise(csWeatherP, 0.4);
+      float csSwirl = csCorSign * csCorStr * u_cloudSwirl * (0.5 + csWCell) + csT * csWind * 0.3;
+      float csCS = cos(csSwirl * 0.18);
+      float csSN = sin(csSwirl * 0.18);
+      vec3 csCloudP = csWeatherP;
+      csCloudP.xz = mat2(csCS, -csSN, csSN, csCS) * csCloudP.xz;
+
+      // Cumulus (exact copy of cloud shader layer 1)
+      float csW1 = fbm3d(csCloudP * 0.3 * 0.8); // cloudFBM approximated by fbm3d
+      float csW2 = pnoise3d(csCloudP * 0.5 + vec3(43.0));
+      vec3 csWarpedP = csCloudP + vec3((csW1 - 0.5) * u_cloudWarp * 1.5, csT * 0.2, (csW2 - 0.5) * u_cloudWarp);
+      float csCumulus = cloudNoise(csWarpedP + vec3(csT * 0.08), 1.2);
+
+      // Fronts (exact copy of cloud shader layer 3)
+      float csFronts = ridgedNoise(csWarpedP * 0.7 + vec3(csT * 0.05, 31.0, 0.0), 1.5);
+
+      // Combine (same as cloud shader)
+      float csDensity = csCumulus * 0.55 + csFronts * 0.2;
+      csDensity = smoothstep(u_cloudCoverage, u_cloudCoverage + 0.15, csDensity);
+
+      // Shadow: darken sunlit surface under clouds
       float sunFacing = max(dot(vWorldNormal, u_sunDirection), 0.0);
-      surfaceColor *= 1.0 - csCloud * sunFacing * 0.4;
+      surfaceColor *= 1.0 - csDensity * sunFacing * 0.45;
     }
 
     // Lighting with bump normal (land only; ocean is smooth)
