@@ -76,6 +76,7 @@ export interface ShaderParams {
   continentFreq?: number;
   bumpStrength?: number;
   displaceScale?: number;
+  tidallyLocked?: boolean;
 }
 
 // Deterministic string hash for seeding planet noise
@@ -157,6 +158,7 @@ export interface ClassificationInput {
   starRadius: number;        // host star radius in solar radii
   name?: string;             // planet name for unique seed generation
   hzRanges?: HzRanges;       // GUI-driven HZ gradient range overrides
+  eccentricity?: number;     // orbital eccentricity (for tidal locking detection)
 }
 
 export function classifyPlanet(input: ClassificationInput): ShaderParams {
@@ -181,6 +183,11 @@ export function classifyPlanet(input: ClassificationInput): ShaderParams {
   const rawSMA = semimajorAxisAU > 0 ? semimajorAxisAU : 1;
   const tEq = estimateEquilibriumTemp(starTemp, starMass, starRadius, rawSMA);
   const sEff = computeStellarFlux(starTemp, starMass, starRadius, rawSMA);
+
+  // Tidal locking detection: M-dwarf + close orbit + circular + rocky
+  const ecc = input.eccentricity ?? 0;
+  const isRockySize = radiusEarth > 0 ? radiusEarth < 2.0 : effectiveMassEarth < 10;
+  const tidallyLocked = starTemp < 4000 && rawSMA < 0.1 && ecc < 0.2 && isRockySize;
 
   // Bulk density (if both mass and radius available)
   const density = (radiusEarth > 0 && effectiveMassEarth > 0)
@@ -266,6 +273,7 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
     haloWhiten: 0.35,
     haloShadow: 0.7,
     hasHzGradient: false,
+    tidallyLocked,
   };
 
   switch (type) {
@@ -538,7 +546,7 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.cloudBands = lerpPreset('cloudBands');
       base.cloudWarp = lerpPreset('cloudWarp');
       base.seaLevel = lerpPreset('seaLevel');
-      base.iceCapSize = lerpPreset('iceCap');
+      base.iceCapSize = tidallyLocked ? 0.0 : lerpPreset('iceCap'); // eyeball: shader handles ice via sun angle
       base.iceEdge = lerpPreset('iceEdge');
       base.iceWarp = lerpPreset('iceWarp');
       base.iceDetail = lerpPreset('iceDetail');

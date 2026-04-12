@@ -766,6 +766,7 @@ const terrestrialFragment = `
   uniform float u_landContrast;
   uniform float u_displace;
   uniform float u_bumpStrength;
+  uniform float u_tidallyLocked;
   uniform float u_useTextureMaps;
   uniform sampler2D u_heightMap;
   uniform sampler2D u_normalMap;
@@ -869,8 +870,24 @@ const terrestrialFragment = `
       }
     }
 
-    // ── Biome coloring — aridity-aware ──
-    float aridity = 1.0 - smoothstep(0.15, 0.55, seaLevel); // 1=dry (Mars), 0=wet (Earth)
+    // ── Biome coloring — aridity-aware + eyeball planet support ──
+    float aridity = 1.0 - smoothstep(0.15, 0.55, seaLevel);
+
+    // Eyeball planet: modulate aridity by sun angle for 3-band appearance
+    // sub-stellar = arid desert, terminator = wet/habitable, anti-stellar = frozen
+    float eyeballSunAngle = 0.0;
+    if (u_tidallyLocked > 0.5) {
+      eyeballSunAngle = dot(baseDir, u_sunDirection); // 1=sub-stellar, 0=terminator, -1=anti-stellar
+      // Sub-stellar band: force arid (hot desert)
+      float subStellarArid = smoothstep(0.2, 0.6, eyeballSunAngle);
+      // Anti-stellar band: force frozen (override aridity with ice)
+      float antiStellarFreeze = smoothstep(-0.1, -0.5, eyeballSunAngle);
+      // Terminator band: reduce aridity for green/wet habitable zone
+      float terminatorWet = (1.0 - subStellarArid) * (1.0 - antiStellarFreeze);
+      aridity = mix(aridity, 1.0, subStellarArid * 0.8); // push toward arid on day side
+      aridity = mix(aridity, 0.0, terminatorWet * 0.7);   // push toward wet at terminator
+    }
+
     float moisture = (u_lod > 0.5) ? cloudNoise(p * 0.5 + vec3(33.0), 1.0) : noise3d(p * 0.5 + vec3(33.0));
     float mountainRidge = (u_lod > 0.5) ? ridgedNoise(p, 2.0) : 0.0;
     float microNoise = noise3d(p * 4.0);
@@ -901,7 +918,14 @@ const terrestrialFragment = `
 
     // Land zones
     float landHeight = (continent - seaLevel) / (1.0 - seaLevel);
-    float latitude = abs(baseDir.y);
+    float latitude;
+    if (u_tidallyLocked > 0.5) {
+      // Eyeball: "latitude" = distance from sub-stellar point
+      // 0 at sub-stellar (warm), 1 at anti-stellar (cold)
+      latitude = 1.0 - (eyeballSunAngle * 0.5 + 0.5);
+    } else {
+      latitude = abs(baseDir.y);
+    }
 
     // Shore — on arid planets, no beach, just terrain edge
     vec3 wetShore = mix(color2, color3, 0.3) + vec3(0.08, 0.06, 0.02);
@@ -949,41 +973,48 @@ const terrestrialFragment = `
 
     vec3 surfaceColor = mix(oceanColor, landColor, isLand);
 
-    // Ice caps at poles
-    float northLat = baseDir.y;
-    float southLat = -baseDir.y;
-
-    // Domain-warped noise for organic, fractal ice boundaries
-    // First warp pass: large-scale continental lobes
+    // ── Ice system ──
+    // Domain-warped noise for organic ice boundaries
     vec3 nWarp = vec3(
       noise3d(p * 2.0 + vec3(11.0, 0.0, 0.0)),
       noise3d(p * 2.0 + vec3(0.0, 23.0, 0.0)),
       noise3d(p * 2.0 + vec3(0.0, 0.0, 37.0))
     ) * u_iceWarp;
-    // Second warp pass: finer swirling detail
     vec3 nWarp2 = vec3(
       noise3d((p + nWarp) * 4.0 + vec3(41.0)),
       noise3d((p + nWarp) * 4.0 + vec3(59.0)),
       noise3d((p + nWarp) * 4.0 + vec3(71.0))
     ) * (u_iceWarp * 0.375);
     vec3 warpedIceP = p + nWarp + nWarp2;
-
-    float northNoise = noise3d(warpedIceP * u_iceDetail + vec3(11.0)) * 0.12
-                     + noise3d(warpedIceP * (u_iceDetail * 2.8) + vec3(23.0)) * 0.04;
-    float southNoise = noise3d(warpedIceP * u_iceDetail + vec3(53.0)) * 0.14
-                     + noise3d(warpedIceP * (u_iceDetail * 2.8) + vec3(67.0)) * 0.04;
-
-    // Asymmetric cap sizes via seed
-    float northStart = u_iceCapSize + u_seed.x * 0.06;
-    float southStart = (u_iceCapSize - 0.02) + u_seed.y * 0.08;
-    float northCap = smoothstep(northStart, northStart + u_iceEdge, northLat + northNoise);
-    float southCap = smoothstep(southStart, southStart + u_iceEdge, southLat + southNoise);
-    float iceCap = max(northCap, southCap);
-    // Frost fringe — thin icy border
-    float northFringe = smoothstep(northStart - 0.03, northStart, northLat + northNoise) * (1.0 - northCap);
-    float southFringe = smoothstep(southStart - 0.03, southStart, southLat + southNoise) * (1.0 - southCap);
-    float iceFringe = max(northFringe, southFringe) * 0.25;
+    float iceNoise = noise3d(warpedIceP * u_iceDetail + vec3(11.0)) * 0.12
+                   + noise3d(warpedIceP * (u_iceDetail * 2.8) + vec3(23.0)) * 0.04;
     vec3 iceColor = vec3(0.82, 0.85, 0.9) + vec3(0.04, 0.03, 0.02) * microNoise;
+
+    float iceCap, iceFringe;
+
+    if (u_tidallyLocked > 0.5) {
+      // Eyeball: ice centered on anti-stellar point (night side)
+      float antiStellar = -dot(baseDir, u_sunDirection); // 1=anti-stellar, -1=sub-stellar
+      float iceStart = 0.0 + u_iceEdge; // ice begins around the terminator
+      iceCap = smoothstep(iceStart, iceStart + u_iceEdge * 3.0, antiStellar + iceNoise);
+      iceFringe = smoothstep(iceStart - 0.08, iceStart, antiStellar + iceNoise) * (1.0 - iceCap) * 0.3;
+    } else {
+      // Normal: polar ice caps
+      float northLat = baseDir.y;
+      float southLat = -baseDir.y;
+      float northNoise = iceNoise;
+      float southNoise = noise3d(warpedIceP * u_iceDetail + vec3(53.0)) * 0.14
+                       + noise3d(warpedIceP * (u_iceDetail * 2.8) + vec3(67.0)) * 0.04;
+      float northStart = u_iceCapSize + u_seed.x * 0.06;
+      float southStart = (u_iceCapSize - 0.02) + u_seed.y * 0.08;
+      float northCap = smoothstep(northStart, northStart + u_iceEdge, northLat + northNoise);
+      float southCap = smoothstep(southStart, southStart + u_iceEdge, southLat + southNoise);
+      iceCap = max(northCap, southCap);
+      float northFringe = smoothstep(northStart - 0.03, northStart, northLat + northNoise) * (1.0 - northCap);
+      float southFringe = smoothstep(southStart - 0.03, southStart, southLat + southNoise) * (1.0 - southCap);
+      iceFringe = max(northFringe, southFringe) * 0.25;
+    }
+
     surfaceColor = mix(surfaceColor, mix(surfaceColor, iceColor, 0.4), iceFringe);
     surfaceColor = mix(surfaceColor, iceColor, iceCap);
 
@@ -1254,6 +1285,7 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_displace: { value: 0 },
       u_vertLOD: { value: 0 },
       u_bumpStrength: { value: params.bumpStrength ?? 0.6 },
+      u_tidallyLocked: { value: params.tidallyLocked ? 1.0 : 0.0 },
       u_useTextureMaps: { value: 0 },
       u_heightMap: { value: null },
       u_normalMap: { value: null },
@@ -1278,6 +1310,7 @@ const cloudFragmentShader = `
   uniform float u_cloudWarp;
   uniform float u_lod;
   uniform vec3 u_sunDirection;
+  uniform float u_tidallyLocked;
   uniform float u_wrapRange;
   uniform float u_wrapPower;
   varying vec3 vPosition;
@@ -1408,8 +1441,13 @@ const cloudFragmentShader = `
     vec3 coolCloud = vec3(0.85, 0.88, 0.95);
     vec3 cloudColor = mix(coolCloud, warmCloud, diff) * diff * selfShadow;
 
-    // Fade clouds into shadow on dark side — smooth terminator transition
+    // Fade clouds into shadow on dark side
     float dayFade = smoothstep(-0.1, 0.15, sunDot);
+    // Eyeball: also fade clouds on frozen anti-stellar hemisphere (no convection there)
+    if (u_tidallyLocked > 0.5) {
+      float antiStellar = -dot(vPosition, u_sunDirection);
+      dayFade *= smoothstep(0.3, -0.1, antiStellar); // clouds only on day side + terminator
+    }
     float alpha = clouds * u_cloudOpacity * dayFade;
     if (alpha < 0.01) discard;
     gl_FragColor = vec4(cloudColor, alpha);
@@ -1435,6 +1473,7 @@ export function createCloudMaterial(params: ShaderParams): THREE.ShaderMaterial 
       u_cloudBands: { value: params.cloudBands ?? 5.0 },
       u_cloudWarp: { value: params.cloudWarp ?? 0.35 },
       u_sunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
+      u_tidallyLocked: { value: params.tidallyLocked ? 1.0 : 0.0 },
       u_wrapRange: { value: 0.45 },
       u_wrapPower: { value: 3.9 },
     },

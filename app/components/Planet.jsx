@@ -147,6 +147,7 @@ const Planet = ({ data, starData, starRef }) => {
       starRadius: starData?.radius || 1,
       name,
       hzRanges: hzPresets,
+      eccentricity,
     });
     const shader = createPlanetMaterial(params);
     const cloudMat = createCloudMaterial(params);
