@@ -607,8 +607,18 @@ const gasGiantFragment = `
     // Polar darkening
     color *= 1.0 - latitude * 0.2;
 
+    // ── Subtle cloud belt normal perturbation ──
+    // Domain warp difference gives gentle organic relief (no extra noise)
+    // Band derivative kept very low to avoid stripey look
+    vec3 beltBump = vec3(
+      (r1 - r2) * 0.08,                          // warp-driven XZ relief
+      cos(bandPhase) * 0.02,                      // very gentle band ridges
+      (n1 - n2) * 0.06                            // warp-driven XZ relief
+    );
+    vec3 gasNormal = normalize(vWorldNormal + beltBump);
+
     vec3 V = normalize(cameraPosition - vWorldPosition);
-    color = planetLighting(color, vWorldNormal, u_sunDirection, V, u_ambient);
+    color = planetLighting(color, gasNormal, u_sunDirection, V, u_ambient);
     color = applyAtmosphere(color, vWorldNormal, vWorldPosition);
 
     gl_FragColor = vec4(color, 1.0);
@@ -1143,8 +1153,16 @@ const iceGiantFragment = `
     float limb = max(dot(vNormal, normalize(vec3(0.0, 0.0, 1.0))), 0.0);
     color *= 0.85 + 0.15 * limb;
 
+    // ── Subtle belt normal perturbation ──
+    vec3 iceBeltBump = vec3(
+      (r1 - r2) * 0.05,
+      cos(bandY * u_gasBands * 0.7 + n1) * 0.015,
+      (n1 - n2) * 0.04
+    );
+    vec3 iceNormal = normalize(vWorldNormal + iceBeltBump);
+
     vec3 V = normalize(cameraPosition - vWorldPosition);
-    color = planetLighting(color, vWorldNormal, u_sunDirection, V, u_ambient);
+    color = planetLighting(color, iceNormal, u_sunDirection, V, u_ambient);
     color = applyAtmosphere(color, vWorldNormal, vWorldPosition);
     gl_FragColor = vec4(color, 1.0);
   }
