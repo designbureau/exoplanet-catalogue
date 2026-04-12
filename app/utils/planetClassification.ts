@@ -184,10 +184,15 @@ export function classifyPlanet(input: ClassificationInput): ShaderParams {
   const tEq = estimateEquilibriumTemp(starTemp, starMass, starRadius, rawSMA);
   const sEff = computeStellarFlux(starTemp, starMass, starRadius, rawSMA);
 
-  // Tidal locking detection: M-dwarf + close orbit + circular + rocky
+  // Tidal locking detection: close-in rocky planets on circular orbits
+  // Threshold scales with star type — hotter stars need even closer orbits
   const ecc = input.eccentricity ?? 0;
-  const isRockySize = radiusEarth > 0 ? radiusEarth < 2.0 : effectiveMassEarth < 10;
-  const tidallyLocked = starTemp < 4000 && rawSMA < 0.1 && ecc < 0.2 && isRockySize;
+  const isRockySize = radiusEarth > 0 ? radiusEarth < 2.5 : effectiveMassEarth < 12;
+  const tidalLockSMA = starTemp < 4000 ? 0.15   // M-dwarf: generous threshold
+                     : starTemp < 5500 ? 0.05   // K-dwarf
+                     : starTemp < 7000 ? 0.03   // Sun-like
+                     :                   0.02;  // hot star
+  const tidallyLocked = rawSMA < tidalLockSMA && ecc < 0.25 && isRockySize;
 
   // Bulk density (if both mass and radius available)
   const density = (radiusEarth > 0 && effectiveMassEarth > 0)
