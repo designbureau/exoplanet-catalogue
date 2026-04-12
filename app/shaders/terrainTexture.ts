@@ -1,11 +1,12 @@
 import * as THREE from "three";
 
-// ── Fast 3D hash noise (matches GLSL noise3d output range [0,1]) ──
-// Uses the same hash function as the GLSL shader for identical output.
-// Much faster than full Perlin — no permute/taylorInvSqrt overhead.
+// ── Fast 3D value noise with integer hash (avoids sin precision issues) ──
 
-function hash3(x: number, y: number, z: number): number {
-  return ((Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453123) % 1 + 1) % 1;
+// Integer hash — no floating-point sin precision problems
+function ihash(x: number, y: number, z: number): number {
+  let h = (x * 374761393 + y * 668265263 + z * 1274126177) | 0;
+  h = ((h ^ (h >> 13)) * 1274126177) | 0;
+  return ((h & 0x7fffffff) / 0x7fffffff);
 }
 
 function noise3d(x: number, y: number, z: number): number {
@@ -15,11 +16,10 @@ function noise3d(x: number, y: number, z: number): number {
   const uy = fy * fy * (3 - 2 * fy);
   const uz = fz * fz * (3 - 2 * fz);
 
-  const h = hash3;
-  const a = h(ix, iy, iz), b = h(ix + 1, iy, iz);
-  const c = h(ix, iy + 1, iz), d = h(ix + 1, iy + 1, iz);
-  const e = h(ix, iy, iz + 1), f = h(ix + 1, iy, iz + 1);
-  const g = h(ix, iy + 1, iz + 1), i = h(ix + 1, iy + 1, iz + 1);
+  const a = ihash(ix, iy, iz), b = ihash(ix + 1, iy, iz);
+  const c = ihash(ix, iy + 1, iz), d = ihash(ix + 1, iy + 1, iz);
+  const e = ihash(ix, iy, iz + 1), f = ihash(ix + 1, iy, iz + 1);
+  const g = ihash(ix, iy + 1, iz + 1), i = ihash(ix + 1, iy + 1, iz + 1);
 
   const x1 = a + (b - a) * ux, x2 = c + (d - c) * ux;
   const x3 = e + (f - e) * ux, x4 = g + (i - g) * ux;
@@ -27,7 +27,6 @@ function noise3d(x: number, y: number, z: number): number {
   return y1 + (y2 - y1) * uz;
 }
 
-// Alias for API compatibility
 function pnoise3d(x: number, y: number, z: number): number {
   return noise3d(x, y, z);
 }
@@ -193,7 +192,7 @@ export function bakeTerrainMaps(
       const dY = (b - t) / (2.0 * eps);
 
       // Normal from gradient (tangent-space)
-      const strength = 0.3; // gentler relief — adjustable via u_bumpStrength in shader
+      const strength = 1.0; // full gradient — shader u_bumpStrength scales at runtime
       const nx = -dX * strength;
       const ny = -dY * strength;
       const nz = 1.0;

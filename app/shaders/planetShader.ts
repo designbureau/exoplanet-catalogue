@@ -844,9 +844,12 @@ const terrestrialFragment = `
     vec3 bumpNormal = vNormal;
     if (u_lod > 0.5) {
       if (u_useTextureMaps > 0.5) {
-        // Pre-baked normal map — single texture lookup
+        // Pre-baked normal map — scale XY by bumpStrength at runtime
         vec2 uv = dirToUV(baseDir);
         vec3 texN = texture2D(u_normalMap, uv).rgb * 2.0 - 1.0;
+        float str = (u_displace > 0.0) ? u_bumpStrength * 0.5 : u_bumpStrength;
+        texN.xy *= str;
+        texN = normalize(texN);
         // Tangent frame from sphere direction
         vec3 up = abs(baseDir.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
         vec3 T = normalize(cross(up, baseDir));
