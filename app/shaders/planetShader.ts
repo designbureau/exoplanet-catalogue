@@ -1266,42 +1266,43 @@ const cloudFragmentShader = `
   varying vec3 vNormal;
   varying vec3 vWorldNormal;
 
-  // Inline noise — matches noiseLib exactly for identical cloud patterns
-  float hash3(vec3 p) {
-    return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453123);
+  // Perlin noise for smooth, detailed cloud patterns
+  ${perlinNoise3D}
+
+  // 5-octave Perlin FBM — smoother than hash noise, better cloud shapes
+  float cloudFBM(vec3 p, float freq) {
+    float v = 0.0, a = 0.5;
+    p = p * freq;
+    for (int i = 0; i < 5; i++) {
+      v += pnoise3d(p) * a;
+      p = p * 2.03 + vec3(float(i) * 13.7, float(i) * 7.3, float(i) * 19.1);
+      a *= 0.5;
+    }
+    return v;
   }
-  float noise3d(vec3 p) {
-    vec3 i = floor(p);
-    vec3 f = fract(p);
-    vec3 u = f * f * (3.0 - 2.0 * f);
-    return mix(
-      mix(mix(hash3(i), hash3(i + vec3(1,0,0)), u.x),
-          mix(hash3(i + vec3(0,1,0)), hash3(i + vec3(1,1,0)), u.x), u.y),
-      mix(mix(hash3(i + vec3(0,0,1)), hash3(i + vec3(1,0,1)), u.x),
-          mix(hash3(i + vec3(0,1,1)), hash3(i + vec3(1,1,1)), u.x), u.y), u.z);
-  }
-  // cloudNoise: matches noiseLib cloudNoise(p, freq) — sin(n*5.0), 4 octaves
+
+  // Sin-modulated cloud noise — wispy organic shapes via Perlin
   float cloudNoise(vec3 p, float freq) {
     float v = 0.0, a = 0.5;
     p = p * freq;
-    for (int i = 0; i < 4; i++) {
-      float n = noise3d(p);
+    for (int i = 0; i < 5; i++) {
+      float n = pnoise3d(p);
       v += a * (sin(n * 5.0) * 0.5 + 0.5);
       p = p * 2.02 + vec3(31.7, 17.3, 53.1);
       a *= 0.5;
     }
     return v;
   }
-  // cloudNoise_lod: matches noiseLib — sin(n*5.0), 4/2 octaves by LOD
-  float cloudNoise_lod(vec3 p, float freq) {
+
+  // Ridged cloud noise — creates sharp frontal boundaries
+  float cloudRidged(vec3 p, float freq) {
     float v = 0.0, a = 0.5;
     p = p * freq;
-    int octaves = (u_lod > 0.5) ? 4 : 2;
     for (int i = 0; i < 4; i++) {
-      if (i >= octaves) break;
-      float n = noise3d(p);
-      v += a * (sin(n * 5.0) * 0.5 + 0.5);
-      p = p * 2.02 + vec3(31.7, 17.3, 53.1);
+      float n = pnoise3d(p);
+      n = 2.0 * (0.5 - abs(0.5 - n));
+      v += a * n;
+      p = p * 2.03 + vec3(13.7, 29.3, 41.1);
       a *= 0.5;
     }
     return v;
@@ -1313,71 +1314,76 @@ const cloudFragmentShader = `
     float signedLat = vPosition.y;
     float absLat = abs(signedLat);
 
-    // ── Weather system: large-scale pressure cells ──
+    // ── Weather system: large-scale pressure cells (Perlin) ──
     vec3 weatherP = p * 2.0;
-    float warpX = noise3d(weatherP * 0.3 + vec3(11.0));
-    float warpZ = noise3d(weatherP * 0.3 + vec3(47.0));
-    weatherP += vec3(warpX, 0.0, warpZ) * u_cloudWarp * 2.0;
+    float warpX = pnoise3d(weatherP * 0.3 + vec3(11.0));
+    float warpZ = pnoise3d(weatherP * 0.3 + vec3(47.0));
+    weatherP += vec3(warpX - 0.5, 0.0, warpZ - 0.5) * u_cloudWarp * 3.0;
 
     // ── Coriolis: cyclonic rotation per hemisphere ──
-    float equatorNoise = noise3d(p * 3.0 + vec3(17.0)) * 0.1;
+    float equatorNoise = pnoise3d(p * 3.0 + vec3(17.0)) * 0.12;
     float coriolisSign = mix(-1.0, 1.0, smoothstep(-0.1 + equatorNoise, 0.1 + equatorNoise, signedLat));
     float coriolisStrength = smoothstep(0.0, 0.4, absLat);
     float windSpeed = 1.0 - absLat * 0.5;
+
+    // Weather cell density modulates cyclone strength
     float weatherCell = cloudNoise(weatherP, 0.4);
     float swirlAngle = coriolisSign * coriolisStrength * u_cloudSwirl * (0.5 + weatherCell)
                      + t * windSpeed * 0.3;
-    float cs = cos(swirlAngle * 0.15);
-    float sn = sin(swirlAngle * 0.15);
+    float cs = cos(swirlAngle * 0.18);
+    float sn = sin(swirlAngle * 0.18);
     vec3 cloudP = weatherP;
     cloudP.xz = mat2(cs, -sn, sn, cs) * cloudP.xz;
 
-    // ── Layer 1: Cumulus masses (domain-warped, low freq) ──
-    float w1 = cloudNoise(cloudP * 0.3, 0.8);
-    float w2 = noise3d(cloudP * 0.5 + vec3(43.0));
-    vec3 warpedP = cloudP + vec3(w1 * u_cloudWarp, t * 0.2, w2 * u_cloudWarp * 0.6);
-    float cumulus = cloudNoise_lod(warpedP + vec3(t * 0.08), 1.0);
+    // ── Layer 1: Cumulus masses — domain-warped Perlin FBM ──
+    float w1 = cloudFBM(cloudP * 0.3, 0.8);
+    float w2 = pnoise3d(cloudP * 0.5 + vec3(43.0));
+    vec3 warpedP = cloudP + vec3((w1 - 0.5) * u_cloudWarp * 1.5, t * 0.2, (w2 - 0.5) * u_cloudWarp);
+    float cumulus = cloudNoise(warpedP + vec3(t * 0.08), 1.2);
 
-    // ── Layer 2: Cirrus wisps (high freq, stretched along latitude) ──
-    vec3 cirrusP = p * 6.0 + vec3(t * 0.15, 0.0, t * 0.1);
-    cirrusP.y *= 0.35; // elongate along longitude
-    float cirrus = noise3d(cirrusP) * 0.65 + noise3d(cirrusP * 2.1 + vec3(23.0)) * 0.35;
-    cirrus = smoothstep(0.52, 0.72, cirrus);
+    // ── Layer 2: Cirrus wisps — stretched Perlin for streaky appearance ──
+    vec3 cirrusP = p * 7.0 + vec3(t * 0.15, 0.0, t * 0.1);
+    cirrusP.y *= 0.25; // heavy longitude stretch = thin streaks
+    float cirrus = cloudFBM(cirrusP, 1.0);
+    // Sharp threshold for thin wisps
+    cirrus = smoothstep(0.55, 0.68, cirrus) * 0.5;
 
-    // ── Layer 3: Convective puffs (small scale) ──
-    float convective = cloudNoise_lod(warpedP * 2.5 + vec3(t * 0.12, 71.0, 0.0), 2.0);
+    // ── Layer 3: Frontal boundaries — ridged noise for sharp cloud fronts ──
+    float fronts = cloudRidged(warpedP * 0.7 + vec3(t * 0.05, 31.0, 0.0), 1.5);
+
+    // ── Layer 4: Fine convective texture ──
+    float convective = cloudNoise(warpedP * 3.0 + vec3(t * 0.1, 71.0, 0.0), 2.5) * 0.15;
 
     // ── Combine ──
-    float clouds = cumulus * 0.6 + convective * 0.2;
+    float clouds = cumulus * 0.55 + fronts * 0.2 + convective;
 
     // ITCZ: tropical convergence band
-    float itcz = smoothstep(0.15, 0.0, absLat) * 0.12;
-    clouds += itcz;
+    clouds += smoothstep(0.15, 0.0, absLat) * 0.1;
 
     // Hadley cell banding
-    float hadley = sin(absLat * u_cloudBands * 6.0 + w1 * 2.0) * 0.07;
-    clouds += hadley;
+    clouds += sin(absLat * u_cloudBands * 6.0 + w1 * 2.5) * 0.06;
 
-    // Add cirrus on top
-    clouds = max(clouds, cirrus * 0.35);
+    // Cirrus wisps on top
+    clouds = max(clouds, cirrus);
 
     // Coverage threshold
-    clouds = smoothstep(u_cloudCoverage, u_cloudCoverage + 0.18, clouds);
+    clouds = smoothstep(u_cloudCoverage, u_cloudCoverage + 0.15, clouds);
 
-    // ── Edge erosion: ragged boundaries ──
-    float edgeNoise = noise3d(p * 14.0 + vec3(t * 0.04));
-    float edgeMask = smoothstep(0.0, 0.25, clouds) * smoothstep(0.35, 0.08, clouds);
-    clouds -= edgeMask * edgeNoise * 0.35;
+    // ── Edge erosion: ragged boundaries (Perlin for smooth erosion) ──
+    float edgeNoise = pnoise3d(p * 16.0 + vec3(t * 0.03));
+    float edgeMask = smoothstep(0.0, 0.2, clouds) * smoothstep(0.3, 0.05, clouds);
+    clouds -= edgeMask * edgeNoise * 0.4;
     clouds = max(clouds, 0.0);
 
-    // ── Polar clearing: fewer clouds near poles ──
+    // Polar clearing
     clouds *= smoothstep(0.95, 0.75, absLat);
 
     // ── Lighting ──
     float diff = max(dot(vWorldNormal, u_sunDirection), 0.0) * 0.8 + 0.2;
-    float selfShadow = 1.0 - clouds * 0.12;
-    vec3 warmCloud = vec3(0.97, 0.96, 0.93);
-    vec3 coolCloud = vec3(0.88, 0.90, 0.95);
+    float selfShadow = 1.0 - clouds * 0.15;
+
+    vec3 warmCloud = vec3(0.98, 0.97, 0.94);
+    vec3 coolCloud = vec3(0.85, 0.88, 0.95);
     vec3 cloudColor = mix(coolCloud, warmCloud, diff) * diff * selfShadow;
 
     float alpha = clouds * u_cloudOpacity;
