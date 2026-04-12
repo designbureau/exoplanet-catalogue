@@ -1,6 +1,6 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useState, useEffect } from "react";
 import * as THREE from "three";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 
 const vertexShader = `
   varying vec3 vPosition;
@@ -50,11 +50,11 @@ const fragmentShader = `
           mix(hash3(i + vec3(0,1,1)), hash3(i + vec3(1,1,1)), u.x), u.y), u.z);
   }
 
-  // Cloud noise: sin-modulated FBM (3 octaves — background doesn't need fine detail)
+  // Cloud noise: sin-modulated FBM (5 octaves — full detail, only rendered once)
   float cloudNoise(vec3 p, float freq, float seed) {
     float v = 0.0, a = 0.5;
     p = p * freq + vec3(seed);
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 5; i++) {
       float n = noise3d(p);
       v += a * (sin(n * 6.2831) * 0.5 + 0.5);
       p = p * 2.02 + vec3(31.7, 17.3, 53.1);
@@ -63,11 +63,11 @@ const fragmentShader = `
     return v;
   }
 
-  // Ridged noise (2 octaves — background filaments)
+  // Ridged noise (4 octaves — full detail filaments)
   float ridgedNoise(vec3 p, float freq) {
     float v = 0.0, a = 0.5;
     p = p * freq;
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 4; i++) {
       float n = noise3d(p);
       n = 1.0 - abs(n * 2.0 - 1.0);
       v += a * n * n;
@@ -236,11 +236,31 @@ interface NebulaProps {
   cutoff?: number;
 }
 
+// Simple cubemap display shader — samples baked cubemap, near-zero cost
+const bakedVertexShader = `
+  varying vec3 vDirection;
+  void main() {
+    vDirection = normalize(position);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const bakedFragmentShader = `
+  uniform samplerCube u_envMap;
+  varying vec3 vDirection;
+  void main() {
+    vec4 c = textureCube(u_envMap, vDirection);
+    gl_FragColor = c;
+  }
+`;
+
 export default function Nebula({ seed = "default", density = 0.6, brightness = 0.5, starTemp = 5500, starDensity = 1.0, scale = 1.0, warp = 0.4, contrast = 1.5, mix = 0.4, colors = null, cutoff = 0.0 }: NebulaProps) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const { gl } = useThree();
+  const [baked, setBaked] = useState(false);
 
-  const material = useMemo(() => {
-    // Hash the seed string
+  // Procedural material (used once for baking, then replaced)
+  const { proceduralMat, bakedMat, cubeTarget } = useMemo(() => {
     let h = 0;
     for (let i = 0; i < seed.length; i++) {
       h = ((h << 5) - h + seed.charCodeAt(i)) | 0;
@@ -254,7 +274,7 @@ export default function Nebula({ seed = "default", density = 0.6, brightness = 0
 
     const [c1, c2, c3, c4] = nebulaColors(h, starTemp);
 
-    return new THREE.ShaderMaterial({
+    const proc = new THREE.ShaderMaterial({
       uniforms: {
         u_time: { value: 0.0 },
         u_seed: { value: seedVec },
@@ -278,27 +298,75 @@ export default function Nebula({ seed = "default", density = 0.6, brightness = 0
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     });
+
+    // Cubemap render target for baking
+    const target = new THREE.WebGLCubeRenderTarget(512, {
+      format: THREE.RGBAFormat,
+      type: THREE.UnsignedByteType,
+      generateMipmaps: true,
+      minFilter: THREE.LinearMipmapLinearFilter,
+    });
+
+    // Material for displaying baked cubemap
+    const bkd = new THREE.ShaderMaterial({
+      uniforms: { u_envMap: { value: null } },
+      vertexShader: bakedVertexShader,
+      fragmentShader: bakedFragmentShader,
+      side: THREE.BackSide,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+
+    return { proceduralMat: proc, bakedMat: bkd, cubeTarget: target };
   }, [seed, starTemp]);
 
-  useFrame((state) => {
-    material.uniforms.u_time.value = state.clock.getElapsedTime();
-    material.uniforms.u_nebulaDensity.value = density;
-    material.uniforms.u_brightness.value = brightness;
-    material.uniforms.u_scale.value = scale;
-    material.uniforms.u_warp.value = warp;
-    material.uniforms.u_contrast.value = contrast;
-    material.uniforms.u_mix.value = mix;
-    material.uniforms.u_cutoff.value = cutoff;
+  // Bake on first frame: render procedural nebula to cubemap, then swap material
+  useFrame(() => {
+    if (baked || !meshRef.current) return;
+
+    // Apply current slider values before baking
+    const u = proceduralMat.uniforms;
+    u.u_nebulaDensity.value = density;
+    u.u_brightness.value = brightness;
+    u.u_scale.value = scale;
+    u.u_warp.value = warp;
+    u.u_contrast.value = contrast;
+    u.u_mix.value = mix;
+    u.u_cutoff.value = cutoff;
     if (colors) {
-      material.uniforms.u_color1.value.set(colors[0]);
-      material.uniforms.u_color2.value.set(colors[1]);
-      material.uniforms.u_color3.value.set(colors[2]);
-      material.uniforms.u_color4.value.set(colors[3]);
+      u.u_color1.value.set(colors[0]);
+      u.u_color2.value.set(colors[1]);
+      u.u_color3.value.set(colors[2]);
+      u.u_color4.value.set(colors[3]);
     }
+
+    // Render to cubemap: place a CubeCamera at origin, render the nebula sphere
+    const cubeCamera = new THREE.CubeCamera(1, 10000000, cubeTarget);
+    const tempScene = new THREE.Scene();
+    const nebulaMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(5000000, 32, 32),
+      proceduralMat
+    );
+    tempScene.add(nebulaMesh);
+    cubeCamera.update(gl, tempScene);
+
+    // Swap to baked material
+    bakedMat.uniforms.u_envMap.value = cubeTarget.texture;
+    meshRef.current.material = bakedMat;
+    setBaked(true);
+
+    // Cleanup
+    nebulaMesh.geometry.dispose();
   });
 
+  // Re-bake when slider values change
+  useEffect(() => {
+    if (baked) setBaked(false);
+  }, [density, brightness, scale, warp, contrast, mix, cutoff, colors]);
+
   return (
-    <mesh ref={meshRef} material={material} renderOrder={-3}>
+    <mesh ref={meshRef} material={proceduralMat} renderOrder={-3}>
       <sphereGeometry args={[5000000, 32, 32]} />
     </mesh>
   );
