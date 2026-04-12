@@ -839,7 +839,15 @@ const terrestrialFragment = `
     }
 
     float seaLevel = u_seaLevel;
-    float isLand = smoothstep(seaLevel - 0.008, seaLevel + 0.008, continent);
+    // Eyeball: pre-compute sun angle for sea level adjustment
+    float eyeballSunAnglePre = (u_tidallyLocked > 0.5) ? dot(baseDir, u_sunDirection) : 0.0;
+    float effectiveSeaLevel = seaLevel;
+    if (u_tidallyLocked > 0.5) {
+      // No water on hot sub-stellar side
+      float subStellarDry = smoothstep(0.15, 0.5, eyeballSunAnglePre);
+      effectiveSeaLevel = mix(seaLevel, 0.0, subStellarDry);
+    }
+    float isLand = smoothstep(effectiveSeaLevel - 0.008, effectiveSeaLevel + 0.008, continent);
 
     // ── Normal mapping: texture or procedural ──
     vec3 bumpNormal = vNormal;
@@ -873,19 +881,26 @@ const terrestrialFragment = `
     // ── Biome coloring — aridity-aware + eyeball planet support ──
     float aridity = 1.0 - smoothstep(0.15, 0.55, seaLevel);
 
-    // Eyeball planet: modulate aridity by sun angle for 3-band appearance
-    // sub-stellar = arid desert, terminator = wet/habitable, anti-stellar = frozen
+    // Eyeball planet: per-zone biome control
     float eyeballSunAngle = 0.0;
+    float eyeSeaLevel = seaLevel;
     if (u_tidallyLocked > 0.5) {
       eyeballSunAngle = dot(baseDir, u_sunDirection); // 1=sub-stellar, 0=terminator, -1=anti-stellar
-      // Sub-stellar band: force arid (hot desert)
-      float subStellarArid = smoothstep(0.2, 0.6, eyeballSunAngle);
-      // Anti-stellar band: force frozen (override aridity with ice)
-      float antiStellarFreeze = smoothstep(-0.1, -0.5, eyeballSunAngle);
-      // Terminator band: reduce aridity for green/wet habitable zone
-      float terminatorWet = (1.0 - subStellarArid) * (1.0 - antiStellarFreeze);
-      aridity = mix(aridity, 1.0, subStellarArid * 0.8); // push toward arid on day side
-      aridity = mix(aridity, 0.0, terminatorWet * 0.7);   // push toward wet at terminator
+
+      // Sub-stellar (hot): fully arid, no water — push sea level above all terrain
+      float subStellar = smoothstep(0.15, 0.5, eyeballSunAngle);
+      aridity = mix(aridity, 1.0, subStellar);
+      eyeSeaLevel = mix(seaLevel, 0.0, subStellar); // no ocean on hot side
+
+      // Terminator ring: wet, habitable, water bodies
+      float terminator = (1.0 - smoothstep(0.15, 0.5, eyeballSunAngle))
+                       * (1.0 - smoothstep(-0.1, -0.35, eyeballSunAngle));
+      aridity = mix(aridity, 0.0, terminator * 0.8);
+
+      // Anti-stellar (cold): water exists but partially frozen — icebergs
+      // Sea level stays normal so water is present, ice cap handles the rest
+      float antiStellar = smoothstep(-0.1, -0.4, eyeballSunAngle);
+      aridity = mix(aridity, 0.2, antiStellar); // slightly arid (frozen desert-ish)
     }
 
     float moisture = (u_lod > 0.5) ? cloudNoise(p * 0.5 + vec3(33.0), 1.0) : noise3d(p * 0.5 + vec3(33.0));
@@ -906,18 +921,18 @@ const terrestrialFragment = `
     vec3 midOcean = mix(midWater, midBasin, aridity);
     vec3 shallowOcean = mix(shallowWater, shallowBasin, aridity);
 
-    float oceanDepth = smoothstep(0.0, seaLevel, continent);
+    float oceanDepth = smoothstep(0.0, effectiveSeaLevel, continent);
     vec3 oceanColor = mix(deepOcean, midOcean, smoothstep(0.0, 0.5, oceanDepth));
     oceanColor = mix(oceanColor, shallowOcean, smoothstep(0.92, 0.99, oceanDepth));
     oceanColor += vec3(-0.006, 0.006, 0.01) * microNoise * (1.0 - aridity);
 
     // Coastal shelf
-    float coastalBand = smoothstep(seaLevel - 0.015, seaLevel - 0.003, continent) * (1.0 - isLand);
+    float coastalBand = smoothstep(effectiveSeaLevel - 0.015, effectiveSeaLevel - 0.003, continent) * (1.0 - isLand);
     vec3 coastalColor = mix(color2, color3, 0.5) * 0.75 + vec3(0.04, 0.04, 0.01);
     oceanColor = mix(oceanColor, coastalColor, coastalBand * 0.4 * (1.0 - aridity * 0.7));
 
     // Land zones
-    float landHeight = (continent - seaLevel) / (1.0 - seaLevel);
+    float landHeight = (continent - effectiveSeaLevel) / (1.0 - effectiveSeaLevel + 0.001);
     float latitude;
     if (u_tidallyLocked > 0.5) {
       // Eyeball: "latitude" = distance from sub-stellar point
@@ -995,9 +1010,25 @@ const terrestrialFragment = `
     if (u_tidallyLocked > 0.5) {
       // Eyeball: ice centered on anti-stellar point (night side)
       float antiStellar = -dot(baseDir, u_sunDirection); // 1=anti-stellar, -1=sub-stellar
-      float iceStart = 0.0 + u_iceEdge; // ice begins around the terminator
-      iceCap = smoothstep(iceStart, iceStart + u_iceEdge * 3.0, antiStellar + iceNoise);
-      iceFringe = smoothstep(iceStart - 0.08, iceStart, antiStellar + iceNoise) * (1.0 - iceCap) * 0.3;
+
+      // Solid ice: deep into night side
+      float solidIceStart = 0.15;
+      iceCap = smoothstep(solidIceStart, solidIceStart + 0.15, antiStellar + iceNoise * 0.8);
+
+      // Icebergs/sea ice: scattered ice fragments in water near terminator
+      // Use high-freq noise for individual iceberg shapes
+      float icebergNoise = noise3d(warpedIceP * 3.5 + vec3(37.0)) * 0.6
+                         + noise3d(warpedIceP * 7.0 + vec3(83.0)) * 0.3;
+      float icebergZone = smoothstep(-0.05, 0.15, antiStellar); // zone where icebergs exist
+      float icebergThreshold = mix(0.7, 0.3, smoothstep(0.0, solidIceStart, antiStellar)); // more icebergs deeper in
+      float icebergs = smoothstep(icebergThreshold, icebergThreshold + 0.1, icebergNoise) * icebergZone;
+      // Icebergs only in water, not on land
+      icebergs *= (1.0 - isLand) * (1.0 - iceCap);
+
+      iceFringe = max(
+        smoothstep(solidIceStart - 0.1, solidIceStart, antiStellar + iceNoise) * (1.0 - iceCap) * 0.3,
+        icebergs * 0.7
+      );
     } else {
       // Normal: polar ice caps
       float northLat = baseDir.y;

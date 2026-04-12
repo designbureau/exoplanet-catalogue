@@ -503,7 +503,10 @@ const Planet = ({ data, starData, starRef }) => {
   useFrame((state) => {
     const elapsedTime = state.clock.getElapsedTime();
     ref.current.rotation.x = Math.PI * 0.5;
-    ref.current.rotation.y += 0.001;
+    // Tidally locked planets don't rotate — one face always toward star
+    if (!(shaderMaterial.uniforms.u_tidallyLocked?.value > 0.5)) {
+      ref.current.rotation.y += 0.001;
+    }
     // Keplerian orbit: mean anomaly linear in time, true anomaly varies (faster at periapsis)
     const meanAnomaly = (elapsedTime / period) * speed * 2 * Math.PI + phaseOffset;
     const kep = keplerPosition(meanAnomaly, eccentricity, semimajoraxis);
