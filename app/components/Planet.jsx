@@ -96,6 +96,7 @@ import {
 } from "../utils/helperFunctions";
 import { classifyPlanet, PlanetType } from "../utils/planetClassification";
 import { createPlanetMaterial, createCloudMaterial } from "../shaders/planetShader";
+import { bakeTerrainMaps } from "../shaders/terrainTexture";
 import { getAtmosphereParams } from "../shaders/atmosphereShader";
 import { getScatteringPreset, createScatteringMaterial } from "../shaders/scatteringShader";
 
@@ -149,6 +150,24 @@ const Planet = ({ data, starData, starRef }) => {
     });
     const shader = createPlanetMaterial(params);
     const cloudMat = createCloudMaterial(params);
+    // Pre-bake terrain textures for terrestrial planets (eliminates per-frame procedural noise)
+    if (params.type === PlanetType.TEMPERATE || params.type === PlanetType.WATER_WORLD) {
+      try {
+        const terrainMaps = bakeTerrainMaps(params.seed, {
+          noiseScale: params.noiseScale,
+          continentFreq: params.continentFreq,
+          coastDetail: params.coastDetail,
+          landContrast: params.landContrast,
+          warpIntensity: 0.5,
+          seaLevel: params.seaLevel,
+        }, 1024); // 1024x512 equirectangular
+        shader.uniforms.u_heightMap.value = terrainMaps.heightMap;
+        shader.uniforms.u_normalMap.value = terrainMaps.normalMap;
+        shader.uniforms.u_useTextureMaps.value = 1.0;
+      } catch (e) {
+        console.warn('Terrain bake failed, using procedural:', e);
+      }
+    }
     // Atmosphere: use HZ-gradient params from classifier when available, fall back to type defaults
     const ap = getAtmosphereParams(params.type, starData?.temperature || 5500);
     const atmosDayCol = params.atmosDayColor || ap?.dayColor || new THREE.Color(0x00aaff);

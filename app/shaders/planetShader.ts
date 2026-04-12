@@ -102,6 +102,16 @@ const terrestrialVertexShader = `
   uniform float u_landContrast;
   uniform float u_vertLOD;
   uniform float scale;
+  uniform float u_useTextureMaps;
+  uniform sampler2D u_heightMap;
+  uniform sampler2D u_normalMap;
+
+  // Equirectangular UV from sphere direction
+  vec2 dirToUV(vec3 d) {
+    float phi = atan(d.z, d.x);      // [-π, π]
+    float theta = acos(clamp(d.y, -1.0, 1.0)); // [0, π]
+    return vec2(phi / (2.0 * 3.14159265) + 0.5, theta / 3.14159265);
+  }
 
   // ── Perlin noise (same as fragment — must match exactly) ──
   ${perlinNoise3D}
@@ -165,7 +175,7 @@ const terrestrialVertexShader = `
     return max(n - u_seaLevel, 0.0) / (1.0 - u_seaLevel);
   }
 
-  // ── Main — displacement + finite-difference normals ──────────────
+  // ── Main — displacement + normals (texture or procedural) ──
   void main() {
     vec3 dir = normalize(position);
     vSphereDir = dir;
@@ -174,22 +184,41 @@ const terrestrialVertexShader = `
     vec3 displacedNormal = normal;
 
     if (u_displace > 0.0) {
-      float height = computeHeight(dir);
+      float height;
+      if (u_useTextureMaps > 0.5) {
+        // ── Texture path: single texture lookup ──
+        vec2 uv = dirToUV(dir);
+        height = texture2D(u_heightMap, uv).r;
+        // Convert heightfield to land-only displacement
+        height = max(height - u_seaLevel, 0.0) / (1.0 - u_seaLevel);
+      } else {
+        // ── Procedural path: expensive per-vertex noise ──
+        height = computeHeight(dir);
+      }
       displacedPos = position + normal * height * u_displace;
 
-      // Forward-difference normal: 2 neighbors (3 total height calls)
-      vec3 up = abs(dir.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
-      vec3 tangent = normalize(cross(up, dir));
-      vec3 bitangent = cross(dir, tangent);
-
-      float eps = 0.003;
-      float r = length(position);
-      vec3 pT = normalize(dir + tangent * eps);
-      vec3 pB = normalize(dir + bitangent * eps);
-      vec3 posT = pT * r + pT * computeHeight(pT) * u_displace;
-      vec3 posB = pB * r + pB * computeHeight(pB) * u_displace;
-
-      displacedNormal = normalize(cross(posT - displacedPos, posB - displacedPos));
+      if (u_useTextureMaps > 0.5) {
+        // Normal from pre-baked normal map (tangent-space → object-space)
+        vec2 uv = dirToUV(dir);
+        vec3 texNormal = texture2D(u_normalMap, uv).rgb * 2.0 - 1.0;
+        // Convert tangent-space normal to object-space using sphere tangent frame
+        vec3 up = abs(dir.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+        vec3 tangent = normalize(cross(up, dir));
+        vec3 bitangent = cross(dir, tangent);
+        displacedNormal = normalize(tangent * texNormal.x + bitangent * texNormal.y + dir * texNormal.z);
+      } else {
+        // Forward-difference normal: 2 neighbors (3 total height calls)
+        vec3 up = abs(dir.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+        vec3 tangent = normalize(cross(up, dir));
+        vec3 bitangent = cross(dir, tangent);
+        float eps = 0.003;
+        float r = length(position);
+        vec3 pT = normalize(dir + tangent * eps);
+        vec3 pB = normalize(dir + bitangent * eps);
+        vec3 posT = pT * r + pT * computeHeight(pT) * u_displace;
+        vec3 posB = pB * r + pB * computeHeight(pB) * u_displace;
+        displacedNormal = normalize(cross(posT - displacedPos, posB - displacedPos));
+      }
       vPosition = normalize(displacedPos);
     } else {
       vPosition = dir;
@@ -737,6 +766,17 @@ const terrestrialFragment = `
   uniform float u_landContrast;
   uniform float u_displace;
   uniform float u_bumpStrength;
+  uniform float u_useTextureMaps;
+  uniform sampler2D u_heightMap;
+  uniform sampler2D u_normalMap;
+
+  // Equirectangular UV from sphere direction
+  vec2 dirToUV(vec3 d) {
+    float phi = atan(d.z, d.x);
+    float theta = acos(clamp(d.y, -1.0, 1.0));
+    return vec2(phi / (2.0 * 3.14159265) + 0.5, theta / 3.14159265);
+  }
+
   varying vec3 vPosition;
   varying vec3 vNormal;
   varying vec3 vWorldNormal;
@@ -788,23 +828,42 @@ const terrestrialFragment = `
     vec3 baseDir = (u_displace > 0.0) ? vSphereDir : vPosition;
     vec3 p = seededPos(baseDir, 100.0) * scale;
 
-    // ── Height ──
-    float continent = computeContinent(p);
+    // ── Height: texture or procedural ──
+    float continent;
+    if (u_useTextureMaps > 0.5) {
+      vec2 uv = dirToUV(baseDir);
+      continent = texture2D(u_heightMap, uv).r;
+    } else {
+      continent = computeContinent(p);
+    }
 
     float seaLevel = u_seaLevel;
     float isLand = smoothstep(seaLevel - 0.008, seaLevel + 0.008, continent);
 
-    // ── Normal mapping: 3-neighbor forward differences (4 total calls) ──
+    // ── Normal mapping: texture or procedural ──
     vec3 bumpNormal = vNormal;
     if (u_lod > 0.5) {
-      float eps = 0.003;
-      float hx = computeContinent(p + vec3(eps, 0.0, 0.0));
-      float hy = computeContinent(p + vec3(0.0, eps, 0.0));
-      float hz = computeContinent(p + vec3(0.0, 0.0, eps));
-      vec3 grad = vec3(continent - hx, continent - hy, continent - hz) / eps;
-      float strength = (u_displace > 0.0) ? u_bumpStrength * 0.5 : u_bumpStrength;
-      bumpNormal = normalize(vNormal + grad * strength);
-      bumpNormal = mix(vNormal, bumpNormal, isLand * 0.95 + 0.05);
+      if (u_useTextureMaps > 0.5) {
+        // Pre-baked normal map — single texture lookup
+        vec2 uv = dirToUV(baseDir);
+        vec3 texN = texture2D(u_normalMap, uv).rgb * 2.0 - 1.0;
+        // Tangent frame from sphere direction
+        vec3 up = abs(baseDir.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+        vec3 T = normalize(cross(up, baseDir));
+        vec3 B = cross(baseDir, T);
+        bumpNormal = normalize(T * texN.x + B * texN.y + baseDir * texN.z);
+        bumpNormal = mix(vNormal, bumpNormal, isLand * 0.95 + 0.05);
+      } else {
+        // Procedural: 3-neighbor forward differences (4 computeContinent calls)
+        float eps = 0.003;
+        float hx = computeContinent(p + vec3(eps, 0.0, 0.0));
+        float hy = computeContinent(p + vec3(0.0, eps, 0.0));
+        float hz = computeContinent(p + vec3(0.0, 0.0, eps));
+        vec3 grad = vec3(continent - hx, continent - hy, continent - hz) / eps;
+        float strength = (u_displace > 0.0) ? u_bumpStrength * 0.5 : u_bumpStrength;
+        bumpNormal = normalize(vNormal + grad * strength);
+        bumpNormal = mix(vNormal, bumpNormal, isLand * 0.95 + 0.05);
+      }
     }
 
     // ── Biome coloring — aridity-aware ──
@@ -1183,6 +1242,9 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_displace: { value: 0 },
       u_vertLOD: { value: 0 },
       u_bumpStrength: { value: params.bumpStrength ?? 0.6 },
+      u_useTextureMaps: { value: 0 },
+      u_heightMap: { value: null },
+      u_normalMap: { value: null },
       u_sunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
       u_atmosDayColor: { value: params.atmosDayColor || new THREE.Color(0x00aaff) },
       u_atmosTwilightColor: { value: params.atmosTwilightColor || new THREE.Color(0xff6600) },
