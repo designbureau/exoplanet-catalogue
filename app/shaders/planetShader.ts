@@ -607,8 +607,19 @@ const gasGiantFragment = `
     // Polar darkening
     color *= 1.0 - latitude * 0.2;
 
+    // ── Normal mapping: band relief + warp perturbation ──
+    // Derive bump from band phase derivative (analytical, no extra noise calls)
+    // cos(bandPhase) is the derivative of sin(bandPhase) — gives latitude gradient
+    float bandGradY = cos(bandPhase) * u_gasBands * scale * 0.5;
+    // Domain warp difference gives XZ perturbation
+    float warpGradX = (r1 - r2) * u_gasWarp * 2.0;
+    float warpGradZ = (n1 - n2) * u_gasWarp * 1.5;
+    // Combine into bump normal (strength ~0.15 for subtle relief)
+    float bumpStr = 0.15;
+    vec3 bumpNormal = normalize(vWorldNormal + vec3(warpGradX, bandGradY, warpGradZ) * bumpStr);
+
     vec3 V = normalize(cameraPosition - vWorldPosition);
-    color = planetLighting(color, vWorldNormal, u_sunDirection, V, u_ambient);
+    color = planetLighting(color, bumpNormal, u_sunDirection, V, u_ambient);
     color = applyAtmosphere(color, vWorldNormal, vWorldPosition);
 
     gl_FragColor = vec4(color, 1.0);
@@ -1143,8 +1154,15 @@ const iceGiantFragment = `
     float limb = max(dot(vNormal, normalize(vec3(0.0, 0.0, 1.0))), 0.0);
     color *= 0.85 + 0.15 * limb;
 
+    // ── Normal mapping: band relief from analytical derivative ──
+    float iceBandPhase = bandY * u_gasBands * 0.7 + n1 * 1.0 + edgeN;
+    float iceBandGradY = cos(iceBandPhase) * u_gasBands * 0.7 * scale * 0.3;
+    float iceWarpGradX = (r1 - r2) * u_gasWarp * 1.5;
+    float iceWarpGradZ = (n1 - n2) * u_gasWarp * 1.0;
+    vec3 iceBumpN = normalize(vWorldNormal + vec3(iceWarpGradX, iceBandGradY, iceWarpGradZ) * 0.12);
+
     vec3 V = normalize(cameraPosition - vWorldPosition);
-    color = planetLighting(color, vWorldNormal, u_sunDirection, V, u_ambient);
+    color = planetLighting(color, iceBumpN, u_sunDirection, V, u_ambient);
     color = applyAtmosphere(color, vWorldNormal, vWorldPosition);
     gl_FragColor = vec4(color, 1.0);
   }
