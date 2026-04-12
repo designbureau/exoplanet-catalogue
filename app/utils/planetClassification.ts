@@ -212,7 +212,10 @@ export function classifyPlanet(input: ClassificationInput): ShaderParams {
   } else if (radiusEarth > 3.5) {
     type = PlanetType.ICE_GIANT;
   } else if (radiusEarth > 1.75) {
-    if (density >= 0 && density < 2) type = PlanetType.WATER_WORLD;
+    // Super-Earth / sub-Neptune boundary — check for extreme flux first
+    if (sEff > 25 && density >= 3) type = PlanetType.LAVA_WORLD; // dense + extreme flux = lava
+    else if (sEff > 1.04 && density >= 3) type = PlanetType.HOT_ROCKY; // dense + hot = hot rocky
+    else if (density >= 0 && density < 2) type = PlanetType.WATER_WORLD;
     else type = PlanetType.SUB_NEPTUNE;
   } else if (radiusEarth > 0) {
     // Rocky planets: use stellar flux for Venus/HZ/Frozen boundaries
