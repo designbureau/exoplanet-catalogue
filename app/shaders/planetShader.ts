@@ -197,9 +197,18 @@ const terrestrialVertexShader = `
         height = computeHeight(dir);
       }
       displacedPos = position + normal * height * u_displace;
-      // Use sphere normal — fragment shader computes detailed bump normals
-      // This saves 2× computeHeight calls (was 3× total, now 1×)
-      displacedNormal = normal;
+
+      // Forward-difference normal: 2 neighbors (3× computeHeight total)
+      vec3 up = abs(dir.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+      vec3 tangent = normalize(cross(up, dir));
+      vec3 bitangent = cross(dir, tangent);
+      float eps = 0.003;
+      float r = length(position);
+      vec3 pT = normalize(dir + tangent * eps);
+      vec3 pB = normalize(dir + bitangent * eps);
+      vec3 posT = pT * r + pT * computeHeight(pT) * u_displace;
+      vec3 posB = pB * r + pB * computeHeight(pB) * u_displace;
+      displacedNormal = normalize(cross(posT - displacedPos, posB - displacedPos));
       vPosition = normalize(displacedPos);
     } else {
       vPosition = dir;

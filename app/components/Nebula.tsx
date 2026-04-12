@@ -50,11 +50,11 @@ const fragmentShader = `
           mix(hash3(i + vec3(0,1,1)), hash3(i + vec3(1,1,1)), u.x), u.y), u.z);
   }
 
-  // Cloud noise: sin-modulated FBM for wispy filaments
+  // Cloud noise: sin-modulated FBM (3 octaves — background doesn't need fine detail)
   float cloudNoise(vec3 p, float freq, float seed) {
     float v = 0.0, a = 0.5;
     p = p * freq + vec3(seed);
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 3; i++) {
       float n = noise3d(p);
       v += a * (sin(n * 6.2831) * 0.5 + 0.5);
       p = p * 2.02 + vec3(31.7, 17.3, 53.1);
@@ -63,13 +63,13 @@ const fragmentShader = `
     return v;
   }
 
-  // Ridged noise for more dramatic features
+  // Ridged noise (2 octaves — background filaments)
   float ridgedNoise(vec3 p, float freq) {
     float v = 0.0, a = 0.5;
     p = p * freq;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 2; i++) {
       float n = noise3d(p);
-      n = 1.0 - abs(n * 2.0 - 1.0); // ridge
+      n = 1.0 - abs(n * 2.0 - 1.0);
       v += a * n * n;
       p = p * 2.03 + vec3(13.7, 29.3, 41.1);
       a *= 0.5;

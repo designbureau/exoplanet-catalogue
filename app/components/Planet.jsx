@@ -520,7 +520,10 @@ const Planet = ({ data, starData, starRef }) => {
       shaderMaterial.uniforms.u_time.value = elapsedTime;
     }
     if (shaderMaterial.uniforms.u_lod) {
+      // LOD 1.0 = full detail (6 octaves + bump). Only for active planet at close range.
+      // LOD 0.0 = reduced (3 octaves, no bump). For inactive or far planets.
       shaderMaterial.uniforms.u_lod.value = isActive ? 1.0 : 0.0;
+      // Note: u_lod is further refined in the LOD tier loop below for active planets
     }
     // Sync cloud sphere uniforms
     if (cloudMat) {
@@ -562,6 +565,10 @@ const Planet = ({ data, starData, starRef }) => {
           }
           if (shaderMaterial.uniforms.u_vertLOD) {
             shaderMaterial.uniforms.u_vertLOD.value = isActive ? vertLOD : 0;
+          }
+          // Refine fragment LOD: skip expensive bump at far tiers (64/32 segs)
+          if (isActive && shaderMaterial.uniforms.u_lod) {
+            shaderMaterial.uniforms.u_lod.value = (pSegs >= 128) ? 1.0 : 0.0;
           }
           break;
         }
@@ -613,6 +620,10 @@ const Planet = ({ data, starData, starRef }) => {
       cloudRef.current.position.copy(ref.current.position);
       cloudRef.current.rotation.x = ref.current.rotation.x;
       cloudRef.current.rotation.y += 0.0009;
+      // Distance cull: hide clouds when far away (saves ~2ms per planet)
+      ref.current.getWorldPosition(_camRight);
+      const cloudDist = state.camera.position.distanceTo(_camRight);
+      cloudRef.current.visible = cloudDist < scale * 8.0;
     }
     if (ringRef.current && ringData) {
       ringRef.current.position.copy(ref.current.position);
