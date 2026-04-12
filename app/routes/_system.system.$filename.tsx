@@ -399,11 +399,11 @@ const App = ({ data }: any) => {
     dof:           { on: false, focusDistance: 0.01, focalLength: 0.05, bokehScale: 3 },
     toneMap:       { on: true, mode: ToneMappingMode.ACES_FILMIC },
     colorGrade:    { on: false, temperature: 0, tint: 0, shadows: 0, highlights: 0 },
-    hueSat:        { on: true, saturation: -0.09 },
+    hueSat:        { on: false, saturation: -0.09 },
     brightContrast:{ on: false, brightness: 0, contrast: 0 },
-    chroma:        { on: true, offset: 0.0005 },
-    vignette:      { on: true, offset: 0.3, darkness: 0.6 },
-    noise:         { on: true, opacity: 0.1 },
+    chroma:        { on: false, offset: 0.0005 },
+    vignette:      { on: false, offset: 0.3, darkness: 0.6 },
+    noise:         { on: false, opacity: 0.1 },
   });
   const updateFx = (key: string, values: any) => setFx(prev => ({ ...prev, [key]: { ...prev[key as keyof typeof prev], ...values } }));
 
@@ -811,7 +811,6 @@ const App = ({ data }: any) => {
           {showNebula && <Nebula seed={data?.name?.[0] ?? "system"} density={nebulaDensity} brightness={nebulaBrightness} scale={nebulaScale} warp={nebulaWarp} contrast={nebulaContrast} mix={nebulaMix} cutoff={nebulaCutoff} colors={nebulaColorOverride} starTemp={getPrimaryStarTemp(data)} />}
           <Binary data={data} />
           <Controls follow={follow} autoRotate={autoRotate} viewAzimuth={viewAzimuth} viewPolar={viewPolar} />
-          {/* Post-FX disabled for performance — toggle via Post FX button
           <EffectComposer key={fxKey} multisampling={0}>
             {fx.smaa.on && <SMAA preset={SMAAPreset.MEDIUM} edgeDetectionMode={EdgeDetectionMode.LUMA} />}
             {fx.dof.on && <DepthOfField
@@ -820,22 +819,21 @@ const App = ({ data }: any) => {
               bokehScale={fx.dof.bokehScale}
             />}
             <ToneMapping mode={fx.toneMap.on ? fx.toneMap.mode : ToneMappingMode.ACES_FILMIC} />
-            <Cinematic
-              temperature={fx.colorGrade.on ? fx.colorGrade.temperature : 0}
-              tint={fx.colorGrade.on ? fx.colorGrade.tint : 0}
-              shadows={fx.colorGrade.on ? fx.colorGrade.shadows : 0}
-              highlights={fx.colorGrade.on ? fx.colorGrade.highlights : 0}
-            />
-            <HueSaturation saturation={fx.hueSat.on ? fx.hueSat.saturation : 0} />
-            <BrightnessContrast
-              brightness={fx.brightContrast.on ? fx.brightContrast.brightness : 0}
-              contrast={fx.brightContrast.on ? fx.brightContrast.contrast : 0}
-            />
-            <ChromaticAberration offset={chromaOffset.set(fx.chroma.on ? fx.chroma.offset : 0, fx.chroma.on ? fx.chroma.offset : 0)} />
-            <Vignette offset={fx.vignette.offset} darkness={fx.vignette.on ? fx.vignette.darkness : 0} />
-            <Noise opacity={fx.noise.on ? fx.noise.opacity : 0} blendFunction={BlendFunction.SOFT_LIGHT} />
+            {fx.colorGrade.on && <Cinematic
+              temperature={fx.colorGrade.temperature}
+              tint={fx.colorGrade.tint}
+              shadows={fx.colorGrade.shadows}
+              highlights={fx.colorGrade.highlights}
+            />}
+            {fx.hueSat.on && <HueSaturation saturation={fx.hueSat.saturation} />}
+            {fx.brightContrast.on && <BrightnessContrast
+              brightness={fx.brightContrast.brightness}
+              contrast={fx.brightContrast.contrast}
+            />}
+            {fx.chroma.on && <ChromaticAberration offset={chromaOffset.set(fx.chroma.offset, fx.chroma.offset)} />}
+            {fx.vignette.on && <Vignette offset={fx.vignette.offset} darkness={fx.vignette.darkness} />}
+            {fx.noise.on && <Noise opacity={fx.noise.opacity} blendFunction={BlendFunction.SOFT_LIGHT} />}
           </EffectComposer>
-          */}
         </Canvas>
       </div>
     </>
