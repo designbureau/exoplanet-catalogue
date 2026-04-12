@@ -895,10 +895,10 @@ const terrestrialFragment = `
       aridity = mix(aridity, 1.0, subStellar);
       eyeSeaLevel = mix(seaLevel, 0.0, subStellar);
 
-      // Terminator ring: wet, habitable, water bodies
+      // Terminator ring: force fully wet/green — habitable belt
       float terminator = (1.0 - smoothstep(u_eyeAridEdge - 0.15, u_eyeAridEdge + 0.2, eyeballSunAngle))
                        * (1.0 - smoothstep(u_eyeIceEdge + 0.1, u_eyeIceEdge - 0.2, eyeballSunAngle));
-      aridity = mix(aridity, 0.0, terminator * 0.8);
+      aridity = mix(aridity, 0.0, terminator); // fully wet at terminator — green vegetation
 
       // Anti-stellar (cold): water with icebergs → solid ice
       float antiStellar = smoothstep(u_eyeIceEdge + 0.1, u_eyeIceEdge - 0.25, eyeballSunAngle);
@@ -906,6 +906,12 @@ const terrestrialFragment = `
     }
 
     float moisture = (u_lod > 0.5) ? cloudNoise(p * 0.5 + vec3(33.0), 1.0) : noise3d(p * 0.5 + vec3(33.0));
+    // Eyeball: boost moisture at terminator to ensure green biome
+    if (u_tidallyLocked > 0.5) {
+      float termMoisture = (1.0 - smoothstep(u_eyeAridEdge - 0.15, u_eyeAridEdge + 0.2, eyeballSunAngle))
+                         * (1.0 - smoothstep(u_eyeIceEdge + 0.1, u_eyeIceEdge - 0.2, eyeballSunAngle));
+      moisture = mix(moisture, 0.7 + moisture * 0.3, termMoisture); // push moisture high at terminator
+    }
     float mountainRidge = (u_lod > 0.5) ? ridgedNoise(p, 2.0) : 0.0;
     float microNoise = noise3d(p * 4.0);
     float warpNoise = noise3d(p * 3.0 + vec3(77.0));
