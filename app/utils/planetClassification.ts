@@ -228,7 +228,7 @@ export function classifyPlanet(input: ClassificationInput): ShaderParams {
     else type = PlanetType.COLD_GIANT;
   }
 
-  return getShaderParams(type, tEq, input.name || "planet", starTemp || 5500, massJupiter, radiusJupiter, input.hzRanges, sEff);
+  return getShaderParams(type, tEq, input.name || "planet", starTemp || 5500, massJupiter, radiusJupiter, input.hzRanges, sEff, tidallyLocked);
 }
 
 export interface HzRanges {
@@ -240,7 +240,7 @@ export interface HzRanges {
   continentFreq?: [number, number];
 }
 
-function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: number, massJup: number = 0, radiusJup: number = 0, hzRanges?: HzRanges, sEff: number = 1.0): ShaderParams {
+function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: number, massJup: number = 0, radiusJup: number = 0, hzRanges?: HzRanges, sEff: number = 1.0, tidallyLocked: boolean = false): ShaderParams {
   const base: ShaderParams = {
     type,
     color1: new THREE.Color(0.5, 0.5, 0.5),
