@@ -1357,11 +1357,13 @@ const cloudFragmentShader = `
     // ── Combine ──
     float clouds = cumulus * 0.55 + fronts * 0.2 + convective;
 
-    // ITCZ: tropical convergence band
-    clouds += smoothstep(0.15, 0.0, absLat) * 0.1;
+    // ITCZ: tropical convergence band (narrow, scaled by bands control)
+    float itczWidth = 0.08 / max(u_cloudBands * 0.5, 0.5);
+    clouds += smoothstep(itczWidth, 0.0, absLat) * 0.06;
 
-    // Hadley cell banding
-    clouds += sin(absLat * u_cloudBands * 6.0 + w1 * 2.5) * 0.06;
+    // Hadley cell banding (strength scaled by bands control)
+    float bandStr = 0.04 * min(u_cloudBands / 5.0, 1.0);
+    clouds += sin(absLat * u_cloudBands * 6.0 + w1 * 2.5) * bandStr;
 
     // Cirrus wisps on top
     clouds = max(clouds, cirrus);
