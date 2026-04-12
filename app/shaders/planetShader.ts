@@ -118,11 +118,12 @@ const terrestrialVertexShader = `
 
   // ── Vertex noise: exact mirrors of fragment hi* functions ──
 
-  // Cloud noise: 6-octave sin-modulated — matches fragment hiCloud
+  // Cloud noise: 4-octave for vertex (displacement doesn't need fine detail)
+  // Same algorithm as fragment hiCloud but fewer octaves — shapes match, less detail
   float vCloud(vec3 pos, float frq, float sd) {
     float n = 0.0, amp = 0.5;
     vec3 p = pos * frq + vec3(sd);
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 4; i++) {
       float s = pnoise3d(p);
       s = sin(s * 5.0) * 0.5 + 0.5;
       n += s * amp;
@@ -132,11 +133,11 @@ const terrestrialVertexShader = `
     return clamp(n, 0.0, 1.0);
   }
 
-  // Ridged: 6-octave ridge-folded — matches fragment hiRidged
+  // Ridged: 4-octave for vertex displacement
   float vRidged(vec3 pos, float frq, float sd) {
     float n = 0.0, amp = 0.5;
     vec3 p = pos * frq + vec3(sd);
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 4; i++) {
       float s = pnoise3d(p);
       s = 2.0 * (0.5 - abs(0.5 - s));
       n += s * amp;
@@ -196,29 +197,9 @@ const terrestrialVertexShader = `
         height = computeHeight(dir);
       }
       displacedPos = position + normal * height * u_displace;
-
-      if (u_useTextureMaps > 0.5) {
-        // Normal from pre-baked normal map (tangent-space → object-space)
-        vec2 uv = dirToUV(dir);
-        vec3 texNormal = texture2D(u_normalMap, uv).rgb * 2.0 - 1.0;
-        // Convert tangent-space normal to object-space using sphere tangent frame
-        vec3 up = abs(dir.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
-        vec3 tangent = normalize(cross(up, dir));
-        vec3 bitangent = cross(dir, tangent);
-        displacedNormal = normalize(tangent * texNormal.x + bitangent * texNormal.y + dir * texNormal.z);
-      } else {
-        // Forward-difference normal: 2 neighbors (3 total height calls)
-        vec3 up = abs(dir.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
-        vec3 tangent = normalize(cross(up, dir));
-        vec3 bitangent = cross(dir, tangent);
-        float eps = 0.003;
-        float r = length(position);
-        vec3 pT = normalize(dir + tangent * eps);
-        vec3 pB = normalize(dir + bitangent * eps);
-        vec3 posT = pT * r + pT * computeHeight(pT) * u_displace;
-        vec3 posB = pB * r + pB * computeHeight(pB) * u_displace;
-        displacedNormal = normalize(cross(posT - displacedPos, posB - displacedPos));
-      }
+      // Use sphere normal — fragment shader computes detailed bump normals
+      // This saves 2× computeHeight calls (was 3× total, now 1×)
+      displacedNormal = normal;
       vPosition = normalize(displacedPos);
     } else {
       vPosition = dir;
