@@ -978,23 +978,21 @@ const terrestrialFragment = `
     surfaceColor = mix(surfaceColor, iceColor, iceCap);
 
     // ── Cloud shadows on surface ──
-    // Simplified cloud density at the surface point — matches cloud shader pattern
-    // Uses the same seed offset and coverage threshold as the cloud sphere
+    // Uses the noiseLib cloudNoise (same as cloud shader's base pattern) for matching shadows
     if (u_lod > 0.5 && u_cloudOpacity > 0.01) {
-      vec3 cloudSampleP = (baseDir + u_seed * 50.0) * 2.0;
-      // Simplified weather warp (matches cloud shader weatherP)
-      float cwx = pnoise3d(cloudSampleP * 0.3 + vec3(11.0));
-      float cwz = pnoise3d(cloudSampleP * 0.3 + vec3(47.0));
-      cloudSampleP += vec3(cwx - 0.5, 0.0, cwz - 0.5) * u_cloudWarp * 3.0;
-      // Simplified cumulus density (2-octave approximation of cloud shader)
-      float shadowDensity = pnoise3d(cloudSampleP * 1.2 + u_seed * 30.0);
-      shadowDensity += pnoise3d(cloudSampleP * 2.4 + vec3(31.7, 17.3, 53.1) + u_seed * 30.0) * 0.5;
-      shadowDensity *= 0.67; // normalize
-      shadowDensity = smoothstep(u_cloudCoverage, u_cloudCoverage + 0.15, shadowDensity);
-      // Darken surface under clouds — modulated by sun-facing and cloud opacity
+      vec3 csP = (baseDir + u_seed * 50.0) * 2.0;
+      // Weather warp (matches cloud shader)
+      float cwx = pnoise3d(csP * 0.3 + vec3(11.0));
+      float cwz = pnoise3d(csP * 0.3 + vec3(47.0));
+      csP += vec3(cwx - 0.5, 0.0, cwz - 0.5) * u_cloudWarp * 3.0;
+      // Cloud density using same cloudNoise as noiseLib (sin-modulated, 4 octaves)
+      float csDensity = cloudNoise(csP + vec3(u_time * 0.001 * 0.08), 1.2);
+      float csFronts = ridgedNoise(csP * 0.7, 1.5) * 0.2;
+      float csCloud = csDensity * 0.55 + csFronts;
+      csCloud = smoothstep(u_cloudCoverage, u_cloudCoverage + 0.15, csCloud);
+      // Strong shadow: up to 40% darkening on sunlit side
       float sunFacing = max(dot(vWorldNormal, u_sunDirection), 0.0);
-      float cloudShadow = 1.0 - shadowDensity * u_cloudOpacity * sunFacing * 0.6;
-      surfaceColor *= cloudShadow;
+      surfaceColor *= 1.0 - csCloud * sunFacing * 0.4;
     }
 
     // Lighting with bump normal (land only; ocean is smooth)
