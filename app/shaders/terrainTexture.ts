@@ -1,63 +1,35 @@
 import * as THREE from "three";
 
-// ── JS Perlin noise (matches GLSL cnoise from perlinNoise3D) ──
+// ── Fast 3D hash noise (matches GLSL noise3d output range [0,1]) ──
+// Uses the same hash function as the GLSL shader for identical output.
+// Much faster than full Perlin — no permute/taylorInvSqrt overhead.
 
-function mod289(x: number): number {
-  return x - Math.floor(x * (1.0 / 289.0)) * 289.0;
+function hash3(x: number, y: number, z: number): number {
+  return ((Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453123) % 1 + 1) % 1;
 }
 
-function permute(x: number): number {
-  return mod289(((x * 34.0) + 10.0) * x);
+function noise3d(x: number, y: number, z: number): number {
+  const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
+  const fx = x - ix, fy = y - iy, fz = z - iz;
+  const ux = fx * fx * (3 - 2 * fx);
+  const uy = fy * fy * (3 - 2 * fy);
+  const uz = fz * fz * (3 - 2 * fz);
+
+  const h = hash3;
+  const a = h(ix, iy, iz), b = h(ix + 1, iy, iz);
+  const c = h(ix, iy + 1, iz), d = h(ix + 1, iy + 1, iz);
+  const e = h(ix, iy, iz + 1), f = h(ix + 1, iy, iz + 1);
+  const g = h(ix, iy + 1, iz + 1), i = h(ix + 1, iy + 1, iz + 1);
+
+  const x1 = a + (b - a) * ux, x2 = c + (d - c) * ux;
+  const x3 = e + (f - e) * ux, x4 = g + (i - g) * ux;
+  const y1 = x1 + (x2 - x1) * uy, y2 = x3 + (x4 - x3) * uy;
+  return y1 + (y2 - y1) * uz;
 }
 
-function fade(t: number): number {
-  return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
-}
-
-function lerp(a: number, b: number, t: number): number {
-  return a + t * (b - a);
-}
-
-function grad3(hash: number, x: number, y: number, z: number): number {
-  const h = hash & 15;
-  const u = h < 8 ? x : y;
-  const v = h < 4 ? y : (h === 12 || h === 14 ? x : z);
-  return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
-}
-
-// Classic 3D Perlin noise [-1,1] → pnoise3d returns [0,1]
-function cnoise(x: number, y: number, z: number): number {
-  const X = Math.floor(x) & 255;
-  const Y = Math.floor(y) & 255;
-  const Z = Math.floor(z) & 255;
-  x -= Math.floor(x);
-  y -= Math.floor(y);
-  z -= Math.floor(z);
-  const u = fade(x);
-  const v = fade(y);
-  const w = fade(z);
-
-  const p = (i: number) => permute(i % 289);
-  const A = p(X) + Y, AA = p(A) + Z, AB = p(A + 1) + Z;
-  const B = p(X + 1) + Y, BA = p(B) + Z, BB = p(B + 1) + Z;
-
-  return lerp(
-    lerp(
-      lerp(grad3(p(AA) | 0, x, y, z), grad3(p(BA) | 0, x - 1, y, z), u),
-      lerp(grad3(p(AB) | 0, x, y - 1, z), grad3(p(BB) | 0, x - 1, y - 1, z), u),
-      v,
-    ),
-    lerp(
-      lerp(grad3(p(AA + 1) | 0, x, y, z - 1), grad3(p(BA + 1) | 0, x - 1, y, z - 1), u),
-      lerp(grad3(p(AB + 1) | 0, x, y - 1, z - 1), grad3(p(BB + 1) | 0, x - 1, y - 1, z - 1), u),
-      v,
-    ),
-    w,
-  ) * 2.2; // match GLSL scale
-}
-
+// Alias for API compatibility
 function pnoise3d(x: number, y: number, z: number): number {
-  return cnoise(x, y, z) * 0.5 + 0.5;
+  return noise3d(x, y, z);
 }
 
 // ── Noise functions matching GLSL hi* exactly ──

@@ -160,7 +160,7 @@ const Planet = ({ data, starData, starRef }) => {
           landContrast: params.landContrast,
           warpIntensity: 0.5,
           seaLevel: params.seaLevel,
-        }, 1024); // 1024x512 equirectangular
+        }, 512); // 512x256 equirectangular
         shader.uniforms.u_heightMap.value = terrainMaps.heightMap;
         shader.uniforms.u_normalMap.value = terrainMaps.normalMap;
         shader.uniforms.u_useTextureMaps.value = 1.0;
