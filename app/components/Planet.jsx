@@ -527,7 +527,7 @@ const Planet = ({ data, starData, starRef }) => {
     }
     // Sync cloud sphere uniforms
     if (cloudMat) {
-      if (isActive) cloudMat.uniforms.u_time.value = elapsedTime;
+      // Cloud time frozen — pattern is static, sphere rotation provides movement
       cloudMat.uniforms.u_lod.value = 1.0; // always full detail — cloud sphere only exists for temperate/water
       if (shaderMaterial.uniforms.u_sunDirection) {
         cloudMat.uniforms.u_sunDirection.value.copy(shaderMaterial.uniforms.u_sunDirection.value);
