@@ -150,24 +150,9 @@ const Planet = ({ data, starData, starRef }) => {
     });
     const shader = createPlanetMaterial(params);
     const cloudMat = createCloudMaterial(params);
-    // Pre-bake terrain textures for terrestrial planets (eliminates per-frame procedural noise)
-    if (params.type === PlanetType.TEMPERATE || params.type === PlanetType.WATER_WORLD) {
-      try {
-        const terrainMaps = bakeTerrainMaps(params.seed, {
-          noiseScale: params.noiseScale,
-          continentFreq: params.continentFreq,
-          coastDetail: params.coastDetail,
-          landContrast: params.landContrast,
-          warpIntensity: 0.5,
-          seaLevel: params.seaLevel,
-        }, 768); // 768x384 equirectangular
-        shader.uniforms.u_heightMap.value = terrainMaps.heightMap;
-        shader.uniforms.u_normalMap.value = terrainMaps.normalMap;
-        shader.uniforms.u_useTextureMaps.value = 1.0;
-      } catch (e) {
-        console.warn('Terrain bake failed, using procedural:', e);
-      }
-    }
+    // Pre-baked terrain textures: disabled for now — JS noise doesn't match
+    // GLSL Perlin, causing mismatched height/biome. Future: GPU render-to-texture
+    // to bake using the actual GLSL shader for identical output.
     // Atmosphere: use HZ-gradient params from classifier when available, fall back to type defaults
     const ap = getAtmosphereParams(params.type, starData?.temperature || 5500);
     const atmosDayCol = params.atmosDayColor || ap?.dayColor || new THREE.Color(0x00aaff);
