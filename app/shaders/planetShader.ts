@@ -1254,46 +1254,77 @@ const cloudFragmentShader = `
 
   void main() {
     vec3 p = vPosition + u_seed * 50.0;
-    vec3 cloudBase = p * 4.0;
-    float t = u_time * 0.002;
-
-    // Latitude-aware wind
+    float t = u_time * 0.001;
     float signedLat = vPosition.y;
     float absLat = abs(signedLat);
-    float windSpeed = (1.0 - absLat * 0.6);
 
-    // Coriolis swirl per hemisphere
-    float equatorNoise = noise3d(cloudBase * 0.8 + vec3(17.0)) * 0.15;
-    float hemisphereBlend = smoothstep(-0.12 + equatorNoise, 0.12 + equatorNoise, signedLat);
-    float coriolisSign = mix(-1.0, 1.0, hemisphereBlend);
-    float coriolisStrength = smoothstep(0.0, 0.5, absLat + equatorNoise * 0.5);
-    float swirlAngle = coriolisSign * coriolisStrength * u_cloudSwirl + t * windSpeed * 0.15;
-    float cs = cos(swirlAngle * 0.08);
-    float sn = sin(swirlAngle * 0.08);
-    cloudBase.xz = mat2(cs, -sn, sn, cs) * cloudBase.xz;
+    // ── Weather system: large-scale pressure cells ──
+    vec3 weatherP = p * 2.0;
+    float warpX = noise3d(weatherP * 0.3 + vec3(11.0));
+    float warpZ = noise3d(weatherP * 0.3 + vec3(47.0));
+    weatherP += vec3(warpX, 0.0, warpZ) * u_cloudWarp * 2.0;
 
-    // Domain warp for organic shapes
-    float warp1 = cloudNoise(cloudBase * 0.4, 1.2);
-    float warp2 = noise3d(cloudBase * 0.6 + vec3(43.0));
-    vec3 warpedP = cloudBase + vec3(warp1 * u_cloudWarp + warp2 * (u_cloudWarp * 0.4), t * 0.4, warp1 * (u_cloudWarp * 0.7));
+    // ── Coriolis: cyclonic rotation per hemisphere ──
+    float equatorNoise = noise3d(p * 3.0 + vec3(17.0)) * 0.1;
+    float coriolisSign = mix(-1.0, 1.0, smoothstep(-0.1 + equatorNoise, 0.1 + equatorNoise, signedLat));
+    float coriolisStrength = smoothstep(0.0, 0.4, absLat);
+    float windSpeed = 1.0 - absLat * 0.5;
+    float weatherCell = cloudNoise(weatherP, 0.4);
+    float swirlAngle = coriolisSign * coriolisStrength * u_cloudSwirl * (0.5 + weatherCell)
+                     + t * windSpeed * 0.3;
+    float cs = cos(swirlAngle * 0.15);
+    float sn = sin(swirlAngle * 0.15);
+    vec3 cloudP = weatherP;
+    cloudP.xz = mat2(cs, -sn, sn, cs) * cloudP.xz;
 
-    // Streaky wispy clouds
-    float c1 = cloudNoise_lod(warpedP + vec3(t * 0.15), 1.2);
-    float c2 = cloudNoise_lod(warpedP * 0.6 + vec3(t * 0.08, 20.0, 0.0), 0.8);
-    float clouds = c1 * 0.6 + c2 * 0.4;
+    // ── Layer 1: Cumulus masses (domain-warped, low freq) ──
+    float w1 = cloudNoise(cloudP * 0.3, 0.8);
+    float w2 = noise3d(cloudP * 0.5 + vec3(43.0));
+    vec3 warpedP = cloudP + vec3(w1 * u_cloudWarp, t * 0.2, w2 * u_cloudWarp * 0.6);
+    float cumulus = cloudNoise_lod(warpedP + vec3(t * 0.08), 1.0);
 
-    // Soft band structure
-    float bands = sin(vPosition.y * u_cloudBands + warp1 * 1.5) * 0.06 + 0.5;
-    clouds *= bands;
-    clouds = smoothstep(u_cloudCoverage, u_cloudCoverage + 0.3, clouds);
+    // ── Layer 2: Cirrus wisps (high freq, stretched along latitude) ──
+    vec3 cirrusP = p * 6.0 + vec3(t * 0.15, 0.0, t * 0.1);
+    cirrusP.y *= 0.35; // elongate along longitude
+    float cirrus = noise3d(cirrusP) * 0.65 + noise3d(cirrusP * 2.1 + vec3(23.0)) * 0.35;
+    cirrus = smoothstep(0.52, 0.72, cirrus);
 
-    // Lighting — only affects colour, not alpha
-    // Old integrated shader mixed clouds onto surface BEFORE lighting,
-    // so clouds were visible everywhere. Separate sphere must keep alpha
-    // independent of lighting to match that look.
+    // ── Layer 3: Convective puffs (small scale) ──
+    float convective = cloudNoise_lod(warpedP * 2.5 + vec3(t * 0.12, 71.0, 0.0), 2.0);
+
+    // ── Combine ──
+    float clouds = cumulus * 0.6 + convective * 0.2;
+
+    // ITCZ: tropical convergence band
+    float itcz = smoothstep(0.15, 0.0, absLat) * 0.12;
+    clouds += itcz;
+
+    // Hadley cell banding
+    float hadley = sin(absLat * u_cloudBands * 6.0 + w1 * 2.0) * 0.07;
+    clouds += hadley;
+
+    // Add cirrus on top
+    clouds = max(clouds, cirrus * 0.35);
+
+    // Coverage threshold
+    clouds = smoothstep(u_cloudCoverage, u_cloudCoverage + 0.18, clouds);
+
+    // ── Edge erosion: ragged boundaries ──
+    float edgeNoise = noise3d(p * 14.0 + vec3(t * 0.04));
+    float edgeMask = smoothstep(0.0, 0.25, clouds) * smoothstep(0.35, 0.08, clouds);
+    clouds -= edgeMask * edgeNoise * 0.35;
+    clouds = max(clouds, 0.0);
+
+    // ── Polar clearing: fewer clouds near poles ──
+    clouds *= smoothstep(0.95, 0.75, absLat);
+
+    // ── Lighting ──
     float diff = max(dot(vWorldNormal, u_sunDirection), 0.0) * 0.8 + 0.2;
+    float selfShadow = 1.0 - clouds * 0.12;
+    vec3 warmCloud = vec3(0.97, 0.96, 0.93);
+    vec3 coolCloud = vec3(0.88, 0.90, 0.95);
+    vec3 cloudColor = mix(coolCloud, warmCloud, diff) * diff * selfShadow;
 
-    vec3 cloudColor = vec3(0.92, 0.93, 0.96) * diff;
     float alpha = clouds * u_cloudOpacity;
     if (alpha < 0.01) discard;
     gl_FragColor = vec4(cloudColor, alpha);
