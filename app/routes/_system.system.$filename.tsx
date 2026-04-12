@@ -1,5 +1,5 @@
 import { useLoaderData } from "react-router";
-import { useEffect, useContext, useState, useMemo } from "react";
+import React, { useEffect, useContext, useState, useMemo, useRef, useCallback } from "react";
 import { RefContext, RefProvider } from "~/components/RefContext";
 import { EnvContext, EnvProvider } from "~/components/EnvContext";
 import Binary from "~/components/Binary";
