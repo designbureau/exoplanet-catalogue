@@ -109,7 +109,7 @@ const Planet = ({ data, starData, starRef }) => {
   const cloudRef = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, spriteGlowInner, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, terrCoastDetail, terrLandContrast, terrDisplaceScale, terrBumpStrength, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, wrapRange, wrapPower, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, showOrbits, hzPresets } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, spriteGlowInner, cloudCoverage, cloudOpacity, cloudSwirl, cloudBands, cloudWarp, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, terrCoastDetail, terrLandContrast, terrDisplaceScale, terrBumpStrength, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, wrapRange, wrapPower, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, showOrbits, hzPresets } = useContext(EnvContext);
 
   // Pre-allocated vectors for per-frame camera updates
   const _camRight = useMemo(() => new THREE.Vector3(), []);
@@ -410,10 +410,9 @@ const Planet = ({ data, starData, starRef }) => {
     if (u.u_cloudCoverage && !hasHzGradient) {
       u.u_cloudCoverage.value = cloudCoverage;
       u.u_cloudOpacity.value = cloudOpacity;
-      // Non-HZ planets use Earth defaults for cloud shape
-      if (u.u_cloudSwirl) u.u_cloudSwirl.value = 0.8;
-      if (u.u_cloudBands) u.u_cloudBands.value = 5.0;
-      if (u.u_cloudWarp) u.u_cloudWarp.value = 0.35;
+      if (u.u_cloudSwirl) u.u_cloudSwirl.value = cloudSwirl;
+      if (u.u_cloudBands) u.u_cloudBands.value = cloudBands;
+      if (u.u_cloudWarp) u.u_cloudWarp.value = cloudWarp;
     }
     if (u.u_gasWarp) {
       const isIce = planetType === "ICE_GIANT" || planetType === "VENUS_LIKE" || planetType === "WATER_WORLD" || planetType === "SUB_NEPTUNE";
@@ -466,7 +465,7 @@ const Planet = ({ data, starData, starRef }) => {
     }
     if (atmosMat?.uniforms.uShellFalloff) atmosMat.uniforms.uShellFalloff.value = glowFalloff;
     if (atmosMat?.uniforms.uShellInner) atmosMat.uniforms.uShellInner.value = glowInner;
-  }, [rimIntensity, atmosFalloff, glowFalloff, glowInner, cloudCoverage, cloudOpacity,
+  }, [rimIntensity, atmosFalloff, glowFalloff, glowInner, cloudCoverage, cloudOpacity, cloudSwirl, cloudBands, cloudWarp,
       gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise,
       iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise,
       terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, terrCoastDetail, terrLandContrast, terrBumpStrength,

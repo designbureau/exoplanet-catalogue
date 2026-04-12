@@ -43,6 +43,9 @@ export const EnvProvider = ({ children }) => {
   const [spriteGlowInner, setSpriteGlowInner] = useState(0.0); // halo inner cutout (global)
   const [cloudCoverage, setCloudCoverage] = useState(0.35);
   const [cloudOpacity, setCloudOpacity] = useState(0.6);
+  const [cloudSwirl, setCloudSwirl] = useState(0.8);
+  const [cloudBands, setCloudBands] = useState(5.0);
+  const [cloudWarp, setCloudWarp] = useState(0.35);
 
   // Gas giant controls
   const [gasSwirl, setGasSwirl] = useState(0.25);
@@ -152,10 +155,11 @@ export const EnvProvider = ({ children }) => {
       glowHueShift, setGlowHueShift,
       glowSaturation, setGlowSaturation,
       spriteGlowInner, setSpriteGlowInner,
-      cloudCoverage,
-      setCloudCoverage,
-      cloudOpacity,
-      setCloudOpacity,
+      cloudCoverage, setCloudCoverage,
+      cloudOpacity, setCloudOpacity,
+      cloudSwirl, setCloudSwirl,
+      cloudBands, setCloudBands,
+      cloudWarp, setCloudWarp,
       gasSwirl, setGasSwirl,
       gasWarp, setGasWarp,
       gasStorm, setGasStorm,

@@ -84,13 +84,24 @@ function getPrimaryStarTemp(data: any): number {
 }
 
 function Slider({ label, min, max, step, value, onChange, suffix = "" }: { label: string; min: number; max: number; step: number; value: number; onChange: (v: number) => void; suffix?: string }) {
+  const localRef = React.useRef(value);
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [display, setDisplay] = React.useState(value);
+  React.useEffect(() => { localRef.current = value; setDisplay(value); }, [value]);
+  const handleChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = parseFloat(e.target.value);
+    localRef.current = v;
+    setDisplay(v);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => onChange(v), 32);
+  }, [onChange]);
   return (
     <div className="flex items-center gap-1.5">
       <label className="w-14 shrink-0">{label}</label>
-      <input type="range" min={min} max={max} step={step} value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
+      <input type="range" min={min} max={max} step={step} value={display}
+        onChange={handleChange}
         className="flex-1 min-w-0 accent-cyan-400" />
-      <span className="w-10 tabular-nums text-right shrink-0">{typeof value === 'number' ? (Number.isInteger(step) ? value : value.toFixed(Math.max(2, -Math.floor(Math.log10(step))))) : value}{suffix}</span>
+      <span className="w-10 tabular-nums text-right shrink-0">{typeof display === 'number' ? (Number.isInteger(step) ? display : display.toFixed(Math.max(2, -Math.floor(Math.log10(step))))) : display}{suffix}</span>
     </div>
   );
 }
@@ -276,6 +287,9 @@ const App = ({ data }: any) => {
     spriteGlowInner, setSpriteGlowInner,
     cloudCoverage: ctxCloudCoverage, setCloudCoverage: ctxSetCloudCoverage,
     cloudOpacity: ctxCloudOpacity, setCloudOpacity: ctxSetCloudOpacity,
+    cloudSwirl, setCloudSwirl,
+    cloudBands, setCloudBands,
+    cloudWarp, setCloudWarp,
     hzPresets, updatePreset,
   } = useContext(EnvContext);
 
@@ -705,8 +719,13 @@ const App = ({ data }: any) => {
             <Slider label="Ice Cap" min={0.6} max={0.98} step={0.01} value={terrIceCapSize} onChange={setTerrIceCapSize} />
             <Slider label="Displace" min={0.002} max={0.04} step={0.002} value={terrDisplaceScale} onChange={setTerrDisplaceScale} />
             <Slider label="Normal" min={0.05} max={1.5} step={0.05} value={terrBumpStrength} onChange={setTerrBumpStrength} />
-            <Slider label="Clouds" min={0.1} max={0.7} step={0.01} value={cloudCoverage} onChange={setCloudCoverage} />
-            <Slider label="Cld Opacity" min={0} max={1} step={0.05} value={cloudOpacity} onChange={setCloudOpacity} />
+            <div className="border-t border-white/10 my-0.5" />
+            <div className="text-[9px] text-muted-foreground/60 mt-1 mb-0.5">Clouds (non-HZ)</div>
+            <Slider label="Coverage" min={0.1} max={0.7} step={0.01} value={cloudCoverage} onChange={setCloudCoverage} />
+            <Slider label="Opacity" min={0} max={1} step={0.05} value={cloudOpacity} onChange={setCloudOpacity} />
+            <Slider label="Swirl" min={0} max={3} step={0.05} value={cloudSwirl} onChange={setCloudSwirl} />
+            <Slider label="Bands" min={1} max={12} step={0.5} value={cloudBands} onChange={setCloudBands} />
+            <Slider label="Warp" min={0} max={2} step={0.05} value={cloudWarp} onChange={setCloudWarp} />
           </Accordion>
         </Accordion>
 
