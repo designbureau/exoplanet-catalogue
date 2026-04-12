@@ -77,6 +77,11 @@ export const EnvProvider = ({ children }) => {
   const [terrDisplaceScale, setTerrDisplaceScale] = useState(0.008);
   const [terrBumpStrength, setTerrBumpStrength] = useState(0.6);
 
+  // Eyeball planet controls
+  const [eyeAridEdge, setEyeAridEdge] = useState(0.3);
+  const [eyeIceEdge, setEyeIceEdge] = useState(-0.15);
+  const [eyeIceBergDensity, setEyeIceBergDensity] = useState(0.5);
+
   // HZ terrestrial presets: 3 categories interpolated by hz position
   const [hzPresets, setHzPresets] = useState({
     mars:  { atmos: 0.0, cloudCover: 0.70, cloudOpacity: 0.15, cloudSwirl: 1.2, cloudBands: 3.0, cloudWarp: 0.2, seaLevel: 0.33, iceCap: 1.0, iceEdge: 0.025, iceWarp: 0.75, iceDetail: 0.9, continentFreq: 0.19, warp: 0.3, ridgeFreq: 0.4, ridgeMix: 1.2, bump: 0.5, displace: 0.008, rim: 0.05, rimFalloff: 1.7, rimDay: '#a06040', rimTwi: '#805030', shell: 0.0, halo: 0.25, haloScale: 1.5, haloFalloff: 3.1, haloWhiten: 0.35, haloShadow: 0.7 },
@@ -179,6 +184,9 @@ export const EnvProvider = ({ children }) => {
       terrLandContrast, setTerrLandContrast,
       terrDisplaceScale, setTerrDisplaceScale,
       terrBumpStrength, setTerrBumpStrength,
+      eyeAridEdge, setEyeAridEdge,
+      eyeIceEdge, setEyeIceEdge,
+      eyeIceBergDensity, setEyeIceBergDensity,
       lavaWarp, setLavaWarp,
       lavaGlow, setLavaGlow,
       lavaHeightOffset, setLavaHeightOffset,

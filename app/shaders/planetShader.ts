@@ -767,6 +767,9 @@ const terrestrialFragment = `
   uniform float u_displace;
   uniform float u_bumpStrength;
   uniform float u_tidallyLocked;
+  uniform float u_eyeAridEdge;    // sun angle where arid→terminator transition starts
+  uniform float u_eyeIceEdge;     // sun angle where terminator→ice transition starts
+  uniform float u_eyeIceBergDensity; // iceberg frequency in transition zone
   uniform float u_useTextureMaps;
   uniform sampler2D u_heightMap;
   uniform sampler2D u_normalMap;
@@ -844,7 +847,7 @@ const terrestrialFragment = `
     float effectiveSeaLevel = seaLevel;
     if (u_tidallyLocked > 0.5) {
       // No water on hot sub-stellar side
-      float subStellarDry = smoothstep(0.15, 0.5, eyeballSunAnglePre);
+      float subStellarDry = smoothstep(u_eyeAridEdge - 0.15, u_eyeAridEdge + 0.2, eyeballSunAnglePre);
       effectiveSeaLevel = mix(seaLevel, 0.0, subStellarDry);
     }
     float isLand = smoothstep(effectiveSeaLevel - 0.008, effectiveSeaLevel + 0.008, continent);
@@ -887,20 +890,19 @@ const terrestrialFragment = `
     if (u_tidallyLocked > 0.5) {
       eyeballSunAngle = dot(baseDir, u_sunDirection); // 1=sub-stellar, 0=terminator, -1=anti-stellar
 
-      // Sub-stellar (hot): fully arid, no water — push sea level above all terrain
-      float subStellar = smoothstep(0.15, 0.5, eyeballSunAngle);
+      // Sub-stellar (hot): fully arid, no water
+      float subStellar = smoothstep(u_eyeAridEdge - 0.15, u_eyeAridEdge + 0.2, eyeballSunAngle);
       aridity = mix(aridity, 1.0, subStellar);
-      eyeSeaLevel = mix(seaLevel, 0.0, subStellar); // no ocean on hot side
+      eyeSeaLevel = mix(seaLevel, 0.0, subStellar);
 
       // Terminator ring: wet, habitable, water bodies
-      float terminator = (1.0 - smoothstep(0.15, 0.5, eyeballSunAngle))
-                       * (1.0 - smoothstep(-0.1, -0.35, eyeballSunAngle));
+      float terminator = (1.0 - smoothstep(u_eyeAridEdge - 0.15, u_eyeAridEdge + 0.2, eyeballSunAngle))
+                       * (1.0 - smoothstep(u_eyeIceEdge + 0.1, u_eyeIceEdge - 0.2, eyeballSunAngle));
       aridity = mix(aridity, 0.0, terminator * 0.8);
 
-      // Anti-stellar (cold): water exists but partially frozen — icebergs
-      // Sea level stays normal so water is present, ice cap handles the rest
-      float antiStellar = smoothstep(-0.1, -0.4, eyeballSunAngle);
-      aridity = mix(aridity, 0.2, antiStellar); // slightly arid (frozen desert-ish)
+      // Anti-stellar (cold): water with icebergs → solid ice
+      float antiStellar = smoothstep(u_eyeIceEdge + 0.1, u_eyeIceEdge - 0.25, eyeballSunAngle);
+      aridity = mix(aridity, 0.2, antiStellar);
     }
 
     float moisture = (u_lod > 0.5) ? cloudNoise(p * 0.5 + vec3(33.0), 1.0) : noise3d(p * 0.5 + vec3(33.0));
@@ -1012,15 +1014,14 @@ const terrestrialFragment = `
       float antiStellar = -dot(baseDir, u_sunDirection); // 1=anti-stellar, -1=sub-stellar
 
       // Solid ice: deep into night side
-      float solidIceStart = 0.15;
+      float solidIceStart = -u_eyeIceEdge + 0.15;
       iceCap = smoothstep(solidIceStart, solidIceStart + 0.15, antiStellar + iceNoise * 0.8);
 
       // Icebergs/sea ice: scattered ice fragments in water near terminator
-      // Use high-freq noise for individual iceberg shapes
-      float icebergNoise = noise3d(warpedIceP * 3.5 + vec3(37.0)) * 0.6
-                         + noise3d(warpedIceP * 7.0 + vec3(83.0)) * 0.3;
-      float icebergZone = smoothstep(-0.05, 0.15, antiStellar); // zone where icebergs exist
-      float icebergThreshold = mix(0.7, 0.3, smoothstep(0.0, solidIceStart, antiStellar)); // more icebergs deeper in
+      float icebergNoise = noise3d(warpedIceP * (3.0 + u_eyeIceBergDensity * 4.0) + vec3(37.0)) * 0.6
+                         + noise3d(warpedIceP * (6.0 + u_eyeIceBergDensity * 6.0) + vec3(83.0)) * 0.3;
+      float icebergZone = smoothstep(-0.05, solidIceStart * 0.7, antiStellar);
+      float icebergThreshold = mix(0.75, 0.25, smoothstep(0.0, solidIceStart, antiStellar)) - u_eyeIceBergDensity * 0.15;
       float icebergs = smoothstep(icebergThreshold, icebergThreshold + 0.1, icebergNoise) * icebergZone;
       // Icebergs only in water, not on land
       icebergs *= (1.0 - isLand) * (1.0 - iceCap);
@@ -1317,6 +1318,9 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_vertLOD: { value: 0 },
       u_bumpStrength: { value: params.bumpStrength ?? 0.6 },
       u_tidallyLocked: { value: params.tidallyLocked ? 1.0 : 0.0 },
+      u_eyeAridEdge: { value: 0.3 },
+      u_eyeIceEdge: { value: -0.15 },
+      u_eyeIceBergDensity: { value: 0.5 },
       u_useTextureMaps: { value: 0 },
       u_heightMap: { value: null },
       u_normalMap: { value: null },

@@ -340,6 +340,9 @@ const App = ({ data }: any) => {
     terrLandContrast, setTerrLandContrast,
     terrDisplaceScale, setTerrDisplaceScale,
     terrBumpStrength, setTerrBumpStrength,
+    eyeAridEdge, setEyeAridEdge,
+    eyeIceEdge, setEyeIceEdge,
+    eyeIceBergDensity, setEyeIceBergDensity,
     lavaWarp, setLavaWarp,
     lavaGlow, setLavaGlow,
     lavaHeightOffset, setLavaHeightOffset,
@@ -727,6 +730,12 @@ const App = ({ data }: any) => {
             <Slider label="Bands" min={1} max={12} step={0.5} value={cloudBands} onChange={setCloudBands} />
             <Slider label="Warp" min={0} max={2} step={0.05} value={cloudWarp} onChange={setCloudWarp} />
           </Accordion>
+        </Accordion>
+
+        <Accordion title="Eyeball (Tidally Locked)" defaultOpen={false}>
+          <Slider label="Arid Edge" min={0.0} max={0.7} step={0.05} value={eyeAridEdge} onChange={setEyeAridEdge} />
+          <Slider label="Ice Edge" min={-0.5} max={0.1} step={0.05} value={eyeIceEdge} onChange={setEyeIceEdge} />
+          <Slider label="Icebergs" min={0.0} max={1.0} step={0.05} value={eyeIceBergDensity} onChange={setEyeIceBergDensity} />
         </Accordion>
 
         <Accordion title="Sub-Neptune" defaultOpen={false}>

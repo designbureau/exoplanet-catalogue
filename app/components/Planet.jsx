@@ -110,7 +110,7 @@ const Planet = ({ data, starData, starRef }) => {
   const cloudRef = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, spriteGlowInner, cloudCoverage, cloudOpacity, cloudSwirl, cloudBands, cloudWarp, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, terrCoastDetail, terrLandContrast, terrDisplaceScale, terrBumpStrength, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, wrapRange, wrapPower, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, showOrbits, hzPresets } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, spriteGlowInner, cloudCoverage, cloudOpacity, cloudSwirl, cloudBands, cloudWarp, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, terrCoastDetail, terrLandContrast, terrDisplaceScale, terrBumpStrength, eyeAridEdge, eyeIceEdge, eyeIceBergDensity, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, wrapRange, wrapPower, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, showOrbits, hzPresets } = useContext(EnvContext);
 
   // Pre-allocated vectors for per-frame camera updates
   const _camRight = useMemo(() => new THREE.Vector3(), []);
@@ -439,6 +439,12 @@ const Planet = ({ data, starData, starRef }) => {
       u.u_coastDetail.value = terrCoastDetail;
       u.u_landContrast.value = terrLandContrast;
     }
+    // Eyeball planet controls
+    if (u.u_eyeAridEdge) {
+      u.u_eyeAridEdge.value = eyeAridEdge;
+      u.u_eyeIceEdge.value = eyeIceEdge;
+      u.u_eyeIceBergDensity.value = eyeIceBergDensity;
+    }
     if (u.u_craterScale) {
       u.u_craterScale.value = rockyCraterScale;
       u.u_ridgeStrength.value = rockyRidgeStrength;
@@ -473,7 +479,7 @@ const Planet = ({ data, starData, starRef }) => {
   }, [rimIntensity, atmosFalloff, glowFalloff, glowInner, cloudCoverage, cloudOpacity, cloudSwirl, cloudBands, cloudWarp,
       gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise,
       iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise,
-      terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, terrCoastDetail, terrLandContrast, terrBumpStrength,
+      terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, terrCoastDetail, terrLandContrast, terrBumpStrength, eyeAridEdge, eyeIceEdge, eyeIceBergDensity,
       rockyCraterScale, rockyRidgeStrength, rockyCraterDepth,
       lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale,
       shaderAmbient, lavaAmbient, wrapRange, wrapPower,
