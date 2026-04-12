@@ -193,7 +193,7 @@ export function bakeTerrainMaps(
       const dY = (b - t) / (2.0 * eps);
 
       // Normal from gradient (tangent-space)
-      const strength = 0.6; // matches u_bumpStrength default
+      const strength = 0.3; // gentler relief — adjustable via u_bumpStrength in shader
       const nx = -dX * strength;
       const ny = -dY * strength;
       const nz = 1.0;
