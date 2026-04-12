@@ -1382,14 +1382,17 @@ const cloudFragmentShader = `
     clouds *= smoothstep(0.95, 0.75, absLat);
 
     // ── Lighting ──
-    float diff = max(dot(vWorldNormal, u_sunDirection), 0.0) * 0.8 + 0.2;
+    float sunDot = dot(vWorldNormal, u_sunDirection);
+    float diff = max(sunDot, 0.0) * 0.8 + 0.2;
     float selfShadow = 1.0 - clouds * 0.15;
 
     vec3 warmCloud = vec3(0.98, 0.97, 0.94);
     vec3 coolCloud = vec3(0.85, 0.88, 0.95);
     vec3 cloudColor = mix(coolCloud, warmCloud, diff) * diff * selfShadow;
 
-    float alpha = clouds * u_cloudOpacity;
+    // Fade clouds into shadow on dark side — smooth terminator transition
+    float dayFade = smoothstep(-0.1, 0.15, sunDot);
+    float alpha = clouds * u_cloudOpacity * dayFade;
     if (alpha < 0.01) discard;
     gl_FragColor = vec4(cloudColor, alpha);
   }
