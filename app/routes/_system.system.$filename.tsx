@@ -243,7 +243,8 @@ export const loader = async ({ params, request }: any) => {
       try {
         const raw = fs.readFileSync(jsonPath, "utf-8");
         const data = JSON.parse(raw);
-        return data?.system || data;
+        const sys = Array.isArray(data?.system) ? data.system[0] : data?.system ?? data;
+        return sys;
       } catch { continue; }
     }
   } catch { /* fs unavailable */ }
@@ -253,7 +254,8 @@ export const loader = async ({ params, request }: any) => {
   const res = await fetch(`${origin}/data-json/${filename}.json`);
   if (!res.ok) throw new Response(`System not found: ${filename}`, { status: 404 });
   const data = await res.json();
-  return data?.system || data;
+  const sys = Array.isArray(data?.system) ? data.system[0] : data?.system ?? data;
+  return sys;
 };
 
 const Root = () => {
@@ -262,7 +264,7 @@ const Root = () => {
   return (
     <EnvProvider>
       <RefProvider>
-        <App data={data.system} />
+        <App data={data} />
       </RefProvider>
     </EnvProvider>
   );
