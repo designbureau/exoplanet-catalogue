@@ -400,9 +400,9 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
     const flareWidth = 0.005;      // original: 0.005
     const flareOpacity = 0.2;      // original: 0.2
 
-    const rGeoHigh = buildRaysGeometry(starRadius, 8000);
-    const rGeoLow = buildRaysGeometry(starRadius, 2000);
-    const rGeoVeryLow = buildRaysGeometry(starRadius, 500);
+    const rGeoHigh = buildRaysGeometry(starRadius, 12000);
+    const rGeoLow = buildRaysGeometry(starRadius, 4000);
+    const rGeoVeryLow = buildRaysGeometry(starRadius, 1000);
     const rGeo = rGeoHigh;
     const rMat = new THREE.ShaderMaterial({
       vertexShader: sunRaysVS,
@@ -551,8 +551,8 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
       // LOD: 3-tier ray geometry + distance-based visibility
       if (focused && raysRef.current) {
         const dist = _camPos.length();
-        const targetGeo = dist < starRadius * 6 ? raysGeoHigh
-                        : dist < starRadius * 20 ? raysGeoLow
+        const targetGeo = dist < starRadius * 4 ? raysGeoHigh
+                        : dist < starRadius * 10 ? raysGeoLow
                         : raysGeoVeryLow;
         if (raysRef.current.geometry !== targetGeo) raysRef.current.geometry = targetGeo;
       }
