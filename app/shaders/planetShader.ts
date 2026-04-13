@@ -1004,12 +1004,13 @@ const terrestrialFragment = `
 
     // Lowland — on arid planets, force toward arid tones
     vec3 lowWet = color2 * 1.1 + vec3(-0.005, 0.015, -0.005);
-    // Eyeball: force green vegetation at terminator regardless of star-type palette
+    // Eyeball: boost vegetation color at terminator — color adapts to star type
+    // (already set by star-type palette: color2 is the vegetation/lowland tone)
     if (u_tidallyLocked > 0.5) {
-      float termGreen = (1.0 - smoothstep(u_eyeAridEdge - 0.15, u_eyeAridEdge + 0.2, eyeballSunAngle))
-                      * (1.0 - smoothstep(u_eyeIceEdge + 0.1, u_eyeIceEdge - 0.2, eyeballSunAngle));
-      // Blend toward actual green — override red dwarf brown palettes
-      lowWet = mix(lowWet, vec3(0.08, 0.18, 0.04), termGreen * 0.7);
+      float termZone = (1.0 - smoothstep(u_eyeAridEdge - 0.15, u_eyeAridEdge + 0.2, eyeballSunAngle))
+                     * (1.0 - smoothstep(u_eyeIceEdge + 0.1, u_eyeIceEdge - 0.2, eyeballSunAngle));
+      // Brighten and saturate the existing palette vegetation color at terminator
+      lowWet = mix(lowWet, color2 * 1.8 + vec3(0.0, 0.02, 0.0), termZone * 0.6);
     }
     vec3 lowDry = mix(color2, color3, 0.4);
     vec3 lowArid = color3 * 0.9 + vec3(0.04, 0.02, -0.01);
