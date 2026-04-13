@@ -727,7 +727,8 @@ const rockyFragment = `
     // ── Tidally locked lava: modulate shader parameters by sun angle ──
     float tidalHeat = 1.0; // 1.0 = normal, >1 = hotter, <1 = cooler
     if (u_tidallyLocked > 0.5 && emissiveIntensity > 0.01) {
-      float sunAngle = dot(normalize(vPosition), u_sunDirection);
+      // Use world-space normal vs world-space sun direction for correct orientation
+      float sunAngle = dot(vWorldNormal, u_sunDirection);
       // Sub-stellar: molten — boost glow, lower terrain (more lava pools)
       float daySide = smoothstep(-0.1, 0.5, sunAngle);
       // Anti-stellar: cooled — suppress glow, raise terrain (solidified crust)
