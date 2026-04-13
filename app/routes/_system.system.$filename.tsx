@@ -230,29 +230,22 @@ function MilkyWaySkybox({ brightness, contrast }: { brightness: number; contrast
 
 export const loader = async ({ params }: any) => {
   const { filename } = params;
-  // Try filesystem first (dev mode), then fetch from static assets (Vercel production)
-  try {
-    const fs = await import("fs");
-    const path = await import("path");
-    const candidates = [
-      path.resolve("data-json", `${filename}.json`),
-      path.resolve(process.cwd(), "data-json", `${filename}.json`),
-    ];
-    for (const jsonPath of candidates) {
-      try {
-        const raw = fs.readFileSync(jsonPath, "utf8");
-        return JSON.parse(raw);
-      } catch { continue; }
-    }
-  } catch { /* fs not available or all paths failed */ }
+  const path = await import("path");
+  const { loadXMLAsJSON } = await import("~/utils/loadXMLAsJSON");
 
-  // Fallback: fetch from static client assets (works on Vercel where fs is limited)
-  const url = new URL(request.url);
-  const staticUrl = `${url.origin}/data-json/${encodeURIComponent(filename)}.json`;
-  try {
-    const res = await fetch(staticUrl);
-    if (res.ok) return await res.json();
-  } catch { /* fetch failed */ }
+  // XML files are committed to git — always available on Vercel
+  const xmlDir = "app/data/open_exoplanet_catalogue/systems";
+  const candidates = [
+    path.resolve(xmlDir, `${filename}.xml`),
+    path.resolve(process.cwd(), xmlDir, `${filename}.xml`),
+  ];
+
+  for (const xmlPath of candidates) {
+    try {
+      const data = await loadXMLAsJSON(xmlPath);
+      return data?.system || data;
+    } catch { continue; }
+  }
 
   throw new Response(`System not found: ${filename}`, { status: 404 });
 };
