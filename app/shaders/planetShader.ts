@@ -861,12 +861,14 @@ const terrestrialFragment = `
     }
 
     float seaLevel = u_seaLevel;
-    // Eyeball: pre-compute sun angle for sea level adjustment
-    float eyeballSunAnglePre = (u_tidallyLocked > 0.5) ? dot(baseDir, u_sunDirection) : 0.0;
+    // Eyeball: pre-compute sun angle for sea level adjustment (with same noise perturbation)
     float effectiveSeaLevel = seaLevel;
     if (u_tidallyLocked > 0.5) {
-      // No water on hot sub-stellar side
-      float subStellarDry = smoothstep(u_eyeAridEdge - 0.15, u_eyeAridEdge + 0.2, eyeballSunAnglePre);
+      // Use noise-perturbed sun angle for consistent noisy edge on sea level too
+      float preBandNoise = (pnoise3d(p * 0.6 + vec3(11.0)) - 0.5) * 0.2
+                         + (pnoise3d(p * 0.6 + vec3(47.0)) - 0.5) * 0.1;
+      float eyeAnglePre = dot(baseDir, u_sunDirection) + preBandNoise;
+      float subStellarDry = smoothstep(u_eyeAridEdge - 0.15, u_eyeAridEdge + 0.2, eyeAnglePre);
       effectiveSeaLevel = mix(seaLevel, 0.0, subStellarDry);
     }
     float isLand = smoothstep(effectiveSeaLevel - 0.008, effectiveSeaLevel + 0.008, continent);
@@ -935,7 +937,20 @@ const terrestrialFragment = `
     float eyeballSunAngle = 0.0;
     float eyeSeaLevel = seaLevel;
     if (u_tidallyLocked > 0.5) {
-      eyeballSunAngle = dot(baseDir, u_sunDirection); // 1=sub-stellar, 0=terminator, -1=anti-stellar
+      float rawSunAngle = dot(baseDir, u_sunDirection); // 1=sub-stellar, 0=terminator, -1=anti-stellar
+
+      // Domain-warped noise to break up band edges (like ice cap boundaries)
+      vec3 bandWarpP = p * 1.5;
+      float bw1 = pnoise3d(bandWarpP * 0.4 + vec3(11.0, 0.0, 0.0));
+      float bw2 = pnoise3d(bandWarpP * 0.4 + vec3(0.0, 23.0, 0.0));
+      vec3 bandWarp2 = vec3(
+        pnoise3d((bandWarpP + vec3(bw1, bw2, 0.0) * 0.3) * 0.8 + vec3(41.0)),
+        pnoise3d((bandWarpP + vec3(bw1, bw2, 0.0) * 0.3) * 0.8 + vec3(59.0)),
+        0.0
+      ) * 0.12;
+      // Perturb the sun angle — creates organic fractal band edges
+      float bandNoise = (bw1 - 0.5 + bandWarp2.x) * 0.2 + (bw2 - 0.5 + bandWarp2.y) * 0.1;
+      eyeballSunAngle = rawSunAngle + bandNoise;
 
       // Sub-stellar (hot): fully arid, no water
       float subStellar = smoothstep(u_eyeAridEdge - 0.15, u_eyeAridEdge + 0.2, eyeballSunAngle);
