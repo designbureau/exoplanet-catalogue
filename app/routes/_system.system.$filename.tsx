@@ -246,15 +246,18 @@ export const loader = async ({ params }: any) => {
     path.resolve(__dirname, "..", "data-json", `${filename}.json`),      // one level up
   ];
 
+  const errors: string[] = [];
   for (const jsonPath of candidates) {
     try {
       const raw = fs.readFileSync(jsonPath, "utf8");
       return JSON.parse(raw);
-    } catch {
+    } catch (e: any) {
+      errors.push(`${jsonPath}: ${e.code || e.message}`);
       continue;
     }
   }
-  throw new Response("System not found", { status: 404 });
+  console.error(`System not found: ${filename}`, { cwd: process.cwd(), __dirname, candidates, errors });
+  throw new Response(`System not found: ${filename}. Tried: ${errors.join('; ')}`, { status: 404 });
 };
 
 const Root = () => {
