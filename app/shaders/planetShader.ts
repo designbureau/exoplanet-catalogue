@@ -724,26 +724,21 @@ const rockyFragment = `
     // Fine surface roughness for colour variation
     color *= 0.9 + 0.1 * noise3d(p * 40.0);
 
-    // ── Tidally locked lava: eyeball effect ──
-    // Sub-stellar = bright molten (yellow/orange), anti-stellar = dark cooled magma
-    float lavaEyeAngle = 0.0;
-    float lavaTidalGlow = 1.0; // multiplier on emissive glow
+    // ── Tidally locked lava: modulate shader parameters by sun angle ──
+    float tidalHeat = 1.0; // 1.0 = normal, >1 = hotter, <1 = cooler
     if (u_tidallyLocked > 0.5 && emissiveIntensity > 0.01) {
-      lavaEyeAngle = dot(vPosition, u_sunDirection); // 1=sub-stellar, -1=anti-stellar
+      float sunAngle = dot(normalize(vPosition), u_sunDirection);
+      // Sub-stellar: molten — boost glow, lower terrain (more lava pools)
+      float daySide = smoothstep(-0.1, 0.5, sunAngle);
+      // Anti-stellar: cooled — suppress glow, raise terrain (solidified crust)
+      float nightSide = smoothstep(0.1, -0.5, sunAngle);
 
-      // Sub-stellar: bright molten — full glow, warm yellow shift
-      float subStellar = smoothstep(0.0, 0.6, lavaEyeAngle);
-      // Anti-stellar: cooled — much reduced glow, dark red/black
-      float antiStellar = smoothstep(0.1, -0.5, lavaEyeAngle);
-
-      // Glow multiplier: bright on day side, dim on night side
-      lavaTidalGlow = mix(0.15, 1.5, subStellar);
-
-      // Color shift: day side warmer (orange/yellow), night side cooler (dark red/black)
-      vec3 moltenColor = vec3(1.0, 0.7, 0.2); // bright orange-yellow
-      vec3 cooledColor = vec3(0.12, 0.04, 0.02); // nearly black dark red
-      vec3 tidalShift = mix(mix(color, moltenColor, 0.3), cooledColor, antiStellar);
-      color = mix(color, tidalShift, 0.7);
+      tidalHeat = mix(0.08, 2.0, daySide); // 8% glow on night, 200% on day
+      // Shift the height so day side has more low areas (lava pools)
+      // and night side has more high areas (solidified crust)
+      h = h - daySide * 0.15 + nightSide * 0.2;
+      // Darken base color on night side (cooled black basalt)
+      color *= mix(1.0, 0.2, nightSide);
     }
 
     // Lighting — lava worlds have higher ambient (self-radiant heat)
@@ -751,13 +746,14 @@ const rockyFragment = `
     vec3 V = normalize(cameraPosition - vWorldPosition);
     color = planetLighting(color, vWorldNormal, u_sunDirection, V, ambient);
 
-    // Emissive (for lava worlds) — added after lighting so it glows in shadow
-    float lavaEmit = smoothstep(0.35, 0.0, h) * u_lavaGlow * lavaTidalGlow;
+    // Emissive (for lava worlds) — glow in low areas + voronoi cracks
+    // tidalHeat modulates everything: bright day side, dim night side
+    float lavaEmit = smoothstep(0.35, 0.0, h) * u_lavaGlow * tidalHeat;
     color += emissiveColor * lavaEmit;
     vec2 v1 = voronoi(p * 0.3);
     float cracks = 1.0 - smoothstep(0.0, 0.1, v1.y - v1.x);
     cracks *= cracks;
-    cracks *= smoothstep(0.5, 0.15, h) * u_lavaGlow * lavaTidalGlow;
+    cracks *= smoothstep(0.5, 0.15, h) * u_lavaGlow * tidalHeat;
     color += emissiveColor * cracks * emissiveIntensity;
     color = applyAtmosphere(color, vWorldNormal, vWorldPosition);
 
