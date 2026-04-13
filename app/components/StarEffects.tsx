@@ -555,7 +555,8 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
                         : dist < starRadius * 20 ? raysGeoLow
                         : raysGeoVeryLow;
         if (raysRef.current.geometry !== targetGeo) raysRef.current.geometry = targetGeo;
-        // Hide flares when far — they're expensive (32K verts) and barely visible
+        // Hide rays and flares when far
+        raysRef.current.visible = dist < starRadius * 30;
         if (flaresRef.current) {
           flaresRef.current.visible = dist < starRadius * 12;
         }
