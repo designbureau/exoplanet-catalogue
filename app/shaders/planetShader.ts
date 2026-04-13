@@ -897,21 +897,30 @@ const terrestrialFragment = `
         float strength = (u_displace > 0.0) ? u_bumpStrength * 0.5 : u_bumpStrength;
         bumpNormal = normalize(vNormal + grad * strength);
 
-        // Layer 2: ridged mountain detail (4-oct ridgedNoise, no extra computeContinent)
+        // Layer 2: ridged mountain detail
         float re = 0.002;
         float rc = ridgedNoise(p, 2.5);
         float rx = ridgedNoise(p + vec3(re, 0.0, 0.0), 2.5);
         float ry = ridgedNoise(p + vec3(0.0, re, 0.0), 2.5);
         float rz = ridgedNoise(p + vec3(0.0, 0.0, re), 2.5);
         vec3 ridgeGrad = vec3(rc - rx, rc - ry, rc - rz) / re;
-        bumpNormal = normalize(bumpNormal + ridgeGrad * 0.06 * isLand);
+        bumpNormal = normalize(bumpNormal + ridgeGrad * 0.08 * isLand);
 
-        // Layer 3: micro surface roughness (moderate frequency, smoothed)
+        // Layer 3: medium-frequency hills and plateaus
+        float me2 = 0.003;
+        float mc2 = cloudNoise(p, 3.0);
+        float mx2 = cloudNoise(p + vec3(me2, 0.0, 0.0), 3.0);
+        float my2 = cloudNoise(p + vec3(0.0, me2, 0.0), 3.0);
+        float mz2 = cloudNoise(p + vec3(0.0, 0.0, me2), 3.0);
+        vec3 hillGrad = vec3(mc2 - mx2, mc2 - my2, mc2 - mz2) / me2;
+        bumpNormal = normalize(bumpNormal + hillGrad * 0.04 * isLand);
+
+        // Layer 4: fine surface roughness
         float me = 0.005;
-        float mc = pnoise3d(p * 6.0);
-        float mx = pnoise3d((p + vec3(me, 0.0, 0.0)) * 6.0);
-        float my = pnoise3d((p + vec3(0.0, me, 0.0)) * 6.0);
-        float mz = pnoise3d((p + vec3(0.0, 0.0, me)) * 6.0);
+        float mc = pnoise3d(p * 8.0);
+        float mx = pnoise3d((p + vec3(me, 0.0, 0.0)) * 8.0);
+        float my = pnoise3d((p + vec3(0.0, me, 0.0)) * 8.0);
+        float mz = pnoise3d((p + vec3(0.0, 0.0, me)) * 8.0);
         vec3 microGrad = vec3(mc - mx, mc - my, mc - mz) / me;
         bumpNormal = normalize(bumpNormal + microGrad * 0.03 * isLand);
 
