@@ -389,7 +389,7 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
     return 0.0;
   }, [temperature]);
 
-  const { raysGeo, raysGeoHigh, raysGeoLow, raysGeoVeryLow, raysMat, flaresGeo, flaresMat, glowGeo, glowMat } = useMemo(() => {
+  const { raysGeo, raysMat, flaresGeo, flaresMat, glowGeo, glowMat } = useMemo(() => {
     // Non-linear scaling: sqrt(r) capped for giant stars
     const r = starRadius;
     const s = Math.sqrt(Math.min(r, 20)); // cap at ~20 scene units to prevent giant star bloat
@@ -400,10 +400,7 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
     const flareWidth = 0.005;      // original: 0.005
     const flareOpacity = 0.2;      // original: 0.2
 
-    const rGeoHigh = buildRaysGeometry(starRadius, 12000);
-    const rGeoLow = buildRaysGeometry(starRadius, 4000);
-    const rGeoVeryLow = buildRaysGeometry(starRadius, 1000);
-    const rGeo = rGeoHigh;
+    const rGeo = buildRaysGeometry(starRadius, 10000);
     const rMat = new THREE.ShaderMaterial({
       vertexShader: sunRaysVS,
       fragmentShader: sunRaysFS,
@@ -517,7 +514,7 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
       },
     });
 
-    return { raysGeo: rGeo, raysGeoHigh: rGeoHigh, raysGeoLow: rGeoLow, raysGeoVeryLow: rGeoVeryLow, raysMat: rMat, flaresGeo: fGeo, flaresMat: fMat, glowGeo: gGeo, glowMat: gMat };
+    return { raysGeo: rGeo, raysMat: rMat, flaresGeo: fGeo, flaresMat: fMat, glowGeo: gGeo, glowMat: gMat };
   }, [starRadius, hue, baseColor, temperature]);
 
   // Pre-allocate vectors to avoid per-frame GC jitter
@@ -548,14 +545,7 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
       frameSkip.current = 0;
       camera.getWorldPosition(_camPos);
 
-      // LOD: 3-tier ray geometry + distance-based visibility
-      if (focused && raysRef.current) {
-        const dist = _camPos.length();
-        const targetGeo = dist < starRadius * 4 ? raysGeoHigh
-                        : dist < starRadius * 10 ? raysGeoLow
-                        : raysGeoVeryLow;
-        if (raysRef.current.geometry !== targetGeo) raysRef.current.geometry = targetGeo;
-      }
+      // Rays use fixed geometry — shown/hidden via focused gate in JSX
       if (focused) {
         raysMat.uniforms.uCamPos.value.copy(_camPos);
         flaresMat.uniforms.uCamPos.value.copy(_camPos);
