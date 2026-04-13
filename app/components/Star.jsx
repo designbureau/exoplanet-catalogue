@@ -3,7 +3,7 @@ import { useRef, useContext, useEffect, useMemo } from "react";
 import { RefContext } from "./RefContext";
 import { EnvContext } from "./EnvContext";
 import {
-  calculateHZFromMassAndType,
+  calculateHZ,
 } from "../utils/getHabitableZone";
 import Planet from "./Planet";
 import * as THREE from "three";
@@ -85,7 +85,7 @@ const Star = ({ data, position, distance }) => {
   });
 
   const spectraltype = data.spectraltype?.[0]?.[0] || "M";
-  const habitableZone = calculateHZFromMassAndType({ mass, spectraltype, Constants });
+  const habitableZone = calculateHZ({ mass, spectraltype, temperature, radius, Constants });
 
   // Average orbital inclination from planets for HZ ring tilt
   const avgInclination = useMemo(() => {
@@ -108,7 +108,7 @@ const Star = ({ data, position, distance }) => {
         const geoInner = Math.max(0, inner - padding);
         const geoOuter = outer + padding;
         return (
-          <mesh rotation-x={(avgInclination * Math.PI) / 180}>
+          <mesh rotation-x={(avgInclination * Math.PI) / 90}>
             <ringGeometry args={[geoInner, geoOuter, 128]} />
             <shaderMaterial
               transparent={true}

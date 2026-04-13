@@ -101,6 +101,8 @@ import { getAtmosphereParams } from "../shaders/atmosphereShader";
 import { getScatteringPreset, createScatteringMaterial } from "../shaders/scatteringShader";
 
 const _starWorldPos = new THREE.Vector3();
+const _sunDirLocal = new THREE.Vector3();
+const _invMatrix = new THREE.Matrix4();
 
 const Planet = ({ data, starData, starRef }) => {
   const ref = useRef();
@@ -542,6 +544,9 @@ const Planet = ({ data, starData, starRef }) => {
       if (shaderMaterial.uniforms.u_sunDirection) {
         cloudMat.uniforms.u_sunDirection.value.copy(shaderMaterial.uniforms.u_sunDirection.value);
       }
+      if (shaderMaterial.uniforms.u_sunDirectionLocal) {
+        cloudMat.uniforms.u_sunDirectionLocal.value.copy(shaderMaterial.uniforms.u_sunDirectionLocal.value);
+      }
       cloudMat.uniforms.u_wrapRange.value = shaderMaterial.uniforms.u_wrapRange?.value ?? 0.45;
       cloudMat.uniforms.u_wrapPower.value = shaderMaterial.uniforms.u_wrapPower?.value ?? 3.9;
       // Sync cloud params from planet shader (set by preset system)
@@ -597,6 +602,12 @@ const Planet = ({ data, starData, starRef }) => {
       const sunDirWorld = _camRight.copy(_starWorldPos).sub(_camUp).normalize();
       if (shaderMaterial.uniforms.u_sunDirection) {
         shaderMaterial.uniforms.u_sunDirection.value.copy(sunDirWorld);
+      }
+      // Transform sun direction to object space for eyeball biome mapping
+      if (shaderMaterial.uniforms.u_sunDirectionLocal) {
+        _invMatrix.copy(ref.current.matrixWorld).invert();
+        _sunDirLocal.copy(sunDirWorld).transformDirection(_invMatrix).normalize();
+        shaderMaterial.uniforms.u_sunDirectionLocal.value.copy(_sunDirLocal);
       }
       // Atmosphere uses world-space (negated convention)
       if (atmosMat) {

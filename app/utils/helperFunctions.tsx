@@ -137,7 +137,7 @@ const spectralTypeTemperatures: Record<string, number> = {
 
 export const getTemperature = ({ data }: any) => {
   // Try to get actual temperature from data first
-  const parsedTemp = parseFloat(data.temperature?.[0]?._ ?? data.temperature?._);
+  const parsedTemp = parseFloat(data.temperature?.[0]?._ ?? data.temperature?.[0] ?? data.temperature?._ ?? data.temperature);
   if (!isNaN(parsedTemp) && parsedTemp > 0) {
     return parsedTemp;
   }

@@ -410,6 +410,7 @@ const noiseLib = `
 
   // Atmosphere fresnel helper
   uniform vec3 u_sunDirection;
+  uniform vec3 u_sunDirectionLocal; // object-space sun direction for eyeball biomes
   uniform float u_ambient;
   uniform float u_lavaAmbient;
   uniform float u_wrapRange;
@@ -865,7 +866,7 @@ const terrestrialFragment = `
     float effectiveSeaLevel = seaLevel;
     if (u_tidallyLocked > 0.5) {
       // Match the terrain-based perturbation from the biome section
-      float eyeAnglePre = dot(baseDir, u_sunDirection)
+      float eyeAnglePre = dot(baseDir, u_sunDirectionLocal)
                         + (continent - 0.5) * 0.25
                         + (pnoise3d(p * 2.0 + vec3(17.0)) - 0.5) * 0.08;
       float subStellarDry = smoothstep(u_eyeAridEdge - 0.15, u_eyeAridEdge + 0.2, eyeAnglePre);
@@ -937,7 +938,7 @@ const terrestrialFragment = `
     float eyeballSunAngle = 0.0;
     float eyeSeaLevel = seaLevel;
     if (u_tidallyLocked > 0.5) {
-      float rawSunAngle = dot(baseDir, u_sunDirection); // 1=sub-stellar, 0=terminator, -1=anti-stellar
+      float rawSunAngle = dot(baseDir, u_sunDirectionLocal); // 1=sub-stellar, 0=terminator, -1=anti-stellar
 
       // Perturb band edges using the actual terrain height — bands follow landmasses
       // Higher terrain = slightly warmer (pushes toward arid), lower = cooler (toward ice)
@@ -1081,7 +1082,7 @@ const terrestrialFragment = `
 
     if (u_tidallyLocked > 0.5) {
       // Eyeball: ice centered on anti-stellar point (night side)
-      float antiStellar = -dot(baseDir, u_sunDirection); // 1=anti-stellar, -1=sub-stellar
+      float antiStellar = -dot(baseDir, u_sunDirectionLocal); // 1=anti-stellar, -1=sub-stellar
 
       // Solid ice: deep into night side
       float solidIceStart = -u_eyeIceEdge + 0.15;
@@ -1395,6 +1396,7 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_heightMap: { value: null },
       u_normalMap: { value: null },
       u_sunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
+      u_sunDirectionLocal: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
       u_atmosDayColor: { value: params.atmosDayColor || new THREE.Color(0x00aaff) },
       u_atmosTwilightColor: { value: params.atmosTwilightColor || new THREE.Color(0xff6600) },
     },
@@ -1415,6 +1417,7 @@ const cloudFragmentShader = `
   uniform float u_cloudWarp;
   uniform float u_lod;
   uniform vec3 u_sunDirection;
+  uniform vec3 u_sunDirectionLocal;
   uniform float u_tidallyLocked;
   uniform float u_wrapRange;
   uniform float u_wrapPower;
@@ -1550,7 +1553,7 @@ const cloudFragmentShader = `
     float dayFade = smoothstep(-0.1, 0.15, sunDot);
     // Eyeball: also fade clouds on frozen anti-stellar hemisphere (no convection there)
     if (u_tidallyLocked > 0.5) {
-      float antiStellar = -dot(vPosition, u_sunDirection);
+      float antiStellar = -dot(vPosition, u_sunDirectionLocal);
       dayFade *= smoothstep(0.3, -0.1, antiStellar); // clouds only on day side + terminator
     }
     float alpha = clouds * u_cloudOpacity * dayFade;
@@ -1578,6 +1581,7 @@ export function createCloudMaterial(params: ShaderParams): THREE.ShaderMaterial 
       u_cloudBands: { value: params.cloudBands ?? 5.0 },
       u_cloudWarp: { value: params.cloudWarp ?? 0.35 },
       u_sunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
+      u_sunDirectionLocal: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
       u_tidallyLocked: { value: params.tidallyLocked ? 1.0 : 0.0 },
       u_wrapRange: { value: 0.45 },
       u_wrapPower: { value: 3.9 },

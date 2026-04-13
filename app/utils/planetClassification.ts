@@ -1,5 +1,12 @@
 import * as THREE from "three";
 
+// Kopparapu et al. 2013 temperature-dependent stellar flux boundary.
+// S_eff = S☉ + a·T* + b·T*² + c·T*³ + d·T*⁴   where T* = T_star − 5780
+function kopparapuSeff(Ssun: number, a: number, b: number, c: number, d: number, starTemp: number): number {
+  const Ts = (starTemp || 5780) - 5780;
+  return Ssun + a * Ts + b * Ts * Ts + c * Ts * Ts * Ts + d * Ts * Ts * Ts * Ts;
+}
+
 // Planet types based on size, temperature, and composition
 export enum PlanetType {
   // Gas giants (Sudarsky classification)
@@ -495,10 +502,12 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       const seed = base.seed;
       const seedVar = (seed.x + seed.y + seed.z) / 3; // 0-1
 
-      // --- Continuous HZ position using stellar flux (Kopparapu et al. 2013) ---
-      // S_eff 0.35 (outer/cold edge) → hz=0, S_eff 1.04 (inner/warm edge) → hz=1
-      // Mars ≈ 0.43 → hz≈0.12, Earth ≈ 1.0 → hz≈0.94
-      const hzRaw = Math.max(0, Math.min(1, (sEff - 0.35) / (1.04 - 0.35)));
+      // --- Continuous HZ position using Kopparapu et al. 2013 boundaries ---
+      // Boundaries are star-temperature-dependent so M-dwarf planets map correctly
+      // (e.g. TRAPPIST-1e at S_eff≈0.61 maps to ~Earth position, not Mars)
+      const hzInnerSeff = kopparapuSeff(1.0512, 1.3242e-4, 1.5418e-8, -7.9895e-12, -1.8328e-15, starTemp);
+      const hzOuterSeff = kopparapuSeff(0.3438, 5.8942e-5, 1.6558e-9, -3.0045e-12, -5.2983e-16, starTemp);
+      const hzRaw = Math.max(0, Math.min(1, (sEff - hzOuterSeff) / (hzInnerSeff - hzOuterSeff)));
 
       // Mass modifier: low mass → Mars-like (cooler), high mass → Venus-like (warmer)
       const massE = massJup > 0 ? massJup * 317.8 : 1.0;
