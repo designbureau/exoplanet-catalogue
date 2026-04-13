@@ -888,8 +888,8 @@ const terrestrialFragment = `
         bumpNormal = normalize(T * texN.x + B * texN.y + baseDir * texN.z);
         bumpNormal = mix(vNormal, bumpNormal, isLand * 0.95 + 0.05);
       } else {
-        // Layer 1: terrain-scale bump from computeContinent (finer epsilon = more detail)
-        float eps = 0.0015;
+        // Layer 1: terrain-scale bump from computeContinent
+        float eps = 0.002;
         float hx = computeContinent(p + vec3(eps, 0.0, 0.0));
         float hy = computeContinent(p + vec3(0.0, eps, 0.0));
         float hz = computeContinent(p + vec3(0.0, 0.0, eps));
@@ -906,14 +906,14 @@ const terrestrialFragment = `
         vec3 ridgeGrad = vec3(rc - rx, rc - ry, rc - rz) / re;
         bumpNormal = normalize(bumpNormal + ridgeGrad * 0.06 * isLand);
 
-        // Layer 3: micro surface roughness (single-octave, very cheap)
-        float me = 0.004;
-        float mc = pnoise3d(p * 12.0);
-        float mx = pnoise3d((p + vec3(me, 0.0, 0.0)) * 12.0);
-        float my = pnoise3d((p + vec3(0.0, me, 0.0)) * 12.0);
-        float mz = pnoise3d((p + vec3(0.0, 0.0, me)) * 12.0);
+        // Layer 3: micro surface roughness (moderate frequency, smoothed)
+        float me = 0.005;
+        float mc = pnoise3d(p * 6.0);
+        float mx = pnoise3d((p + vec3(me, 0.0, 0.0)) * 6.0);
+        float my = pnoise3d((p + vec3(0.0, me, 0.0)) * 6.0);
+        float mz = pnoise3d((p + vec3(0.0, 0.0, me)) * 6.0);
         vec3 microGrad = vec3(mc - mx, mc - my, mc - mz) / me;
-        bumpNormal = normalize(bumpNormal + microGrad * 0.025 * isLand);
+        bumpNormal = normalize(bumpNormal + microGrad * 0.03 * isLand);
 
         bumpNormal = mix(vNormal, bumpNormal, isLand * 0.95 + 0.05);
       }
@@ -1360,7 +1360,7 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_wrapPower: { value: 3.9 },
       u_displace: { value: 0 },
       u_vertLOD: { value: 0 },
-      u_bumpStrength: { value: params.bumpStrength ?? 0.6 },
+      u_bumpStrength: { value: params.bumpStrength ?? 0.8 },
       u_tidallyLocked: { value: params.tidallyLocked ? 1.0 : 0.0 },
       u_eyeAridEdge: { value: 0.3 },
       u_eyeIceEdge: { value: -0.15 },
