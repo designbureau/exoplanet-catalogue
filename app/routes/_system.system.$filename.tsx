@@ -230,34 +230,31 @@ function MilkyWaySkybox({ brightness, contrast }: { brightness: number; contrast
 
 export const loader = async ({ params }: any) => {
   const { filename } = params;
-  const fs = await import("fs");
-  const path = await import("path");
-  const { fileURLToPath } = await import("url");
-
-  // Resolve data-json relative to this module (works on Vercel serverless)
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  // In dev: __dirname is app/routes/, data-json is at project root
-  // In build: __dirname is build/server/, data-json is at project root
-  // Try multiple resolution strategies
-  const candidates = [
-    path.resolve("data-json", `${filename}.json`),                    // CWD-relative
-    path.resolve(__dirname, "data-json", `${filename}.json`),         // same dir (build/server/data-json)
-    path.resolve(__dirname, "..", "..", "data-json", `${filename}.json`), // module-relative
-    path.resolve(__dirname, "..", "data-json", `${filename}.json`),      // one level up
-  ];
-
-  const errors: string[] = [];
-  for (const jsonPath of candidates) {
-    try {
-      const raw = fs.readFileSync(jsonPath, "utf8");
-      return JSON.parse(raw);
-    } catch (e: any) {
-      errors.push(`${jsonPath}: ${e.code || e.message}`);
-      continue;
+  // Try filesystem first (dev mode), then fetch from static assets (Vercel production)
+  try {
+    const fs = await import("fs");
+    const path = await import("path");
+    const candidates = [
+      path.resolve("data-json", `${filename}.json`),
+      path.resolve(process.cwd(), "data-json", `${filename}.json`),
+    ];
+    for (const jsonPath of candidates) {
+      try {
+        const raw = fs.readFileSync(jsonPath, "utf8");
+        return JSON.parse(raw);
+      } catch { continue; }
     }
-  }
-  console.error(`System not found: ${filename}`, { cwd: process.cwd(), __dirname, candidates, errors });
-  throw new Response(`System not found: ${filename}. Tried: ${errors.join('; ')}`, { status: 404 });
+  } catch { /* fs not available or all paths failed */ }
+
+  // Fallback: fetch from static client assets (works on Vercel where fs is limited)
+  const url = new URL(request.url);
+  const staticUrl = `${url.origin}/data-json/${encodeURIComponent(filename)}.json`;
+  try {
+    const res = await fetch(staticUrl);
+    if (res.ok) return await res.json();
+  } catch { /* fetch failed */ }
+
+  throw new Response(`System not found: ${filename}`, { status: 404 });
 };
 
 const Root = () => {
