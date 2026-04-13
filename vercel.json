@@ -1,8 +1,3 @@
 {
-  "installCommand": "npm install --legacy-peer-deps",
-  "functions": {
-    "build/server/index.js": {
-      "includeFiles": "data-json/**"
-    }
-  }
+  "installCommand": "npm install --legacy-peer-deps"
 }
