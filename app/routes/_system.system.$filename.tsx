@@ -241,6 +241,7 @@ export const loader = async ({ params }: any) => {
   // Try multiple resolution strategies
   const candidates = [
     path.resolve("data-json", `${filename}.json`),                    // CWD-relative
+    path.resolve(__dirname, "data-json", `${filename}.json`),         // same dir (build/server/data-json)
     path.resolve(__dirname, "..", "..", "data-json", `${filename}.json`), // module-relative
     path.resolve(__dirname, "..", "data-json", `${filename}.json`),      // one level up
   ];
