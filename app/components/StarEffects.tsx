@@ -549,20 +549,17 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
       camera.getWorldPosition(_camPos);
 
       // LOD: 3-tier ray geometry + distance-based visibility
-      if (raysRef.current) {
+      if (focused && raysRef.current) {
         const dist = _camPos.length();
         const targetGeo = dist < starRadius * 6 ? raysGeoHigh
                         : dist < starRadius * 20 ? raysGeoLow
                         : raysGeoVeryLow;
         if (raysRef.current.geometry !== targetGeo) raysRef.current.geometry = targetGeo;
-        // Hide rays and flares when far
-        raysRef.current.visible = dist < starRadius * 30;
-        if (flaresRef.current) {
-          flaresRef.current.visible = dist < starRadius * 12;
-        }
       }
-      raysMat.uniforms.uCamPos.value.copy(_camPos);
-      flaresMat.uniforms.uCamPos.value.copy(_camPos);
+      if (focused) {
+        raysMat.uniforms.uCamPos.value.copy(_camPos);
+        flaresMat.uniforms.uCamPos.value.copy(_camPos);
+      }
       camera.matrixWorld.extractBasis(_camRight, _camUp, _camFwd);
     }
   });
@@ -570,8 +567,12 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
   return (
     <>
       <mesh geometry={glowGeo} material={glowMat} frustumCulled={false} renderOrder={2} />
-      <mesh ref={raysRef} geometry={raysGeo} material={raysMat} frustumCulled={false} renderOrder={3} />
-      <mesh ref={flaresRef} geometry={flaresGeo} material={flaresMat} frustumCulled={false} renderOrder={1} />
+      {focused && (
+        <>
+          <mesh ref={raysRef} geometry={raysGeo} material={raysMat} frustumCulled={false} renderOrder={3} />
+          <mesh ref={flaresRef} geometry={flaresGeo} material={flaresMat} frustumCulled={false} renderOrder={1} />
+        </>
+      )}
     </>
   );
 }
