@@ -443,7 +443,10 @@ const Planet = ({ data, starData, starRef }) => {
     }
     // Eyeball planet controls
     if (u.u_eyeAridEdge) {
-      u.u_eyeAridEdge.value = eyeAridEdge;
+      // Don't overwrite ice/ocean eyeball presets (eyeAridEdge > 1.0 signals ice/ocean type)
+      if (u.u_eyeAridEdge.value <= 1.0) {
+        u.u_eyeAridEdge.value = eyeAridEdge;
+      }
       u.u_eyeIceEdge.value = eyeIceEdge;
       u.u_eyeIceBergDensity.value = eyeIceBergDensity;
       if (u.u_eyeVegHue) {

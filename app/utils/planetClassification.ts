@@ -228,7 +228,7 @@ export function classifyPlanet(input: ClassificationInput): ShaderParams {
     // Super-Earth / sub-Neptune boundary — check for extreme flux first
     if (sEff > 25 && density >= 3) type = PlanetType.LAVA_WORLD; // dense + extreme flux = lava
     else if (sEff > 1.04 && density >= 3) type = PlanetType.HOT_ROCKY; // dense + hot = hot rocky
-    else if (tidallyLocked && density >= 0 && density < 2 && sEff > 0.2 && sEff <= 0.8) type = PlanetType.ICE_OCEAN_EYEBALL;
+    else if (tidallyLocked && density >= 0 && density < 2 && sEff > 0.2 && sEff <= 0.45) type = PlanetType.ICE_OCEAN_EYEBALL;
     else if (density >= 0 && density < 2) type = PlanetType.WATER_WORLD;
     else type = PlanetType.SUB_NEPTUNE;
   } else if (radiusEarth > 0) {
@@ -236,8 +236,7 @@ export function classifyPlanet(input: ClassificationInput): ShaderParams {
     if (sEff > 25) type = PlanetType.LAVA_WORLD;
     else if (sEff > 1.04 && radiusEarth > 0.5) type = PlanetType.VENUS_LIKE;
     else if (sEff > 1.04) type = PlanetType.HOT_ROCKY;  // too small to retain atmosphere
-    else if (tidallyLocked && sEff > 0.2 && sEff <= 0.8) type = PlanetType.ICE_OCEAN_EYEBALL;
-    else if (sEff > 0.35) type = PlanetType.TEMPERATE;
+    else if (sEff > 0.35) type = tidallyLocked && sEff <= 0.45 ? PlanetType.ICE_OCEAN_EYEBALL : PlanetType.TEMPERATE;
     else type = PlanetType.FROZEN;
   } else {
     // No size data at all - guess from temperature
@@ -404,25 +403,29 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
     }
 
     case PlanetType.ICE_OCEAN_EYEBALL: {
-      // Tidally locked ice/ocean world: open ocean at sub-stellar, ice everywhere else
-      base.color1 = new THREE.Color('#0a1a3d'); // deep ocean
-      base.color2 = new THREE.Color('#1a2a3a'); // dark cold water (no vegetation)
-      base.color3 = new THREE.Color('#2a3a4a'); // slate rock/ice transition
-      base.color4 = new THREE.Color('#c8d0d8'); // bright ice/snow
+      // Tidally locked ice/ocean world — uses standard eyeball zone system:
+      // Sub-stellar "arid" zone = ocean (color3 = ocean tones, high sea level drowns it)
+      // Terminator "wet" zone = slushy ice-water transition
+      // Anti-stellar "ice" zone = solid ice cap
+      base.color1 = new THREE.Color('#0e2a4a'); // deep ocean
+      base.color2 = new THREE.Color('#3a5a6a'); // shallow water / slush (replaces vegetation)
+      base.color3 = new THREE.Color('#6a7a88'); // ice-rock shelf
+      base.color4 = new THREE.Color('#d0d8e2'); // bright ice
       base.noiseScale = 10;
-      base.seaLevel = 0.98;
-      base.continentFreq = 0.15;
-      base.iceCapSize = 0.3;
-      base.iceEdge = 0.04;
-      base.iceWarp = 1.2;
-      base.iceDetail = 0.9;
-      base.warpIntensity = 2.0;
-      base.coastDetail = 0.3;
-      base.landContrast = 1.2;
-      base.bumpStrength = 0.4;
+      base.seaLevel = 0.78;
+      base.continentFreq = 0.18;
+      base.iceCapSize = 0.15;
+      base.iceEdge = 0.06;
+      base.iceWarp = 1.4;
+      base.iceDetail = 0.8;
+      base.warpIntensity = 3.0;
+      base.coastDetail = 0.35;
+      base.landContrast = 1.4;
+      base.bumpStrength = 0.5;
       base.tidallyLocked = true;
-      base.eyeAridEdge = 0.85;       // push arid zone far in — sub-stellar is ocean, not desert
-      base.eyeIceEdge = 0.1;         // ice starts closer to terminator
+      base.eyeAridEdge = 1.5;        // beyond max — no arid zone at all, entire day side is wet ocean
+      base.eyeIceEdge = -0.1;        // ice starts just past terminator
+      base.eyeIceBergDensity = 0.85;
       base.cloudCoverage = 0.65;
       base.cloudOpacity = 0.4;
       base.cloudSwirl = 0.6;
@@ -444,6 +447,7 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.haloFalloff = 2.5;
       base.haloWhiten = 0.2;
       base.haloShadow = 0.7;
+      base.hasHzGradient = true; // prevent global sliders from overriding preset values
       break;
     }
 

@@ -105,6 +105,9 @@ const terrestrialVertexShader = `
   uniform float u_useTextureMaps;
   uniform sampler2D u_heightMap;
   uniform sampler2D u_normalMap;
+  uniform float u_tidallyLocked;
+  uniform vec3 u_sunDirectionLocal;
+  uniform float u_eyeAridEdge;
 
   // Equirectangular UV from sphere direction
   vec2 dirToUV(vec3 d) {
@@ -148,7 +151,7 @@ const terrestrialVertexShader = `
   }
 
   // ── Height: exact mirror of fragment computeContinent ───────
-  float computeHeight(vec3 p) {
+  float computeHeight(vec3 p, vec3 sphereDir) {
     // Same coordinate space as fragment: seededPos(dir, 100.0) * scale
     vec3 sp = (p + u_seed * 100.0) * scale;
     float sd = u_seed.x * 100.0;
@@ -173,7 +176,14 @@ const terrestrialVertexShader = `
     n = clamp(n, 0.0, 1.0);
 
     // Land only — ocean stays flat
-    return max(n - u_seaLevel, 0.0) / (1.0 - u_seaLevel);
+    // Ice/ocean eyeball: raise sea level on day side so displacement is suppressed (smooth ocean)
+    float sl = u_seaLevel;
+    if (u_tidallyLocked > 0.5 && u_eyeAridEdge > 1.0) {
+      float sunAngle = dot(sphereDir, u_sunDirectionLocal);
+      float dayBoost = smoothstep(0.0, 0.65, sunAngle);
+      sl = mix(0.05, 1.0, dayBoost);
+    }
+    return max(n - sl, 0.0) / (1.0 - sl + 0.001);
   }
 
   // ── Main — displacement + normals (texture or procedural) ──
@@ -194,7 +204,7 @@ const terrestrialVertexShader = `
         height = max(height - u_seaLevel, 0.0) / (1.0 - u_seaLevel);
       } else {
         // ── Procedural path: expensive per-vertex noise ──
-        height = computeHeight(dir);
+        height = computeHeight(dir, dir);
       }
       displacedPos = position + normal * height * u_displace;
 
@@ -206,8 +216,8 @@ const terrestrialVertexShader = `
       float r = length(position);
       vec3 pT = normalize(dir + tangent * eps);
       vec3 pB = normalize(dir + bitangent * eps);
-      vec3 posT = pT * r + pT * computeHeight(pT) * u_displace;
-      vec3 posB = pB * r + pB * computeHeight(pB) * u_displace;
+      vec3 posT = pT * r + pT * computeHeight(pT, pT) * u_displace;
+      vec3 posB = pB * r + pB * computeHeight(pB, pB) * u_displace;
       displacedNormal = normalize(cross(posT - displacedPos, posB - displacedPos));
       vPosition = normalize(displacedPos);
     } else {
@@ -872,8 +882,17 @@ const terrestrialFragment = `
       float eyeAnglePre = dot(baseDir, u_sunDirectionLocal)
                         + (continent - 0.5) * 0.25
                         + (pnoise3d(p * 2.0 + vec3(17.0)) - 0.5) * 0.08;
-      float subStellarDry = smoothstep(u_eyeAridEdge - 0.15, u_eyeAridEdge + 0.2, eyeAnglePre);
-      effectiveSeaLevel = mix(seaLevel, 0.0, subStellarDry);
+
+      if (u_eyeAridEdge > 1.0) {
+        // Ice/ocean eyeball: ocean at sub-stellar, land/ice at anti-stellar
+        float rawSun = dot(baseDir, u_sunDirectionLocal);
+        float dayBoost = smoothstep(0.0, 0.65, rawSun);
+        effectiveSeaLevel = mix(0.05, 1.0, dayBoost);
+      } else {
+        // Temperate eyeball: arid sub-stellar drops sea level
+        float subStellarDry = smoothstep(u_eyeAridEdge - 0.15, u_eyeAridEdge + 0.2, eyeAnglePre);
+        effectiveSeaLevel = mix(seaLevel, 0.0, subStellarDry);
+      }
     }
     float isLand = smoothstep(effectiveSeaLevel - 0.008, effectiveSeaLevel + 0.008, continent);
 
@@ -1099,20 +1118,35 @@ const terrestrialFragment = `
 
       // Solid ice: deep into night side
       float solidIceStart = -u_eyeIceEdge + 0.15;
-      iceCap = smoothstep(solidIceStart, solidIceStart + 0.15, antiStellar + iceNoise * 0.8);
+      iceCap = smoothstep(solidIceStart, solidIceStart + 0.2, antiStellar + iceNoise * 0.8);
 
-      // Icebergs/sea ice: scattered ice fragments in water near terminator
+      // Icebergs/sea ice: wide graduation from open water → scattered floes → pack ice → solid
       float icebergNoise = noise3d(warpedIceP * (3.0 + u_eyeIceBergDensity * 4.0) + vec3(37.0)) * 0.6
                          + noise3d(warpedIceP * (6.0 + u_eyeIceBergDensity * 6.0) + vec3(83.0)) * 0.3;
-      float icebergZone = smoothstep(-0.05, solidIceStart * 0.7, antiStellar);
-      float icebergThreshold = mix(0.75, 0.25, smoothstep(0.0, solidIceStart, antiStellar)) - u_eyeIceBergDensity * 0.15;
+      // Cracked floe texture: large angular shapes for pack ice look
+      float floeNoise = noise3d(warpedIceP * 1.5 + vec3(59.0)) * 0.4
+                      + noise3d(warpedIceP * 3.0 + vec3(97.0)) * 0.3;
+
+      // Iceberg zone: starts near terminator, extends deep toward anti-stellar
+      float icebergZoneStart = min(-0.1, solidIceStart * 0.3); // starts earlier
+      float icebergZone = smoothstep(icebergZoneStart - 0.15, icebergZoneStart + 0.1, antiStellar);
+
+      // Threshold decreases with distance — sparse near terminator, dense near solid ice
+      float densityGradient = smoothstep(icebergZoneStart, solidIceStart, antiStellar);
+      float icebergThreshold = mix(0.7, 0.15, densityGradient) - u_eyeIceBergDensity * 0.15;
       float icebergs = smoothstep(icebergThreshold, icebergThreshold + 0.1, icebergNoise) * icebergZone;
+
+      // Pack ice: larger connected floes closer to solid ice
+      float packIceZone = smoothstep(solidIceStart - 0.3, solidIceStart, antiStellar);
+      float packIce = smoothstep(0.3, 0.5, floeNoise) * packIceZone;
+      icebergs = max(icebergs, packIce);
+
       // Icebergs only in water, not on land
       icebergs *= (1.0 - isLand) * (1.0 - iceCap);
 
       iceFringe = max(
-        smoothstep(solidIceStart - 0.1, solidIceStart, antiStellar + iceNoise) * (1.0 - iceCap) * 0.3,
-        icebergs * 0.7
+        smoothstep(solidIceStart - 0.15, solidIceStart, antiStellar + iceNoise) * (1.0 - iceCap) * 0.4,
+        icebergs * 0.75
       );
     } else {
       // Normal: polar ice caps
@@ -1152,7 +1186,83 @@ const terrestrialFragment = `
     // Atmospheric rim (uses shared applyAtmosphere with shadow)
     surfaceColor = applyAtmosphere(surfaceColor, vWorldNormal, vWorldPosition);
 
+
     gl_FragColor = vec4(surfaceColor, 1.0);
+  }
+`;
+
+// Ice/ocean eyeball shader — open ocean at sub-stellar, ice graduation to anti-stellar
+const iceOceanFragment = `
+  uniform float u_time;
+  uniform float scale;
+  uniform vec3 color1, color2, color3, color4;
+
+  varying vec3 vPosition;
+  varying vec3 vNormal;
+  varying vec3 vWorldNormal;
+  varying vec3 vWorldPosition;
+
+  ${noiseLib}
+
+  void main() {
+    vec3 baseDir = vPosition;
+    vec3 p = baseDir + u_seed * 100.0;
+
+    float sunAngle = dot(baseDir, u_sunDirectionLocal);
+
+    // Noise for organic edge perturbation
+    float edgeNoise = (noise3d(baseDir * 4.0 + u_seed * 20.0) - 0.5) * 0.12;
+    float fineNoise = (noise3d(baseDir * 8.0 + u_seed * 35.0) - 0.5) * 0.06;
+    float t = sunAngle + edgeNoise + fineNoise;
+
+    // ── Zone colors ──
+
+    // Deep open ocean (sub-stellar center)
+    vec3 deepOcean = color1;
+
+    // Shallow ocean (sub-stellar edges, warmer water)
+    vec3 shallowOcean = color1 * 1.5 + vec3(0.04, 0.08, 0.1);
+
+    // Brash ice / slush — scattered floating chunks in dark water
+    vec3 slushBase = mix(color1, color4, 0.25);
+    float slushChunks = noise3d(baseDir * 12.0 + u_seed * 45.0);
+    vec3 slush = mix(slushBase, color4 * 0.7, smoothstep(0.4, 0.6, slushChunks) * 0.5);
+
+    // Pack ice — large cracked floes with dark water visible in cracks
+    vec3 packIce = color4 * 0.8 + vec3(0.02, 0.04, 0.06);
+    float cracks = noise3d(baseDir * 6.0 + u_seed * 30.0);
+    float fineCracks = noise3d(baseDir * 15.0 + u_seed * 55.0);
+    // Dark water in crack lines
+    packIce = mix(packIce, color1 * 0.5 + vec3(0.02, 0.04, 0.06), smoothstep(0.42, 0.52, cracks) * 0.6);
+    packIce = mix(packIce, color1 * 0.6 + vec3(0.01, 0.03, 0.04), smoothstep(0.44, 0.54, fineCracks) * 0.3);
+
+    // Solid ice — smooth, bright, slight texture
+    float iceTexture = noise3d(baseDir * 5.0 + u_seed * 15.0) * 0.05;
+    vec3 solidIce = color4 + iceTexture - 0.02;
+
+    // ── Gradient: ocean → shallow → slush → pack ice → solid ice ──
+    // Tight ocean eye, quick transition to ice, ice dominates
+    vec3 surface = deepOcean;
+    surface = mix(surface, shallowOcean, smoothstep(0.6, 0.35, t));
+    surface = mix(surface, slush, smoothstep(0.35, 0.2, t));       // narrow slush band
+    surface = mix(surface, packIce, smoothstep(0.2, 0.0, t));      // pack ice starts near terminator
+    surface = mix(surface, solidIce, smoothstep(0.0, -0.3, t));    // solid ice covers most of nightside
+
+    // ── Lighting ──
+    vec3 V = normalize(cameraPosition - vWorldPosition);
+    surface = planetLighting(surface, vWorldNormal, u_sunDirection, V, u_ambient);
+
+    // Ocean specular — strong on liquid, fading on ice
+    float liquidAmount = smoothstep(-0.1, 0.3, t);
+    vec3 reflectDir = reflect(-u_sunDirection, vWorldNormal);
+    float spec = pow(max(dot(normalize(-vPosition), reflectDir), 0.0), 32.0);
+    float specShadow = wrapDiffuse(vWorldNormal, u_sunDirection);
+    surface += vec3(0.35) * spec * specShadow * liquidAmount;
+
+    // Atmospheric rim
+    surface = applyAtmosphere(surface, vWorldNormal, vWorldPosition);
+
+    gl_FragColor = vec4(surface, 1.0);
   }
 `;
 
@@ -1328,6 +1438,8 @@ function selectFragmentShader(type: PlanetType): string {
       return iceGiantFragment;
 
     case PlanetType.WATER_WORLD:
+      return terrestrialFragment;
+
     case PlanetType.ICE_OCEAN_EYEBALL:
       return terrestrialFragment;
 
@@ -1403,9 +1515,9 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_vertLOD: { value: 0 },
       u_bumpStrength: { value: params.bumpStrength ?? 0.8 },
       u_tidallyLocked: { value: params.tidallyLocked ? 1.0 : 0.0 },
-      u_eyeAridEdge: { value: 0.3 },
-      u_eyeIceEdge: { value: -0.15 },
-      u_eyeIceBergDensity: { value: 0.5 },
+      u_eyeAridEdge: { value: params.eyeAridEdge ?? 0.3 },
+      u_eyeIceEdge: { value: params.eyeIceEdge ?? -0.15 },
+      u_eyeIceBergDensity: { value: params.eyeIceBergDensity ?? 0.5 },
       u_eyeVegHue: { value: 0.0 },
       u_eyeVegSat: { value: 1.0 },
       u_eyeMoisture: { value: 0.7 },
@@ -1647,7 +1759,7 @@ const cloudFragmentShader = `
 `;
 
 export function createCloudMaterial(params: ShaderParams): THREE.ShaderMaterial | null {
-  if (params.type !== PlanetType.TEMPERATE && params.type !== PlanetType.WATER_WORLD && params.type !== PlanetType.ICE_OCEAN_EYEBALL) return null;
+  if (params.type !== PlanetType.TEMPERATE && params.type !== PlanetType.WATER_WORLD) return null;
 
   return new THREE.ShaderMaterial({
     vertexShader,  // standard flat vertex shader — no displacement
