@@ -345,6 +345,9 @@ const App = ({ data }: any) => {
     eyeSpiralArms, setEyeSpiralArms,
     eyeSpiralStrength, setEyeSpiralStrength,
     eyeEyeSize, setEyeEyeSize,
+    eyeVegHue, setEyeVegHue,
+    eyeVegSat, setEyeVegSat,
+    eyeMoisture, setEyeMoisture,
     lavaWarp, setLavaWarp,
     lavaGlow, setLavaGlow,
     lavaHeightOffset, setLavaHeightOffset,
@@ -742,6 +745,9 @@ const App = ({ data }: any) => {
           <Slider label="Spiral Arms" min={1.0} max={5.0} step={0.5} value={eyeSpiralArms} onChange={setEyeSpiralArms} />
           <Slider label="Spiral Str" min={0.0} max={0.4} step={0.01} value={eyeSpiralStrength} onChange={setEyeSpiralStrength} />
           <Slider label="Eye Size" min={0.05} max={0.4} step={0.01} value={eyeEyeSize} onChange={setEyeEyeSize} />
+          <Slider label="Veg Hue" min={-0.5} max={0.5} step={0.01} value={eyeVegHue} onChange={setEyeVegHue} />
+          <Slider label="Veg Sat" min={0.0} max={2.0} step={0.05} value={eyeVegSat} onChange={setEyeVegSat} />
+          <Slider label="Moisture" min={0.0} max={1.0} step={0.05} value={eyeMoisture} onChange={setEyeMoisture} />
         </Accordion>
 
         <Accordion title="Sub-Neptune" defaultOpen={false}>

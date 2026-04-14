@@ -790,6 +790,9 @@ const terrestrialFragment = `
   uniform float u_eyeAridEdge;    // sun angle where arid→terminator transition starts
   uniform float u_eyeIceEdge;     // sun angle where terminator→ice transition starts
   uniform float u_eyeIceBergDensity; // iceberg frequency in transition zone
+  uniform float u_eyeVegHue;        // hue rotation for vegetation (-0.5 to 0.5)
+  uniform float u_eyeVegSat;        // saturation multiplier (0=grey, 1=normal, 2=vivid)
+  uniform float u_eyeMoisture;      // terminator moisture level (0=dry, 1=lush)
   uniform float u_useTextureMaps;
   uniform sampler2D u_heightMap;
   uniform sampler2D u_normalMap;
@@ -967,7 +970,7 @@ const terrestrialFragment = `
     if (u_tidallyLocked > 0.5) {
       float termMoisture = (1.0 - smoothstep(u_eyeAridEdge - 0.15, u_eyeAridEdge + 0.2, eyeballSunAngle))
                          * (1.0 - smoothstep(u_eyeIceEdge + 0.1, u_eyeIceEdge - 0.2, eyeballSunAngle));
-      moisture = mix(moisture, 0.7 + moisture * 0.3, termMoisture); // push moisture high at terminator
+      moisture = mix(moisture, u_eyeMoisture + moisture * 0.3, termMoisture);
     }
     float mountainRidge = (u_lod > 0.5) ? ridgedNoise(p, 2.0) : 0.0;
     float microNoise = noise3d(p * 4.0);
@@ -1013,14 +1016,24 @@ const terrestrialFragment = `
     vec3 shoreColor = mix(wetShore, dryShore, aridity);
 
     // Lowland — on arid planets, force toward arid tones
-    vec3 lowWet = color2 * 1.1 + vec3(-0.005, 0.015, -0.005);
-    // Eyeball: boost vegetation color at terminator — color adapts to star type
-    // (already set by star-type palette: color2 is the vegetation/lowland tone)
+    // Eyeball: apply hue/saturation shift to vegetation color
+    vec3 vegColor = color2;
+    if (u_tidallyLocked > 0.5) {
+      // Hue rotation via Rodrigues' formula around luminance axis
+      vec3 k = vec3(0.57735); // normalize(1,1,1)
+      float angle = u_eyeVegHue * 6.2832;
+      float ca = cos(angle);
+      float sa = sin(angle);
+      vegColor = vegColor * ca + cross(k, vegColor) * sa + k * dot(k, vegColor) * (1.0 - ca);
+      // Saturation: lerp toward grey
+      float lum = dot(vegColor, vec3(0.299, 0.587, 0.114));
+      vegColor = mix(vec3(lum), vegColor, u_eyeVegSat);
+    }
+    vec3 lowWet = vegColor * 1.1 + vec3(-0.005, 0.015, -0.005);
     if (u_tidallyLocked > 0.5) {
       float termZone = (1.0 - smoothstep(u_eyeAridEdge - 0.15, u_eyeAridEdge + 0.2, eyeballSunAngle))
                      * (1.0 - smoothstep(u_eyeIceEdge + 0.1, u_eyeIceEdge - 0.2, eyeballSunAngle));
-      // Brighten and saturate the existing palette vegetation color at terminator
-      lowWet = mix(lowWet, color2 * 1.8 + vec3(0.0, 0.02, 0.0), termZone * 0.6);
+      lowWet = mix(lowWet, vegColor * 1.8 + vec3(0.0, 0.02, 0.0), termZone * 0.6);
     }
     vec3 lowDry = mix(color2, color3, 0.4);
     vec3 lowArid = color3 * 0.9 + vec3(0.04, 0.02, -0.01);
@@ -1392,6 +1405,9 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_eyeAridEdge: { value: 0.3 },
       u_eyeIceEdge: { value: -0.15 },
       u_eyeIceBergDensity: { value: 0.5 },
+      u_eyeVegHue: { value: 0.0 },
+      u_eyeVegSat: { value: 1.0 },
+      u_eyeMoisture: { value: 0.7 },
       u_useTextureMaps: { value: 0 },
       u_heightMap: { value: null },
       u_normalMap: { value: null },

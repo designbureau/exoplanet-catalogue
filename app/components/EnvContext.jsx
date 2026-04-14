@@ -85,6 +85,9 @@ export const EnvProvider = ({ children }) => {
   const [eyeSpiralArms, setEyeSpiralArms] = useState(2.0);
   const [eyeSpiralStrength, setEyeSpiralStrength] = useState(0.14);
   const [eyeEyeSize, setEyeEyeSize] = useState(0.15);
+  const [eyeVegHue, setEyeVegHue] = useState(0.0);
+  const [eyeVegSat, setEyeVegSat] = useState(1.0);
+  const [eyeMoisture, setEyeMoisture] = useState(0.7);
 
   // HZ terrestrial presets: 3 categories interpolated by hz position
   const [hzPresets, setHzPresets] = useState({
@@ -195,6 +198,9 @@ export const EnvProvider = ({ children }) => {
       eyeSpiralArms, setEyeSpiralArms,
       eyeSpiralStrength, setEyeSpiralStrength,
       eyeEyeSize, setEyeEyeSize,
+      eyeVegHue, setEyeVegHue,
+      eyeVegSat, setEyeVegSat,
+      eyeMoisture, setEyeMoisture,
       lavaWarp, setLavaWarp,
       lavaGlow, setLavaGlow,
       lavaHeightOffset, setLavaHeightOffset,
@@ -207,7 +213,7 @@ export const EnvProvider = ({ children }) => {
       typeColorOverrides, setTypeColorOverrides,
       activePlanetInfo, setActivePlanetInfo,
       hzPresets, updatePreset,
-  }), [Constants, planetDistanceFactor, binaryDistanceFactor, bodyScale, showHabitableZone, showOrbits, shaderAmbient, starGlowScale, starGlowFalloff, starGlowOpacity, lavaAmbient, wrapRange, wrapPower, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, activePlanetInfo, hzPresets, eyeSpiralTightness, eyeSpiralArms, eyeSpiralStrength, eyeEyeSize]);
+  }), [Constants, planetDistanceFactor, binaryDistanceFactor, bodyScale, showHabitableZone, showOrbits, shaderAmbient, starGlowScale, starGlowFalloff, starGlowOpacity, lavaAmbient, wrapRange, wrapPower, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, cloudCoverage, cloudOpacity, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, activePlanetInfo, hzPresets, eyeSpiralTightness, eyeSpiralArms, eyeSpiralStrength, eyeEyeSize, eyeVegHue, eyeVegSat, eyeMoisture]);
 
   return (
     <EnvContext.Provider value={contextValue}>
