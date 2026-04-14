@@ -117,6 +117,8 @@ export function getScatteringPreset(type: PlanetType, hz: number = 0.5): Scatter
       return VENUS_PRESET;
     case PlanetType.WATER_WORLD:
       return WATER_WORLD_PRESET;
+    case PlanetType.ICE_OCEAN_EYEBALL:
+      return lerpParams(FROZEN_PRESET, WATER_WORLD_PRESET, 0.5);
     case PlanetType.LAVA_WORLD:
       return LAVA_PRESET;
     case PlanetType.FROZEN:

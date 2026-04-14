@@ -1328,6 +1328,7 @@ function selectFragmentShader(type: PlanetType): string {
       return iceGiantFragment;
 
     case PlanetType.WATER_WORLD:
+    case PlanetType.ICE_OCEAN_EYEBALL:
       return terrestrialFragment;
 
     case PlanetType.SUB_NEPTUNE:
@@ -1416,7 +1417,7 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_atmosDayColor: { value: params.atmosDayColor || new THREE.Color(0x00aaff) },
       u_atmosTwilightColor: { value: params.atmosTwilightColor || new THREE.Color(0xff6600) },
     },
-    vertexShader: (params.type === PlanetType.TEMPERATE || params.type === PlanetType.WATER_WORLD)
+    vertexShader: (params.type === PlanetType.TEMPERATE || params.type === PlanetType.WATER_WORLD || params.type === PlanetType.ICE_OCEAN_EYEBALL)
       ? terrestrialVertexShader : vertexShader,
     fragmentShader: selectFragmentShader(params.type),
   });
@@ -1646,7 +1647,7 @@ const cloudFragmentShader = `
 `;
 
 export function createCloudMaterial(params: ShaderParams): THREE.ShaderMaterial | null {
-  if (params.type !== PlanetType.TEMPERATE && params.type !== PlanetType.WATER_WORLD) return null;
+  if (params.type !== PlanetType.TEMPERATE && params.type !== PlanetType.WATER_WORLD && params.type !== PlanetType.ICE_OCEAN_EYEBALL) return null;
 
   return new THREE.ShaderMaterial({
     vertexShader,  // standard flat vertex shader — no displacement
