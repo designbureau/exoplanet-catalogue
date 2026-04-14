@@ -1474,6 +1474,13 @@ const cloudFragmentShader = `
     float signedLat = vPosition.y;
     float absLat = abs(signedLat);
 
+    // Eyeball: redefine "latitude" as distance from terminator ring
+    if (u_tidallyLocked > 0.5) {
+      float sunAngle = dot(vPosition, u_sunDirectionLocal);
+      signedLat = -sunAngle;  // terminator at 0, sub-stellar at -1, anti-stellar at +1
+      absLat = abs(signedLat);
+    }
+
     // ── Weather system: large-scale pressure cells (Perlin) ──
     vec3 weatherP = p * 2.0;
     float warpX = pnoise3d(weatherP * 0.3 + vec3(11.0));
@@ -1493,7 +1500,18 @@ const cloudFragmentShader = `
     float cs = cos(swirlAngle * 0.18);
     float sn = sin(swirlAngle * 0.18);
     vec3 cloudP = weatherP;
-    cloudP.xz = mat2(cs, -sn, sn, cs) * cloudP.xz;
+    if (u_tidallyLocked > 0.5) {
+      // Eyeball: swirl around sub-stellar axis instead of Y axis
+      vec3 sunDir = normalize(u_sunDirectionLocal);
+      vec3 upRef = abs(sunDir.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+      vec3 T = normalize(cross(upRef, sunDir));
+      vec3 B = cross(sunDir, T);
+      float ct = dot(cloudP, T);
+      float cb = dot(cloudP, B);
+      cloudP += T * (cs * ct + sn * cb - ct) + B * (-sn * ct + cs * cb - cb);
+    } else {
+      cloudP.xz = mat2(cs, -sn, sn, cs) * cloudP.xz;
+    }
 
     // ── Layer 1: Cumulus masses — domain-warped Perlin FBM ──
     float w1 = cloudFBM(cloudP * 0.3, 0.8);
@@ -1525,6 +1543,15 @@ const cloudFragmentShader = `
     float bandStr = 0.04 * min(u_cloudBands / 5.0, 1.0);
     clouds += sin(absLat * u_cloudBands * 6.0 + w1 * 2.5) * bandStr;
 
+    // Eyeball: sub-stellar convective cap + terminator convergence
+    if (u_tidallyLocked > 0.5) {
+      float sunAngle = dot(vPosition, u_sunDirectionLocal);
+      // Gentle convective cap at sub-stellar point
+      clouds += smoothstep(0.3, 0.85, sunAngle) * 0.08;
+      // Mild terminator convergence band
+      clouds += smoothstep(0.35, 0.0, abs(sunAngle)) * 0.04;
+    }
+
     // Cirrus wisps on top
     clouds = max(clouds, cirrus);
 
@@ -1537,8 +1564,14 @@ const cloudFragmentShader = `
     clouds -= edgeMask * edgeNoise * 0.4;
     clouds = max(clouds, 0.0);
 
-    // Polar clearing
-    clouds *= smoothstep(0.95, 0.75, absLat);
+    // Polar / anti-stellar clearing
+    if (u_tidallyLocked > 0.5) {
+      // Eyeball: only clear on anti-stellar side (signedLat > 0), keep thick cap at sub-stellar
+      float antiStellarFade = smoothstep(0.75, 0.95, max(signedLat, 0.0));
+      clouds *= 1.0 - antiStellarFade;
+    } else {
+      clouds *= smoothstep(0.95, 0.75, absLat);
+    }
 
     // ── Lighting ──
     float sunDot = dot(vWorldNormal, u_sunDirection);
@@ -1551,11 +1584,6 @@ const cloudFragmentShader = `
 
     // Fade clouds into shadow on dark side
     float dayFade = smoothstep(-0.1, 0.15, sunDot);
-    // Eyeball: also fade clouds on frozen anti-stellar hemisphere (no convection there)
-    if (u_tidallyLocked > 0.5) {
-      float antiStellar = -dot(vPosition, u_sunDirectionLocal);
-      dayFade *= smoothstep(0.3, -0.1, antiStellar); // clouds only on day side + terminator
-    }
     float alpha = clouds * u_cloudOpacity * dayFade;
     if (alpha < 0.01) discard;
     gl_FragColor = vec4(cloudColor, alpha);
