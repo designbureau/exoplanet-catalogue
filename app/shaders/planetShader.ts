@@ -1419,6 +1419,10 @@ const cloudFragmentShader = `
   uniform vec3 u_sunDirection;
   uniform vec3 u_sunDirectionLocal;
   uniform float u_tidallyLocked;
+  uniform float u_spiralTightness;
+  uniform float u_spiralArms;
+  uniform float u_spiralStrength;
+  uniform float u_eyeSize;
   uniform float u_wrapRange;
   uniform float u_wrapPower;
   varying vec3 vPosition;
@@ -1543,11 +1547,46 @@ const cloudFragmentShader = `
     float bandStr = 0.04 * min(u_cloudBands / 5.0, 1.0);
     clouds += sin(absLat * u_cloudBands * 6.0 + w1 * 2.5) * bandStr;
 
-    // Eyeball: sub-stellar convective cap + terminator convergence
+    // Eyeball: sub-stellar hurricane + terminator convergence
     if (u_tidallyLocked > 0.5) {
       float sunAngle = dot(vPosition, u_sunDirectionLocal);
-      // Gentle convective cap at sub-stellar point
-      clouds += smoothstep(0.3, 0.85, sunAngle) * 0.08;
+
+      // ── Sub-stellar hurricane spiral ──
+      vec3 sunDir = normalize(u_sunDirectionLocal);
+      vec3 upRef = abs(sunDir.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+      vec3 spiralT = normalize(cross(upRef, sunDir));
+      vec3 spiralB = cross(sunDir, spiralT);
+      float azimuth = atan(dot(vPosition, spiralB), dot(vPosition, spiralT));
+      float distFromCenter = acos(clamp(sunAngle, -1.0, 1.0)); // angular distance from sub-stellar
+
+      // Logarithmic spiral: tighter near eye, widening outward (like real hurricanes)
+      float logDist = log(max(distFromCenter, 0.01) * 8.0 + 1.0);
+      float spiralPhase = azimuth + logDist * u_spiralTightness;
+
+      // Domain warp the spiral with noise — breaks up the geometric regularity
+      float warpA = pnoise3d(p * 3.0 + vec3(53.0)) * 0.6;
+      float warpB = pnoise3d(p * 5.0 + vec3(91.0)) * 0.3;
+      spiralPhase += warpA + warpB;
+
+      // Soft cloud bands, not hard arms — wider bands further out
+      float bandWidth = mix(0.4, 0.7, smoothstep(0.0, 1.0, distFromCenter));
+      float spiralArm = sin(spiralPhase * u_spiralArms) * 0.5 + 0.5;
+      spiralArm = smoothstep(0.5 - bandWidth * 0.5, 0.5 + bandWidth * 0.5, spiralArm);
+
+      // Feathered trailing edges: add fine detail noise that erodes the bands
+      float feather = pnoise3d(p * 8.0 + vec3(37.0)) * 0.4
+                    + pnoise3d(p * 14.0 + vec3(71.0)) * 0.2;
+      spiralArm = clamp(spiralArm + feather - 0.2, 0.0, 1.0);
+
+      // Spiral strength: strong near eye wall, fading toward terminator
+      float eyeWall = smoothstep(u_eyeSize * 0.5, u_eyeSize * 1.7, distFromCenter);
+      float outerFade = smoothstep(1.3, 0.2, distFromCenter);
+      clouds += spiralArm * eyeWall * outerFade * u_spiralStrength;
+
+      // Clear eye at dead center
+      float eyeClearing = smoothstep(u_eyeSize, u_eyeSize * 0.4, distFromCenter);
+      clouds *= 1.0 - eyeClearing * 0.8;
+
       // Mild terminator convergence band
       clouds += smoothstep(0.35, 0.0, abs(sunAngle)) * 0.04;
     }
@@ -1611,6 +1650,10 @@ export function createCloudMaterial(params: ShaderParams): THREE.ShaderMaterial 
       u_sunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
       u_sunDirectionLocal: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
       u_tidallyLocked: { value: params.tidallyLocked ? 1.0 : 0.0 },
+      u_spiralTightness: { value: 3.5 },
+      u_spiralArms: { value: 2.0 },
+      u_spiralStrength: { value: 0.14 },
+      u_eyeSize: { value: 0.15 },
       u_wrapRange: { value: 0.45 },
       u_wrapPower: { value: 3.9 },
     },

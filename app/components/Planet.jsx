@@ -112,7 +112,7 @@ const Planet = ({ data, starData, starRef }) => {
   const cloudRef = useRef();
 
   const { addRef, activeRef, setActive } = useContext(RefContext);
-  const { Constants, planetDistanceFactor, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, spriteGlowInner, cloudCoverage, cloudOpacity, cloudSwirl, cloudBands, cloudWarp, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, terrCoastDetail, terrLandContrast, terrDisplaceScale, terrBumpStrength, eyeAridEdge, eyeIceEdge, eyeIceBergDensity, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, wrapRange, wrapPower, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, showOrbits, hzPresets } = useContext(EnvContext);
+  const { Constants, planetDistanceFactor, atmosFalloff, glowFalloff, glowInner, glowHueShift, glowSaturation, spriteGlowInner, cloudCoverage, cloudOpacity, cloudSwirl, cloudBands, cloudWarp, gasSwirl, gasWarp, gasStorm, gasTurb, gasBands, gasEdgeNoise, iceWarp, iceStorm, iceTurb, iceBands, iceEdgeNoise, terrSeaLevel, terrContinentFreq, terrWarpStrength, terrIceCapSize, terrCoastDetail, terrLandContrast, terrDisplaceScale, terrBumpStrength, eyeAridEdge, eyeIceEdge, eyeIceBergDensity, eyeSpiralTightness, eyeSpiralArms, eyeSpiralStrength, eyeEyeSize, lavaWarp, lavaGlow, lavaHeightOffset, lavaFlowScale, shaderAmbient, lavaAmbient, wrapRange, wrapPower, rockyCraterScale, rockyRidgeStrength, rockyCraterDepth, typeColorOverrides, setActivePlanetInfo, showOrbits, hzPresets } = useContext(EnvContext);
 
   // Pre-allocated vectors for per-frame camera updates
   const _camRight = useMemo(() => new THREE.Vector3(), []);
@@ -556,6 +556,12 @@ const Planet = ({ data, starData, starRef }) => {
         cloudMat.uniforms.u_cloudSwirl.value = shaderMaterial.uniforms.u_cloudSwirl.value;
         cloudMat.uniforms.u_cloudBands.value = shaderMaterial.uniforms.u_cloudBands.value;
         cloudMat.uniforms.u_cloudWarp.value = shaderMaterial.uniforms.u_cloudWarp.value;
+      }
+      if (cloudMat.uniforms.u_spiralTightness) {
+        cloudMat.uniforms.u_spiralTightness.value = eyeSpiralTightness;
+        cloudMat.uniforms.u_spiralArms.value = eyeSpiralArms;
+        cloudMat.uniforms.u_spiralStrength.value = eyeSpiralStrength;
+        cloudMat.uniforms.u_eyeSize.value = eyeEyeSize;
       }
     }
 

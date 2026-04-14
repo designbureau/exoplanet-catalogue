@@ -341,6 +341,10 @@ const App = ({ data }: any) => {
     eyeAridEdge, setEyeAridEdge,
     eyeIceEdge, setEyeIceEdge,
     eyeIceBergDensity, setEyeIceBergDensity,
+    eyeSpiralTightness, setEyeSpiralTightness,
+    eyeSpiralArms, setEyeSpiralArms,
+    eyeSpiralStrength, setEyeSpiralStrength,
+    eyeEyeSize, setEyeEyeSize,
     lavaWarp, setLavaWarp,
     lavaGlow, setLavaGlow,
     lavaHeightOffset, setLavaHeightOffset,
@@ -734,6 +738,10 @@ const App = ({ data }: any) => {
           <Slider label="Arid Edge" min={0.0} max={0.7} step={0.05} value={eyeAridEdge} onChange={setEyeAridEdge} />
           <Slider label="Ice Edge" min={-0.5} max={0.1} step={0.05} value={eyeIceEdge} onChange={setEyeIceEdge} />
           <Slider label="Icebergs" min={0.0} max={1.0} step={0.05} value={eyeIceBergDensity} onChange={setEyeIceBergDensity} />
+          <Slider label="Spiral Tight" min={1.0} max={8.0} step={0.5} value={eyeSpiralTightness} onChange={setEyeSpiralTightness} />
+          <Slider label="Spiral Arms" min={1.0} max={5.0} step={0.5} value={eyeSpiralArms} onChange={setEyeSpiralArms} />
+          <Slider label="Spiral Str" min={0.0} max={0.4} step={0.01} value={eyeSpiralStrength} onChange={setEyeSpiralStrength} />
+          <Slider label="Eye Size" min={0.05} max={0.4} step={0.01} value={eyeEyeSize} onChange={setEyeEyeSize} />
         </Accordion>
 
         <Accordion title="Sub-Neptune" defaultOpen={false}>
