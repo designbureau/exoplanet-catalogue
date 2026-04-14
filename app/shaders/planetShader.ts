@@ -108,6 +108,7 @@ const terrestrialVertexShader = `
   uniform float u_tidallyLocked;
   uniform vec3 u_sunDirectionLocal;
   uniform float u_eyeAridEdge;
+  uniform float u_lavaPoolSize;
 
   // Equirectangular UV from sphere direction
   vec2 dirToUV(vec3 d) {
@@ -180,8 +181,10 @@ const terrestrialVertexShader = `
     float sl = u_seaLevel;
     if (u_tidallyLocked > 0.5 && u_eyeAridEdge > 1.0) {
       float sunAngle = dot(sphereDir, u_sunDirectionLocal);
-      float dayBoost = smoothstep(0.0, 0.65, sunAngle);
-      sl = mix(0.05, 1.0, dayBoost);
+      float dayBoost = (u_eyeAridEdge > 1.0 && u_seaLevel < 0.75) ?
+        smoothstep(u_lavaPoolSize, u_lavaPoolSize + 0.6, sunAngle) : // lava: pool size controls lake
+        smoothstep(0.0, 0.65, sunAngle);     // ice: wider ocean
+      sl = mix(0.05, (u_eyeAridEdge > 1.0 && u_seaLevel < 0.75) ? 0.9 : 1.0, dayBoost);
     }
     return max(n - sl, 0.0) / (1.0 - sl + 0.001);
   }
@@ -803,6 +806,12 @@ const terrestrialFragment = `
   uniform float u_eyeVegHue;        // hue rotation for vegetation (-0.5 to 0.5)
   uniform float u_eyeVegSat;        // saturation multiplier (0=grey, 1=normal, 2=vivid)
   uniform float u_eyeMoisture;      // terminator moisture level (0=dry, 1=lush)
+  uniform vec3 emissiveColor;
+  uniform float emissiveIntensity;
+  uniform float u_lavaGlow;
+  uniform float u_lavaCrackDepth;
+  uniform float u_lavaPoolSize;
+  uniform float u_lavaHeatGrad;
   uniform float u_useTextureMaps;
   uniform sampler2D u_heightMap;
   uniform sampler2D u_normalMap;
@@ -874,6 +883,31 @@ const terrestrialFragment = `
       continent = computeContinent(p);
     }
 
+    // Lava eyeball: carve Voronoi crack valleys into terrain
+    if (emissiveIntensity > 0.01 && u_tidallyLocked > 0.5) {
+      // Domain-warp for organic shapes
+      vec3 crackWarp = vec3(
+        noise3d(p * 1.5 + vec3(11.0)),
+        noise3d(p * 1.5 + vec3(47.0)),
+        noise3d(p * 1.5 + vec3(83.0))
+      ) * 0.3;
+      vec3 warpedP = p + crackWarp;
+
+      vec2 v1 = voronoi(warpedP * 0.4);
+      vec2 v2 = voronoi(warpedP * 1.2);
+      float largeEdge = 1.0 - smoothstep(0.0, 0.1, v1.y - v1.x);
+      float medEdge = 1.0 - smoothstep(0.0, 0.08, v2.y - v2.x);
+      // Blend with FBM for irregularity
+      float fbm = noise3d(p * 2.5 + vec3(31.0)) * 0.3;
+      float crackDepth = (largeEdge * 0.5 + medEdge * 0.3 + fbm * 0.2);
+      crackDepth *= crackDepth;
+      // Carve valleys — deeper near sub-stellar (hotter, more molten)
+      float rawSunH = dot(baseDir, u_sunDirectionLocal);
+      float heatCarve = smoothstep(-0.5, 0.5, rawSunH);
+      continent -= crackDepth * heatCarve * u_lavaCrackDepth;
+      continent = max(continent, 0.0);
+    }
+
     float seaLevel = u_seaLevel;
     // Eyeball: pre-compute sun angle for sea level adjustment (with same noise perturbation)
     float effectiveSeaLevel = seaLevel;
@@ -884,10 +918,13 @@ const terrestrialFragment = `
                         + (pnoise3d(p * 2.0 + vec3(17.0)) - 0.5) * 0.08;
 
       if (u_eyeAridEdge > 1.0) {
-        // Ice/ocean eyeball: ocean at sub-stellar, land/ice at anti-stellar
+        // Eyeball sea level gradient: ocean/lava at sub-stellar, land/ice at anti-stellar
         float rawSun = dot(baseDir, u_sunDirectionLocal);
-        float dayBoost = smoothstep(0.0, 0.65, rawSun);
-        effectiveSeaLevel = mix(0.05, 1.0, dayBoost);
+        float dayBoost = (emissiveIntensity > 0.01) ?
+          smoothstep(u_lavaPoolSize, u_lavaPoolSize + 0.6, rawSun) : // lava: pool size controls lake
+          smoothstep(0.0, 0.65, rawSun);     // ice: wider ocean
+        float maxSea = (emissiveIntensity > 0.01) ? 0.9 : 1.0;
+        effectiveSeaLevel = mix(0.05, maxSea, dayBoost);
       } else {
         // Temperate eyeball: arid sub-stellar drops sea level
         float subStellarDry = smoothstep(u_eyeAridEdge - 0.15, u_eyeAridEdge + 0.2, eyeAnglePre);
@@ -1109,6 +1146,10 @@ const terrestrialFragment = `
     float iceNoise = noise3d(warpedIceP * u_iceDetail + vec3(11.0)) * 0.12
                    + noise3d(warpedIceP * (u_iceDetail * 2.8) + vec3(23.0)) * 0.04;
     vec3 iceColor = vec3(0.82, 0.85, 0.9) + vec3(0.04, 0.03, 0.02) * microNoise;
+    // Lava eyeball: replace ice with dark solidified crust
+    if (emissiveIntensity > 0.01) {
+      iceColor = color4 + vec3(0.03, 0.01, 0.005) * microNoise;
+    }
 
     float iceCap, iceFringe;
 
@@ -1182,6 +1223,61 @@ const terrestrialFragment = `
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
     float specShadow = wrapDiffuse(vWorldNormal, u_sunDirection);
     surfaceColor += vec3(0.3) * spec * specShadow * (1.0 - isLand);
+
+    // ── Lava eyeball: emissive glow (cracks are already in terrain) ──
+    if (emissiveIntensity > 0.01 && u_tidallyLocked > 0.5) {
+      float rawSun = dot(baseDir, u_sunDirectionLocal);
+      float heatGradient = smoothstep(-0.4, u_lavaHeatGrad, rawSun);
+
+      // Lava pool: REPLACE surface color in molten areas with graduated lava
+      float poolMask = (1.0 - isLand);
+
+      // Internal pool variation: terrain noise + depth create cooler/hotter patches
+      float poolNoise = noise3d(p * 2.0 + vec3(19.0)) * 0.25
+                      + noise3d(p * 5.0 + vec3(43.0)) * 0.12;
+      float poolDepth = smoothstep(effectiveSeaLevel, effectiveSeaLevel - 0.2, continent);
+
+      // Heat within pool: macro (sun angle) + micro (depth, noise)
+      float poolHeat = heatGradient * (0.5 + poolDepth * 0.5) * (0.8 + poolNoise);
+      poolHeat = clamp(poolHeat, 0.0, 1.0);
+
+      // Graduated lava color: dark red → red → orange → yellow-orange → yellow
+      vec3 poolColor = vec3(0.25, 0.03, 0.005);                                           // darkest: cooling edge
+      poolColor = mix(poolColor, vec3(0.5, 0.08, 0.01), smoothstep(0.1, 0.3, poolHeat));  // dark red
+      poolColor = mix(poolColor, vec3(0.8, 0.2, 0.02), smoothstep(0.3, 0.5, poolHeat));   // red-orange
+      poolColor = mix(poolColor, vec3(1.0, 0.45, 0.05), smoothstep(0.5, 0.7, poolHeat));  // orange
+      poolColor = mix(poolColor, vec3(1.0, 0.75, 0.2), smoothstep(0.7, 0.9, poolHeat));   // yellow-orange
+
+      // Replace surface color in pool areas (not additive)
+      surfaceColor = mix(surfaceColor, poolColor, poolMask);
+
+      // Emissive glow in low terrain (Voronoi crack valleys + natural low areas)
+      // Narrow bright lava in the deepest areas, dimmer red glow in shallow cracks
+      float deepLava = smoothstep(effectiveSeaLevel + 0.05, effectiveSeaLevel - 0.08, continent);
+      float shallowCrack = smoothstep(effectiveSeaLevel + 0.2, effectiveSeaLevel + 0.02, continent);
+
+      // Deep lava: bright yellow-orange (the rivers of fire)
+      vec3 deepGlow = vec3(0.05, 0.01, 0.003);
+      deepGlow = mix(deepGlow, vec3(0.4, 0.05, 0.01), smoothstep(-0.5, -0.1, rawSun));
+      deepGlow = mix(deepGlow, vec3(0.9, 0.3, 0.03), smoothstep(-0.1, 0.15, rawSun));
+      deepGlow = mix(deepGlow, vec3(1.0, 0.65, 0.1), smoothstep(0.15, 0.5, rawSun));
+
+      // Shallow cracks: dim red underglow (heat seeping through thin crust)
+      vec3 shallowGlow = vec3(0.03, 0.005, 0.002);
+      shallowGlow = mix(shallowGlow, vec3(0.25, 0.04, 0.01), smoothstep(-0.3, 0.1, rawSun));
+      shallowGlow = mix(shallowGlow, vec3(0.5, 0.1, 0.02), smoothstep(0.1, 0.4, rawSun));
+
+      surfaceColor += deepGlow * deepLava * heatGradient * emissiveIntensity * 1.5;
+      surfaceColor += shallowGlow * shallowCrack * isLand * heatGradient * emissiveIntensity * 0.6;
+
+      // Subtle warm tint on crust near sub-stellar (radiant heat from below)
+      float surfaceHeat = isLand * heatGradient * heatGradient;
+      surfaceColor += vec3(0.12, 0.02, 0.005) * surfaceHeat * 0.3;
+
+      // Darken anti-stellar: cold dead basalt
+      float coldDarken = smoothstep(0.1, -0.5, rawSun) * isLand;
+      surfaceColor *= mix(1.0, 0.15, coldDarken);
+    }
 
     // Atmospheric rim (uses shared applyAtmosphere with shadow)
     surfaceColor = applyAtmosphere(surfaceColor, vWorldNormal, vWorldPosition);
@@ -1441,6 +1537,7 @@ function selectFragmentShader(type: PlanetType): string {
       return terrestrialFragment;
 
     case PlanetType.ICE_OCEAN_EYEBALL:
+    case PlanetType.LAVA_EYEBALL:
       return terrestrialFragment;
 
     case PlanetType.SUB_NEPTUNE:
@@ -1475,8 +1572,12 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       color2: { value: params.color2 },
       color3: { value: params.color3 },
       color4: { value: params.color4 },
-      emissiveColor: { value: params.emissive },
-      emissiveIntensity: { value: params.emissiveIntensity },
+      emissiveColor: { value: params.emissive || new THREE.Color(0, 0, 0) },
+      emissiveIntensity: { value: params.emissiveIntensity ?? 0 },
+      u_lavaGlow: { value: params.emissiveIntensity > 0 ? 0.6 : 0.0 },
+      u_lavaCrackDepth: { value: 0.25 },
+      u_lavaPoolSize: { value: 0.3 },
+      u_lavaHeatGrad: { value: 0.6 },
       u_atmosColor: { value: params.atmosColor },
       u_atmosIntensity: { value: params.atmosIntensity },
       u_atmosFalloff: { value: 1.4 },
@@ -1529,7 +1630,7 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_atmosDayColor: { value: params.atmosDayColor || new THREE.Color(0x00aaff) },
       u_atmosTwilightColor: { value: params.atmosTwilightColor || new THREE.Color(0xff6600) },
     },
-    vertexShader: (params.type === PlanetType.TEMPERATE || params.type === PlanetType.WATER_WORLD || params.type === PlanetType.ICE_OCEAN_EYEBALL)
+    vertexShader: (params.type === PlanetType.TEMPERATE || params.type === PlanetType.WATER_WORLD || params.type === PlanetType.ICE_OCEAN_EYEBALL || params.type === PlanetType.LAVA_EYEBALL)
       ? terrestrialVertexShader : vertexShader,
     fragmentShader: selectFragmentShader(params.type),
   });

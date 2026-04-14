@@ -120,6 +120,7 @@ export function getScatteringPreset(type: PlanetType, hz: number = 0.5): Scatter
     case PlanetType.ICE_OCEAN_EYEBALL:
       return lerpParams(FROZEN_PRESET, WATER_WORLD_PRESET, 0.5);
     case PlanetType.LAVA_WORLD:
+    case PlanetType.LAVA_EYEBALL:
       return LAVA_PRESET;
     case PlanetType.FROZEN:
       return FROZEN_PRESET;

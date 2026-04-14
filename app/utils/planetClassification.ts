@@ -29,6 +29,7 @@ export enum PlanetType {
   VENUS_LIKE = "VENUS_LIKE",         // Hot, thick haze (larger rocky worlds)
   TEMPERATE = "TEMPERATE",           // Habitable zone, Earth-like potential
   ICE_OCEAN_EYEBALL = "ICE_OCEAN_EYEBALL", // Tidally locked ice/ocean world
+  LAVA_EYEBALL = "LAVA_EYEBALL",     // Tidally locked lava world
   FROZEN = "FROZEN",                 // Cold, icy surface
 
   UNKNOWN = "UNKNOWN",
@@ -226,14 +227,16 @@ export function classifyPlanet(input: ClassificationInput): ShaderParams {
     type = PlanetType.ICE_GIANT;
   } else if (radiusEarth > 1.75) {
     // Super-Earth / sub-Neptune boundary — check for extreme flux first
-    if (sEff > 25 && density >= 3) type = PlanetType.LAVA_WORLD; // dense + extreme flux = lava
-    else if (sEff > 1.04 && density >= 3) type = PlanetType.HOT_ROCKY; // dense + hot = hot rocky
+    if (tidallyLocked && sEff > 25 && density >= 3) type = PlanetType.LAVA_EYEBALL;
+    else if (sEff > 25 && density >= 3) type = PlanetType.LAVA_WORLD;
+    else if (sEff > 1.04 && density >= 3) type = PlanetType.HOT_ROCKY;
     else if (tidallyLocked && density >= 0 && density < 2 && sEff > 0.2 && sEff <= 0.45) type = PlanetType.ICE_OCEAN_EYEBALL;
     else if (density >= 0 && density < 2) type = PlanetType.WATER_WORLD;
     else type = PlanetType.SUB_NEPTUNE;
   } else if (radiusEarth > 0) {
     // Rocky planets: use stellar flux for Venus/HZ/Frozen boundaries
-    if (sEff > 25) type = PlanetType.LAVA_WORLD;
+    if (tidallyLocked && sEff > 25) type = PlanetType.LAVA_EYEBALL;
+    else if (sEff > 25) type = PlanetType.LAVA_WORLD;
     else if (sEff > 1.04 && radiusEarth > 0.5) type = PlanetType.VENUS_LIKE;
     else if (sEff > 1.04) type = PlanetType.HOT_ROCKY;  // too small to retain atmosphere
     else if (sEff > 0.35) type = tidallyLocked && sEff <= 0.45 ? PlanetType.ICE_OCEAN_EYEBALL : PlanetType.TEMPERATE;
@@ -448,6 +451,54 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.haloWhiten = 0.2;
       base.haloShadow = 0.7;
       base.hasHzGradient = true; // prevent global sliders from overriding preset values
+      break;
+    }
+
+    case PlanetType.LAVA_EYEBALL: {
+      // Tidally locked lava world — molten lake at sub-stellar, cooling crust, cold rock at anti-stellar
+      // Uses terrestrial shader with eyeball sea level gradient (eyeAridEdge > 1.0)
+      // color1 = "ocean" = molten lava, color2 = "vegetation" = cooling orange crust
+      // color3 = "highland" = solidified dark rock, color4 = "ice/peak" = cold black basalt
+      base.color1 = new THREE.Color('#cc5500'); // molten lava channels (orange)
+      base.color2 = new THREE.Color('#301008'); // warm crust (very dark red-brown)
+      base.color3 = new THREE.Color('#120604'); // cooled rock (near black with red tint)
+      base.color4 = new THREE.Color('#080302'); // cold dead basalt (almost black)
+      base.noiseScale = 12;
+      base.seaLevel = 0.72;
+      base.continentFreq = 0.2;
+      base.iceCapSize = 0.15;
+      base.iceEdge = 0.06;
+      base.iceWarp = 0.8;
+      base.iceDetail = 0.7;
+      base.warpIntensity = 4.0;
+      base.coastDetail = 0.3;
+      base.landContrast = 1.6;
+      base.bumpStrength = 0.6;
+      base.tidallyLocked = true;
+      base.eyeAridEdge = 1.5;        // signals lava eyeball to shader (same as ice/ocean)
+      base.eyeIceEdge = -0.2;
+      base.eyeIceBergDensity = 0.3;
+      base.emissive = new THREE.Color(1.0, 0.5, 0.08);
+      base.emissiveIntensity = 0.8;
+      base.cloudCoverage = 0.0;
+      base.cloudOpacity = 0.0;
+      base.swirlStrength = 0.0;
+      base.hasAtmosphere = true;
+      base.showRim = true;
+      base.showHalo = true;
+      base.atmosIntensity = 0.0;
+      base.atmosDayColor = new THREE.Color('#ff6622');
+      base.atmosTwilightColor = new THREE.Color('#aa3300');
+      base.rimIntensity = 0.05;
+      base.rimFalloff = 1.5;
+      base.shellIntensity = 0;
+      base.showShell = false;
+      base.haloIntensity = 0.3;
+      base.haloScale = 1.6;
+      base.haloFalloff = 2.8;
+      base.haloWhiten = 0.1;
+      base.haloShadow = 0.5;
+      base.hasHzGradient = true;
       break;
     }
 
