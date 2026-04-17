@@ -81,6 +81,10 @@ export const EnvProvider = ({ children }) => {
   const [eyeAridEdge, setEyeAridEdge] = useState(0.3);
   const [eyeIceEdge, setEyeIceEdge] = useState(-0.15);
   const [eyeIceBergDensity, setEyeIceBergDensity] = useState(0.5);
+  // Ice-ocean eyeball (tidally locked ice world)
+  const [iceOceanPolarFade, setIceOceanPolarFade] = useState(0.5);
+  const [iceOceanEdgeNoise, setIceOceanEdgeNoise] = useState(0.5);
+  const [iceOceanCrackDepth, setIceOceanCrackDepth] = useState(0.5);
   const [eyeSpiralTightness, setEyeSpiralTightness] = useState(3.5);
   const [eyeSpiralArms, setEyeSpiralArms] = useState(2.0);
   const [eyeSpiralStrength, setEyeSpiralStrength] = useState(0.14);
@@ -125,7 +129,7 @@ export const EnvProvider = ({ children }) => {
   // Rocky controls
   // Wrap lighting controls
   const [wrapRange, setWrapRange] = useState(0.45);
-  const [wrapPower, setWrapPower] = useState(3.9);
+  const [wrapPower, setWrapPower] = useState(1.0);
 
   const [rockyCraterScale, setRockyCraterScale] = useState(1.0);
   const [rockyRidgeStrength, setRockyRidgeStrength] = useState(0.35);
@@ -199,6 +203,9 @@ export const EnvProvider = ({ children }) => {
       eyeAridEdge, setEyeAridEdge,
       eyeIceEdge, setEyeIceEdge,
       eyeIceBergDensity, setEyeIceBergDensity,
+      iceOceanPolarFade, setIceOceanPolarFade,
+      iceOceanEdgeNoise, setIceOceanEdgeNoise,
+      iceOceanCrackDepth, setIceOceanCrackDepth,
       eyeSpiralTightness, setEyeSpiralTightness,
       eyeSpiralArms, setEyeSpiralArms,
       eyeSpiralStrength, setEyeSpiralStrength,

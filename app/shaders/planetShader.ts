@@ -803,6 +803,9 @@ const terrestrialFragment = `
   uniform float u_eyeAridEdge;    // sun angle where arid→terminator transition starts
   uniform float u_eyeIceEdge;     // sun angle where terminator→ice transition starts
   uniform float u_eyeIceBergDensity; // iceberg frequency in transition zone
+  uniform float u_iceOceanPolarFade;   // 0=no cap, 1=cap fills most of night side
+  uniform float u_iceOceanEdgeNoise;   // 0=smooth cap edge, 1=very ragged floe-shaped edge
+  uniform float u_iceOceanCrackDepth;  // 0=cracks invisible, 1=strong dark water in cracks
   uniform float u_eyeVegHue;        // hue rotation for vegetation (-0.5 to 0.5)
   uniform float u_eyeVegSat;        // saturation multiplier (0=grey, 1=normal, 2=vivid)
   uniform float u_eyeMoisture;      // terminator moisture level (0=dry, 1=lush)
@@ -883,28 +886,66 @@ const terrestrialFragment = `
       continent = computeContinent(p);
     }
 
-    // Lava eyeball: carve Voronoi crack valleys into terrain
-    if (emissiveIntensity > 0.01 && u_tidallyLocked > 0.5) {
-      // Domain-warp for organic shapes
+    // Eyeball Voronoi crack valleys
+    float eyeCrackMask = 0.0; // stored for ice crevasse rendering later
+    if (u_tidallyLocked > 0.5 && u_eyeAridEdge > 1.0) {
+      // Heavy domain-warp for organic, terrain-following shapes
       vec3 crackWarp = vec3(
-        noise3d(p * 1.5 + vec3(11.0)),
-        noise3d(p * 1.5 + vec3(47.0)),
-        noise3d(p * 1.5 + vec3(83.0))
-      ) * 0.3;
-      vec3 warpedP = p + crackWarp;
+        noise3d(p * 1.2 + vec3(11.0)),
+        noise3d(p * 1.2 + vec3(47.0)),
+        noise3d(p * 1.2 + vec3(83.0))
+      ) * 0.5;
+      // Second warp layer blended with terrain height for organic merging
+      vec3 terrainWarp = vec3(
+        noise3d(p * 2.5 + vec3(23.0)),
+        noise3d(p * 2.5 + vec3(59.0)),
+        noise3d(p * 2.5 + vec3(91.0))
+      ) * 0.2 * continent;
+      vec3 warpedP = p + crackWarp + terrainWarp;
 
-      vec2 v1 = voronoi(warpedP * 0.4);
-      vec2 v2 = voronoi(warpedP * 1.2);
-      float largeEdge = 1.0 - smoothstep(0.0, 0.1, v1.y - v1.x);
-      float medEdge = 1.0 - smoothstep(0.0, 0.08, v2.y - v2.x);
-      // Blend with FBM for irregularity
-      float fbm = noise3d(p * 2.5 + vec3(31.0)) * 0.3;
-      float crackDepth = (largeEdge * 0.5 + medEdge * 0.3 + fbm * 0.2);
-      crackDepth *= crackDepth;
-      // Carve valleys — deeper near sub-stellar (hotter, more molten)
+      // Single Voronoi cell set — "large" and "small" cracks are both drawn
+      // on the SAME cell boundaries, so the hierarchy looks unified rather
+      // than two independent layers crossing each other. Low-frequency noise
+      // decides which edges get drawn wide (major cracks) vs hairline (minor).
+      vec2 v = voronoi(warpedP * 0.7);
+      float edgeDist = v.y - v.x;
+      float widthNoise = noise3d(warpedP * 0.45 + vec3(13.0));
+      float majorAmp = smoothstep(0.35, 0.7, widthNoise);
+      float wideEdge = 1.0 - smoothstep(0.0, 0.14, edgeDist); // thick cracks
+      float thinEdge = 1.0 - smoothstep(0.0, 0.05, edgeDist); // hairline cracks
+      // Every edge exists; width ramps between hairline and wide by region
+      float unifiedEdge = mix(thinEdge * 0.55, wideEdge, majorAmp);
+      // Heavy FBM blend so cracks follow terrain contours
+      float fbm = noise3d(p * 2.0 + vec3(31.0)) * 0.35
+                + noise3d(p * 4.0 + vec3(67.0)) * 0.15;
+      float crackDepth = unifiedEdge * 0.7 + fbm * 0.25;
+      crackDepth = crackDepth * mix(crackDepth, 1.0, 0.3); // softer than pure square
+
       float rawSunH = dot(baseDir, u_sunDirectionLocal);
-      float heatCarve = smoothstep(-0.5, 0.5, rawSunH);
-      continent -= crackDepth * heatCarve * u_lavaCrackDepth;
+
+      if (emissiveIntensity > 0.01) {
+        // Lava: cracks deeper near sub-stellar (hotter, more molten)
+        float heatCarve = smoothstep(-0.5, 0.5, rawSunH);
+        continent -= crackDepth * heatCarve * u_lavaCrackDepth;
+      } else {
+        // Ice: cracks live in a band between the two poles.
+        // Sub-stellar (rawSunH=1): clear open ocean.
+        // Day side → terminator → mid-night: full cellular crack pattern.
+        // Anti-stellar (rawSunH=-1): solid unbroken polar ice cap.
+        float iceCarve = (1.0 - smoothstep(0.2, 0.95, rawSunH))
+                       * smoothstep(-0.55, -0.1, rawSunH);
+        float iceCrack = crackDepth * iceCarve;
+        continent -= iceCrack * 0.45;
+        eyeCrackMask = iceCrack;
+
+        // Sub-stellar abyssal basin — force the continent lower near the eye
+        // so the ocean-depth gradient naturally reaches its deepest colour
+        // at the sub-stellar pole. Wide and concentrated: the darkest zone
+        // covers most of the inner day-side, fading to normal terrain as
+        // the floes take over.
+        float subStellarBasin = smoothstep(0.1, 0.85, rawSunH);
+        continent -= subStellarBasin * 0.6;
+      }
       continent = max(continent, 0.0);
     }
 
@@ -1033,7 +1074,10 @@ const terrestrialFragment = `
     float warpNoise = noise3d(p * 3.0 + vec3(77.0));
 
     // Ocean / basins: on arid planets, "ocean" is dark dusty lowland, not water
-    vec3 deepWater = color1 * 0.3;
+    // deepWater matches the crevasse crack colour (color1 * 0.12) so the ocean
+    // gradient reaches the same deepest blue as the dark water in ice cracks,
+    // unifying the two visually.
+    vec3 deepWater = color1 * 0.12;
     vec3 midWater = color1 * 0.6;
     vec3 shallowWater = color1 * 0.95 + vec3(0.01, 0.02, 0.015);
     // Arid basins: dark rusty lowlands instead of blue water
@@ -1157,16 +1201,22 @@ const terrestrialFragment = `
       // Eyeball: ice centered on anti-stellar point (night side)
       float antiStellar = -dot(baseDir, u_sunDirectionLocal); // 1=anti-stellar, -1=sub-stellar
 
-      // Solid ice: deep into night side
-      float solidIceStart = -u_eyeIceEdge + 0.15;
-      iceCap = smoothstep(solidIceStart, solidIceStart + 0.2, antiStellar + iceNoise * 0.8);
-
       // Icebergs/sea ice: wide graduation from open water → scattered floes → pack ice → solid
       float icebergNoise = noise3d(warpedIceP * (3.0 + u_eyeIceBergDensity * 4.0) + vec3(37.0)) * 0.6
                          + noise3d(warpedIceP * (6.0 + u_eyeIceBergDensity * 6.0) + vec3(83.0)) * 0.3;
       // Cracked floe texture: large angular shapes for pack ice look
       float floeNoise = noise3d(warpedIceP * 1.5 + vec3(59.0)) * 0.4
                       + noise3d(warpedIceP * 3.0 + vec3(97.0)) * 0.3;
+
+      // Solid ice: deep into night side. Feed the SAME floe noise that paints
+      // the pack-ice floes into the cap's edge so the boundary follows floe
+      // shapes — solid ice reads as frozen-together floes rather than a disc
+      // dropped on top. Perturbation scaled by u_iceOceanEdgeNoise (0=smooth,
+      // 1=strongly ragged); cap size shifted by u_iceOceanPolarFade.
+      float solidIceStart = -u_eyeIceEdge + 0.15 - (u_iceOceanPolarFade - 0.5) * 0.5;
+      float edgeAmt = u_iceOceanEdgeNoise * 2.0;
+      float capEdgePerturb = iceNoise * 0.6 * edgeAmt + (floeNoise - 0.35) * 0.85 * edgeAmt;
+      iceCap = smoothstep(solidIceStart - 0.2, solidIceStart + 0.3, antiStellar + capEdgePerturb);
 
       // Iceberg zone: starts near terminator, extends deep toward anti-stellar
       float icebergZoneStart = min(-0.1, solidIceStart * 0.3); // starts earlier
@@ -1207,7 +1257,19 @@ const terrestrialFragment = `
     }
 
     surfaceColor = mix(surfaceColor, mix(surfaceColor, iceColor, 0.4), iceFringe);
-    surfaceColor = mix(surfaceColor, iceColor, iceCap);
+    // Ice crevasses: reduce ice cap coverage where Voronoi cracks are deep
+    float adjustedIceCap = iceCap * (1.0 - eyeCrackMask * 3.5);
+    adjustedIceCap = max(adjustedIceCap, 0.0);
+    surfaceColor = mix(surfaceColor, iceColor, adjustedIceCap);
+    // Dark water visible in crevasses through the ice
+    if (eyeCrackMask > 0.02 && emissiveIntensity < 0.01) {
+      // Crack interiors = very deep dark water. Must be darker than the
+      // surrounding ocean (which is already color1 * 0.3) so crack lines read
+      // as dark seams between brighter floes, not bright lines on dark cells.
+      vec3 crevassColor = color1 * 0.12;
+      float crevassVis = smoothstep(0.02, 0.15, eyeCrackMask);
+      surfaceColor = mix(surfaceColor, crevassColor, crevassVis * 0.85 * (u_iceOceanCrackDepth * 2.0));
+    }
 
     // Cloud shadows: handled by the cloud sphere layer rendering on top
     // with alpha blending — no separate shadow pass needed.
@@ -1292,6 +1354,9 @@ const iceOceanFragment = `
   uniform float u_time;
   uniform float scale;
   uniform vec3 color1, color2, color3, color4;
+  uniform float u_iceOceanPolarFade;   // 0=no polar cap, 1=polar cap fills most of night side
+  uniform float u_iceOceanEdgeNoise;   // 0=smooth pack/polar edge, 1=very ragged
+  uniform float u_iceOceanCrackDepth;  // 0=cracks invisible, 1=deep dark water between floes
 
   varying vec3 vPosition;
   varying vec3 vNormal;
@@ -1311,6 +1376,15 @@ const iceOceanFragment = `
     float fineNoise = (noise3d(baseDir * 8.0 + u_seed * 35.0) - 0.5) * 0.06;
     float t = sunAngle + edgeNoise + fineNoise;
 
+    // Fully independent perturbation for the pack-ice → solid-ice boundary,
+    // weighted toward higher frequencies so the polar edge breaks into fingers
+    // and inlets instead of a smoothly wobbling band.
+    float edgeAmp = u_iceOceanEdgeNoise * 2.0;
+    float iceLarge  = (noise3d(baseDir * 3.0  + u_seed * 62.0) - 0.5) * 0.20 * edgeAmp;
+    float iceMid    = (noise3d(baseDir * 7.0  + u_seed * 77.0) - 0.5) * 0.14 * edgeAmp;
+    float iceFine   = (noise3d(baseDir * 16.0 + u_seed * 91.0) - 0.5) * 0.07 * edgeAmp;
+    float tIce = sunAngle + iceLarge + iceMid + iceFine;
+
     // ── Zone colors ──
 
     // Deep open ocean (sub-stellar center)
@@ -1324,25 +1398,52 @@ const iceOceanFragment = `
     float slushChunks = noise3d(baseDir * 12.0 + u_seed * 45.0);
     vec3 slush = mix(slushBase, color4 * 0.7, smoothstep(0.4, 0.6, slushChunks) * 0.5);
 
-    // Pack ice — large cracked floes with dark water visible in cracks
-    vec3 packIce = color4 * 0.8 + vec3(0.02, 0.04, 0.06);
+    // Unified ice surface — one material, cracks fade organically toward the
+    // pole. No separate solid-ice layer, so the floe pattern stays connected
+    // all the way from the terminator into the polar cap.
     float cracks = noise3d(baseDir * 6.0 + u_seed * 30.0);
     float fineCracks = noise3d(baseDir * 15.0 + u_seed * 55.0);
-    // Dark water in crack lines
-    packIce = mix(packIce, color1 * 0.5 + vec3(0.02, 0.04, 0.06), smoothstep(0.42, 0.52, cracks) * 0.6);
-    packIce = mix(packIce, color1 * 0.6 + vec3(0.01, 0.03, 0.04), smoothstep(0.44, 0.54, fineCracks) * 0.3);
+    // Tie the polar whitening to the same floe pattern that draws the cracks,
+    // so the solid ice grows out of the floes rather than sitting on top.
+    tIce += (cracks - 0.5) * 0.22 + (fineCracks - 0.5) * 0.08;
 
-    // Solid ice — smooth, bright, slight texture
     float iceTexture = noise3d(baseDir * 5.0 + u_seed * 15.0) * 0.05;
-    vec3 solidIce = color4 + iceTexture - 0.02;
+    vec3 cleanIce = color4 + iceTexture - 0.02;
 
-    // ── Gradient: ocean → shallow → slush → pack ice → solid ice ──
-    // Tight ocean eye, quick transition to ice, ice dominates
+    // Per-floe jitter — each floe gets a random offset to its fade threshold
+    // so neighbouring floes don't cross the pack→solid transition in sync.
+    // This scatters the boundary across ~0.4 of sunAngle space, dissolving
+    // any visible ring.
+    float floeJitter = (noise3d(baseDir * 6.0 + u_seed * 44.0) - 0.5) * 0.45
+                     + (noise3d(baseDir * 2.5 + u_seed * 71.0) - 0.5) * 0.25;
+    // Low-frequency "cluster" jitter so whole regions of floes lose cracks
+    // earlier/later than others — prevents a uniform scatter pattern too.
+    // polarShift pushes the fade threshold: +ve values grow the polar cap.
+    float polarShift = (u_iceOceanPolarFade - 0.5) * 0.8;
+    float crackStrength = smoothstep(-0.5, 0.25, tIce + floeJitter - polarShift);
+
+    // Single ice brightness everywhere — the transition from pack to polar
+    // ice is carried entirely by how dark the water in the cracks is, not by
+    // any overlay. At the pack front the cracks read as dark water between
+    // floes; toward the pole those cracks fill with frozen slush/snow and
+    // finally become hairline surface seams. Same floe pattern throughout.
+    vec3 ice = cleanIce;
+    // Dark water in cracks fades continuously; floor at 0.35 so the floe
+    // pattern still reads as subtle ice-grey seams at the pole.
+    float crackDark = mix(0.35, 1.0, crackStrength);
+    float crackScale = u_iceOceanCrackDepth * 2.0;
+    ice = mix(ice, color1 * 0.5 + vec3(0.02, 0.04, 0.06), smoothstep(0.42, 0.52, cracks) * 0.55 * crackDark * crackScale);
+    ice = mix(ice, color1 * 0.6 + vec3(0.01, 0.03, 0.04), smoothstep(0.44, 0.54, fineCracks) * 0.28 * crackDark * crackScale);
+    // At the pole only, faint bright hairlines along the same crack pattern —
+    // gives the solid cap a sense of frozen-over seams instead of smooth white.
+    float hairline = smoothstep(0.47, 0.51, cracks) * (1.0 - crackStrength) * 0.08;
+    ice += vec3(0.02, 0.03, 0.04) * hairline;
+
+    // ── Gradient: ocean → shallow → slush → ice ──
     vec3 surface = deepOcean;
     surface = mix(surface, shallowOcean, smoothstep(0.6, 0.35, t));
     surface = mix(surface, slush, smoothstep(0.35, 0.2, t));       // narrow slush band
-    surface = mix(surface, packIce, smoothstep(0.2, 0.0, t));      // pack ice starts near terminator
-    surface = mix(surface, solidIce, smoothstep(0.0, -0.3, t));    // solid ice covers most of nightside
+    surface = mix(surface, ice, smoothstep(0.2, 0.0, t));          // ice starts near terminator
 
     // ── Lighting ──
     vec3 V = normalize(cameraPosition - vWorldPosition);
@@ -1611,7 +1712,7 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_ambient: { value: 0.06 },
       u_lavaAmbient: { value: 0.08 },
       u_wrapRange: { value: 0.45 },
-      u_wrapPower: { value: 3.9 },
+      u_wrapPower: { value: 1.0 },
       u_displace: { value: 0 },
       u_vertLOD: { value: 0 },
       u_bumpStrength: { value: params.bumpStrength ?? 0.8 },
@@ -1619,6 +1720,9 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_eyeAridEdge: { value: params.eyeAridEdge ?? 0.3 },
       u_eyeIceEdge: { value: params.eyeIceEdge ?? -0.15 },
       u_eyeIceBergDensity: { value: params.eyeIceBergDensity ?? 0.5 },
+      u_iceOceanPolarFade: { value: params.iceOceanPolarFade ?? 0.5 },
+      u_iceOceanEdgeNoise: { value: params.iceOceanEdgeNoise ?? 0.5 },
+      u_iceOceanCrackDepth: { value: params.iceOceanCrackDepth ?? 0.5 },
       u_eyeVegHue: { value: 0.0 },
       u_eyeVegSat: { value: 1.0 },
       u_eyeMoisture: { value: 0.7 },
@@ -1885,7 +1989,7 @@ export function createCloudMaterial(params: ShaderParams): THREE.ShaderMaterial 
       u_spiralStrength: { value: 0.14 },
       u_eyeSize: { value: 0.15 },
       u_wrapRange: { value: 0.45 },
-      u_wrapPower: { value: 3.9 },
+      u_wrapPower: { value: 1.0 },
     },
   });
 }
