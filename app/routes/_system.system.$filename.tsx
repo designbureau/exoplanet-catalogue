@@ -341,6 +341,9 @@ const App = ({ data }: any) => {
     eyeAridEdge, setEyeAridEdge,
     eyeIceEdge, setEyeIceEdge,
     eyeIceBergDensity, setEyeIceBergDensity,
+    iceOceanPolarFade, setIceOceanPolarFade,
+    iceOceanEdgeNoise, setIceOceanEdgeNoise,
+    iceOceanCrackDepth, setIceOceanCrackDepth,
     eyeSpiralTightness, setEyeSpiralTightness,
     eyeSpiralArms, setEyeSpiralArms,
     eyeSpiralStrength, setEyeSpiralStrength,
@@ -751,6 +754,12 @@ const App = ({ data }: any) => {
           <Slider label="Veg Hue" min={-0.5} max={0.5} step={0.01} value={eyeVegHue} onChange={setEyeVegHue} />
           <Slider label="Veg Sat" min={0.0} max={2.0} step={0.05} value={eyeVegSat} onChange={setEyeVegSat} />
           <Slider label="Moisture" min={0.0} max={1.0} step={0.05} value={eyeMoisture} onChange={setEyeMoisture} />
+        </Accordion>
+
+        <Accordion title="Ice Ocean Eyeball" defaultOpen={false}>
+          <Slider label="Polar Fade" min={0.0} max={1.0} step={0.01} value={iceOceanPolarFade} onChange={setIceOceanPolarFade} />
+          <Slider label="Edge Noise" min={0.0} max={1.0} step={0.01} value={iceOceanEdgeNoise} onChange={setIceOceanEdgeNoise} />
+          <Slider label="Crack Depth" min={0.0} max={1.0} step={0.01} value={iceOceanCrackDepth} onChange={setIceOceanCrackDepth} />
         </Accordion>
 
         <Accordion title="Lava Eyeball" defaultOpen={false}>
