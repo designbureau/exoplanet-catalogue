@@ -201,6 +201,7 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
           <ShaderPlanet
             type={system.featured.type}
             seed={system.featured.seed}
+            slug={system.slug}
             size={360}
             style={{ filter: "drop-shadow(0 30px 80px rgba(0,0,0,0.7))" }}
           />
@@ -254,6 +255,7 @@ function SystemCard({ system }: { system: CatalogueSystem }) {
             <ShaderPlanet
               type={system.featured.type}
               seed={system.featured.seed}
+              slug={system.slug}
               size={140}
               style={{ filter: "drop-shadow(0 14px 36px rgba(0,0,0,0.55))" }}
             />
@@ -639,8 +641,9 @@ export default function Index() {
             <ShaderPlanet
               type={featured.featured.type}
               seed={featured.featured.seed}
+              slug={featured.slug}
               size={900}
-              style={{ width: "100%", height: "100%" }}
+              style={{ width: "100%", height: "100%", borderRadius: 0 }}
             />
           </div>
         </section>

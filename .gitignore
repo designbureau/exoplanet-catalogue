@@ -8,3 +8,4 @@ node_modules
 
 # Generated data (from scripts/prebuild-data.js)
 data-json/
+public/planet-thumbs/

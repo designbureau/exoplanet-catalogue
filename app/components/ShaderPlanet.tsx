@@ -1,10 +1,10 @@
 /**
- * ShaderPlanet — renders a catalogue planet thumbnail using the real GLSL
- * fragment shader from planetShader.ts, via an off-screen WebGLRenderer.
+ * ShaderPlanet — renders a catalogue planet thumbnail.
  *
- * Drop-in visual replacement for <PlanetCanvas> in the catalogue.
- * Shows a subtle pulsing placeholder while the offscreen render completes,
- * then cross-fades to the shader image.
+ * Priority:
+ *  1. Static baked PNG at /planet-thumbs/{slug}.png  (prod, post-bake)
+ *  2. Runtime off-screen WebGL render via planetSnapshot (dev / unbaked)
+ *  3. Pulsing circular placeholder while either is in-flight
  */
 
 import { useState, useEffect } from "react";
@@ -15,29 +15,51 @@ export interface ShaderPlanetProps {
   type?: PlanetType;
   seed?: number;
   size?: number;
+  /** System slug — if provided, tries /planet-thumbs/{slug}.png first */
+  slug?: string;
   className?: string;
   style?: React.CSSProperties;
+}
+
+const THUMB_BASE = "/planet-thumbs";
+
+function staticPath(slug: string) {
+  return `${THUMB_BASE}/${slug}.png`;
 }
 
 export function ShaderPlanet({
   type = "rocky_earthlike",
   seed = 1,
   size = 200,
+  slug,
   className,
   style,
 }: ShaderPlanetProps) {
-  const [dataURL, setDataURL] = useState<string | null>(null);
+  const [src, setSrc] = useState<string | null>(
+    // Optimistic: assume baked asset exists if slug provided
+    slug ? staticPath(slug) : null,
+  );
+  const [tried, setTried] = useState(false);
 
+  // If no slug, or static asset 404s → fall back to runtime render
   useEffect(() => {
-    let cancelled = false;
-    renderPlanetSnapshot(type, seed, size).then((url) => {
-      if (!cancelled && url) setDataURL(url);
-    });
-    return () => { cancelled = true; };
-  }, [type, seed, size]);
+    if (!src && !tried) {
+      setTried(true);
+      renderPlanetSnapshot(type, seed, size).then((url) => {
+        if (url) setSrc(url);
+      });
+    }
+  }, [src, tried, type, seed, size]);
 
-  if (!dataURL) {
-    // Placeholder — same shape as the planet, subtle shimmer
+  const handleError = () => {
+    // Static PNG missing → fall back to runtime render
+    if (!tried) {
+      setTried(true);
+      setSrc(null); // triggers the useEffect on next render
+    }
+  };
+
+  if (!src) {
     return (
       <div
         className={className}
@@ -45,7 +67,8 @@ export function ShaderPlanet({
           width: size,
           height: size,
           borderRadius: "50%",
-          background: "radial-gradient(circle at 38% 35%, oklch(0.28 0.02 260), oklch(0.12 0.01 260))",
+          background:
+            "radial-gradient(circle at 38% 35%, oklch(0.28 0.02 260), oklch(0.12 0.01 260))",
           flexShrink: 0,
           animation: "pulse 1.8s ease-in-out infinite",
           ...style,
@@ -56,10 +79,11 @@ export function ShaderPlanet({
 
   return (
     <img
-      src={dataURL}
+      src={src}
       width={size}
       height={size}
       alt=""
+      onError={handleError}
       className={className}
       style={{
         width: size,

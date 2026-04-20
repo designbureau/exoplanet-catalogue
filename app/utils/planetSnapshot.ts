@@ -274,6 +274,11 @@ function buildShaderParams(catType: CatType, seed: THREE.Vector3): ShaderParams 
 }
 
 // ─── renderer ────────────────────────────────────────────────────────────────
+/** Exported for use by the bake route — renders arbitrary ShaderParams. */
+export function renderOffscreenFromParams(params: ShaderParams, size: number): string {
+  return renderOffscreen(params, size);
+}
+
 function renderOffscreen(params: ShaderParams, size: number): string {
   const canvas = document.createElement("canvas");
   canvas.width = size;

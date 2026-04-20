@@ -6,6 +6,7 @@
   "scripts": {
     "prebuild": "node scripts/prebuild-data.js",
     "build": "node scripts/prebuild-data.js && react-router build && cp -r data-json build/client/data-json",
+    "bake": "node scripts/bake-planets.mjs",
     "dev": "react-router dev",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "start": "react-router-serve ./build/server/index.js",
