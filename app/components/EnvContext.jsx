@@ -94,7 +94,7 @@ export const EnvProvider = ({ children }) => {
   const [eyeMoisture, setEyeMoisture] = useState(0.7);
 
   // Lava eyeball controls
-  const [lavaCrackDepth, setLavaCrackDepth] = useState(0.25);
+  const [lavaCrackDepth, setLavaCrackDepth] = useState(0.45);
   const [lavaPoolSize, setLavaPoolSize] = useState(0.3);
   const [lavaHeatGrad, setLavaHeatGrad] = useState(0.6);
 

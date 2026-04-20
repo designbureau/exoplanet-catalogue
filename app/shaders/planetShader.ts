@@ -887,7 +887,9 @@ const terrestrialFragment = `
     }
 
     // Eyeball Voronoi crack valleys
-    float eyeCrackMask = 0.0; // stored for ice crevasse rendering later
+    float eyeCrackMask = 0.0;  // ice: crevasse rendering
+    float eyeMajorEdge = 0.0;  // lava: wide major-crack strength (0-1)
+    float eyeMinorEdge = 0.0;  // lava: hairline minor-crack strength (0-1)
     if (u_tidallyLocked > 0.5 && u_eyeAridEdge > 1.0) {
       // Heavy domain-warp for organic, terrain-following shapes
       vec3 crackWarp = vec3(
@@ -909,12 +911,31 @@ const terrestrialFragment = `
       // decides which edges get drawn wide (major cracks) vs hairline (minor).
       vec2 v = voronoi(warpedP * 0.7);
       float edgeDist = v.y - v.x;
+
+      // ── Crack edge roughness ──
+      // Mix multiple noise types at the crack boundary so edges are jagged/organic
+      // rather than smooth Voronoi arcs. Perlin adds broad scalloping; high-freq
+      // noise adds fine chipping; together they break the geometric look.
+      float edgePerlin  = pnoise3d(warpedP * 6.0  + vec3(19.0)) * 0.022;
+      float edgeChip    = noise3d(warpedP  * 14.0 + vec3(53.0)) * 0.012
+                        + noise3d(warpedP  * 28.0 + vec3(79.0)) * 0.006;
+      float roughEdgeDist = edgeDist + edgePerlin + edgeChip;
+
       float widthNoise = noise3d(warpedP * 0.45 + vec3(13.0));
-      float majorAmp = smoothstep(0.35, 0.7, widthNoise);
-      float wideEdge = 1.0 - smoothstep(0.0, 0.14, edgeDist); // thick cracks
-      float thinEdge = 1.0 - smoothstep(0.0, 0.05, edgeDist); // hairline cracks
+      // Lava prefers fewer-but-wider rivers + prominent hairline detail;
+      // ice prefers a more uniform major/hairline blend.
+      bool isLava = emissiveIntensity > 0.01;
+      float majorAmp = isLava
+        ? smoothstep(0.55, 0.8, widthNoise)
+        : smoothstep(0.35, 0.7, widthNoise);
+      float wideEdge = 1.0 - smoothstep(0.0, 0.14, roughEdgeDist); // thick cracks
+      float thinEdge = 1.0 - smoothstep(0.0, 0.05, roughEdgeDist); // hairline cracks
+      float thinAmp = isLava ? 0.8 : 0.55;
       // Every edge exists; width ramps between hairline and wide by region
-      float unifiedEdge = mix(thinEdge * 0.55, wideEdge, majorAmp);
+      float unifiedEdge = mix(thinEdge * thinAmp, wideEdge, majorAmp);
+      // Expose separated edge strengths for lava rendering
+      eyeMajorEdge = wideEdge * majorAmp;
+      eyeMinorEdge = thinEdge * (1.0 - majorAmp);
       // Heavy FBM blend so cracks follow terrain contours
       float fbm = noise3d(p * 2.0 + vec3(31.0)) * 0.35
                 + noise3d(p * 4.0 + vec3(67.0)) * 0.15;
@@ -927,6 +948,11 @@ const terrestrialFragment = `
         // Lava: cracks deeper near sub-stellar (hotter, more molten)
         float heatCarve = smoothstep(-0.5, 0.5, rawSunH);
         continent -= crackDepth * heatCarve * u_lavaCrackDepth;
+        // Cold-side crack mask for anti-stellar: same Voronoi geometry,
+        // anti-stellar weighted. Lets adjustedIceCap carve fracture seams
+        // into the solidified crust cap (like ice has dark-water seams).
+        float coldCarve = 1.0 - smoothstep(-0.5, 0.0, rawSunH);
+        eyeCrackMask = crackDepth * coldCarve;
       } else {
         // Ice: cracks live in a band between the two poles.
         // Sub-stellar (rawSunH=1): clear open ocean.
@@ -1303,42 +1329,92 @@ const terrestrialFragment = `
       float poolHeat = heatGradient * (0.5 + poolDepth * 0.5) * (0.8 + poolNoise);
       poolHeat = clamp(poolHeat, 0.0, 1.0);
 
-      // Graduated lava color: dark red → red → orange → yellow-orange → yellow
-      vec3 poolColor = vec3(0.25, 0.03, 0.005);                                           // darkest: cooling edge
-      poolColor = mix(poolColor, vec3(0.5, 0.08, 0.01), smoothstep(0.1, 0.3, poolHeat));  // dark red
-      poolColor = mix(poolColor, vec3(0.8, 0.2, 0.02), smoothstep(0.3, 0.5, poolHeat));   // red-orange
-      poolColor = mix(poolColor, vec3(1.0, 0.45, 0.05), smoothstep(0.5, 0.7, poolHeat));  // orange
-      poolColor = mix(poolColor, vec3(1.0, 0.75, 0.2), smoothstep(0.7, 0.9, poolHeat));   // yellow-orange
+      // Graduated lava color: near-black → dark red → deep red → orange → yellow
+      // Dark edge is very dark for high contrast; orange→yellow spread is gradual.
+      vec3 poolColor = vec3(0.05, 0.004, 0.001);                                             // near-black cooling crust
+      poolColor = mix(poolColor, vec3(0.32, 0.03, 0.003), smoothstep(0.06, 0.20, poolHeat)); // very dark red
+      poolColor = mix(poolColor, vec3(0.72, 0.10, 0.008), smoothstep(0.20, 0.40, poolHeat)); // deep red
+      poolColor = mix(poolColor, vec3(1.0,  0.36, 0.025), smoothstep(0.40, 0.58, poolHeat)); // orange
+      poolColor = mix(poolColor, vec3(1.1,  0.62, 0.055), smoothstep(0.58, 0.76, poolHeat)); // orange-yellow (gradual)
+      poolColor = mix(poolColor, vec3(1.2,  0.88, 0.16),  smoothstep(0.76, 0.95, poolHeat)); // yellow core (gradual)
 
       // Replace surface color in pool areas (not additive)
       surfaceColor = mix(surfaceColor, poolColor, poolMask);
 
-      // Emissive glow in low terrain (Voronoi crack valleys + natural low areas)
-      // Narrow bright lava in the deepest areas, dimmer red glow in shallow cracks
+      // Orange cooling-crust patches on sub-stellar pool: solidifying surface skin
+      // floats as darker islands on the bright lava, adding texture to the hot side
+      float coolPatch = noise3d(p * 2.8 + vec3(71.0)) * 0.52 + noise3d(p * 6.5 + vec3(43.0)) * 0.28;
+      float coolMask = smoothstep(0.5, 0.72, coolPatch) * poolMask * smoothstep(0.25, 0.75, rawSun);
+      surfaceColor = mix(surfaceColor, vec3(0.6, 0.12, 0.012), coolMask * 0.6);
+
+      // ── Black basalt crust with surface detail + normal-mapped lighting ──
+      // Multi-scale noise: coarse macro variation, ridged mid-scale for rocky
+      // texture, fine Perlin grain. A fake normal map from noise gradients then
+      // lights the surface so the texture has actual shadow relief.
+      vec3 basaltBase = vec3(0.02, 0.014, 0.011);
+      float bMacro  = noise3d(p * 4.5  + vec3(23.0)) * 0.5
+                    + noise3d(p * 9.0  + vec3(61.0)) * 0.3;
+      float bRidge  = ridgedNoise(p * 7.0, 2.5)      * 0.35; // rocky relief
+      float bFine   = pnoise3d(p * 22.0 + vec3(47.0)) * 0.2
+                    + noise3d(p * 40.0  + vec3(83.0)) * 0.1; // micro grain
+
+      // Fake normal map: finite-difference gradient of mid-scale noise
+      float bne = 0.004;
+      float bnc = noise3d(p * 12.0 + vec3(37.0));
+      vec3 bGrad = vec3(
+        bnc - noise3d((p + vec3(bne,0,0)) * 12.0 + vec3(37.0)),
+        bnc - noise3d((p + vec3(0,bne,0)) * 12.0 + vec3(37.0)),
+        bnc - noise3d((p + vec3(0,0,bne)) * 12.0 + vec3(37.0))
+      ) / bne;
+      vec3 basaltNormal = normalize(vNormal + bGrad * 0.18);
+      float basaltLight = wrapDiffuse(basaltNormal, u_sunDirection);
+      // Compose: base colour tinted by noise layers, then lit
+      float bDetail = (bMacro - 0.35) * 0.022 + (bRidge - 0.3) * 0.018 + (bFine - 0.3) * 0.008;
+      vec3 basaltColor = basaltBase + vec3(1.2, 0.8, 0.6) * bDetail * 0.018;
+      basaltColor *= (0.12 + basaltLight * 0.88); // shadow relief from fake normals
+      // Keep pool areas as-is; replace crust with textured lit basalt.
+      surfaceColor = mix(basaltColor, surfaceColor, poolMask);
+
+      // ── Lava rivers along MAJOR Voronoi edges ──
+      // Directly drive glow from eyeMajorEdge so the unified hierarchy is
+      // visible regardless of whether terrain carved below sea level.
+      vec3 riverCore = vec3(0.04, 0.007, 0.002);
+      riverCore = mix(riverCore, vec3(0.38, 0.045, 0.007), smoothstep(-0.5, -0.05, rawSun)); // dark red
+      riverCore = mix(riverCore, vec3(0.95, 0.28,  0.022), smoothstep(-0.05, 0.2, rawSun)); // orange
+      riverCore = mix(riverCore, vec3(1.15, 0.52,  0.06),  smoothstep(0.2,  0.55, rawSun)); // orange-yellow
+      // Rivers: glow on crack lines only — NOT the whole pool (which already has
+      // poolColor). deepLava widens the crack where terrain dips below sea level.
       float deepLava = smoothstep(effectiveSeaLevel + 0.05, effectiveSeaLevel - 0.08, continent);
-      float shallowCrack = smoothstep(effectiveSeaLevel + 0.2, effectiveSeaLevel + 0.02, continent);
+      float riverMask = eyeMajorEdge * mix(0.6, 1.0, deepLava);
+      surfaceColor += riverCore * riverMask * heatGradient * emissiveIntensity * 2.2;
 
-      // Deep lava: bright yellow-orange (the rivers of fire)
-      vec3 deepGlow = vec3(0.05, 0.01, 0.003);
-      deepGlow = mix(deepGlow, vec3(0.4, 0.05, 0.01), smoothstep(-0.5, -0.1, rawSun));
-      deepGlow = mix(deepGlow, vec3(0.9, 0.3, 0.03), smoothstep(-0.1, 0.15, rawSun));
-      deepGlow = mix(deepGlow, vec3(1.0, 0.65, 0.1), smoothstep(0.15, 0.5, rawSun));
+      // ── Hairline red glow along MINOR Voronoi edges ──
+      // Keeps minor cell boundaries visible on the basalt crust as thin
+      // red/orange fracture lines, without widening into rivers.
+      vec3 hairlineGlow = vec3(0.02, 0.004, 0.002);
+      hairlineGlow = mix(hairlineGlow, vec3(0.22, 0.04, 0.01), smoothstep(-0.3, 0.1, rawSun));
+      hairlineGlow = mix(hairlineGlow, vec3(0.55, 0.12, 0.02), smoothstep(0.1, 0.5, rawSun));
+      surfaceColor += hairlineGlow * eyeMinorEdge * heatGradient * emissiveIntensity * 0.85;
 
-      // Shallow cracks: dim red underglow (heat seeping through thin crust)
-      vec3 shallowGlow = vec3(0.03, 0.005, 0.002);
-      shallowGlow = mix(shallowGlow, vec3(0.25, 0.04, 0.01), smoothstep(-0.3, 0.1, rawSun));
-      shallowGlow = mix(shallowGlow, vec3(0.5, 0.1, 0.02), smoothstep(0.1, 0.4, rawSun));
-
-      surfaceColor += deepGlow * deepLava * heatGradient * emissiveIntensity * 1.5;
-      surfaceColor += shallowGlow * shallowCrack * isLand * heatGradient * emissiveIntensity * 0.6;
-
-      // Subtle warm tint on crust near sub-stellar (radiant heat from below)
+      // Subtle warm tint on crust near sub-stellar (radiant heat from below) — kept very faint
       float surfaceHeat = isLand * heatGradient * heatGradient;
-      surfaceColor += vec3(0.12, 0.02, 0.005) * surfaceHeat * 0.3;
+      surfaceColor += vec3(0.04, 0.005, 0.001) * surfaceHeat * 0.3;
 
       // Darken anti-stellar: cold dead basalt
       float coldDarken = smoothstep(0.1, -0.5, rawSun) * isLand;
-      surfaceColor *= mix(1.0, 0.15, coldDarken);
+      surfaceColor *= mix(1.0, 0.05, coldDarken);
+
+      // ── Cold-side fracture texture (applied AFTER coldDarken so it survives) ──
+      // Voronoi cell hierarchy is visible at anti-stellar as dim residual-heat
+      // seams — major cracks glow faintly dark-red (magma depth), minor cracks
+      // are slightly brighter surface variation. Both fade to zero at sub-stellar
+      // where the hot-side rivers take over.
+      float coldZone = (1.0 - heatGradient) * isLand;
+      // Major cracks: faint ember glow from magma far below
+      surfaceColor += vec3(0.06, 0.012, 0.004) * eyeMajorEdge * coldZone * emissiveIntensity;
+      // Cell faces: slight warm variation so plates don't read as identical black
+      float cellFace = adjustedIceCap * (1.0 - eyeMajorEdge) * (1.0 - poolMask);
+      surfaceColor += vec3(0.025, 0.008, 0.004) * cellFace * coldZone * emissiveIntensity;
     }
 
     // Atmospheric rim (uses shared applyAtmosphere with shadow)
@@ -1676,7 +1752,7 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       emissiveColor: { value: params.emissive || new THREE.Color(0, 0, 0) },
       emissiveIntensity: { value: params.emissiveIntensity ?? 0 },
       u_lavaGlow: { value: params.emissiveIntensity > 0 ? 0.6 : 0.0 },
-      u_lavaCrackDepth: { value: 0.25 },
+      u_lavaCrackDepth: { value: 0.45 },
       u_lavaPoolSize: { value: 0.3 },
       u_lavaHeatGrad: { value: 0.6 },
       u_atmosColor: { value: params.atmosColor },

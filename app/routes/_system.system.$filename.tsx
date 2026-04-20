@@ -763,7 +763,7 @@ const App = ({ data }: any) => {
         </Accordion>
 
         <Accordion title="Lava Eyeball" defaultOpen={false}>
-          <Slider label="Crack Depth" min={0.0} max={0.5} step={0.01} value={lavaCrackDepth} onChange={setLavaCrackDepth} />
+          <Slider label="Crack Depth" min={0.0} max={0.8} step={0.01} value={lavaCrackDepth} onChange={setLavaCrackDepth} />
           <Slider label="Pool Size" min={0.0} max={0.8} step={0.05} value={lavaPoolSize} onChange={setLavaPoolSize} />
           <Slider label="Heat Grad" min={0.2} max={1.0} step={0.05} value={lavaHeatGrad} onChange={setLavaHeatGrad} />
         </Accordion>
