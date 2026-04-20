@@ -4,23 +4,54 @@
 }
 
 :root {
+  /* Legacy vars (used by 3D viewer routes) */
   --background-black: 0, 0, 10;
-  /* --background: 30, 30, 40; */
   --background: 30, 30, 40;
   --background-darker: 0, 0, 10;
   --border: 0, 0, 5;
   --text: rgb(180, 180, 190);
   --white: white;
+
+  /* Design token layer — shadcn HSL vars */
+  --shadcn-background: 240 10% 4%;
+  --shadcn-foreground: 0 0% 98%;
+  --shadcn-muted: 240 4% 16%;
+  --shadcn-muted-foreground: 240 5% 65%;
+  --shadcn-popover: 240 10% 6%;
+  --shadcn-popover-foreground: 0 0% 98%;
+  --shadcn-card: 240 10% 6%;
+  --shadcn-card-foreground: 0 0% 98%;
+  --shadcn-primary: 0 0% 98%;
+  --shadcn-primary-foreground: 240 6% 10%;
+  --shadcn-secondary: 240 4% 16%;
+  --shadcn-secondary-foreground: 0 0% 98%;
+  --shadcn-accent: 240 4% 16%;
+  --shadcn-accent-foreground: 0 0% 98%;
+  --shadcn-border-catalogue: 240 4% 22%;
+  --shadcn-input: 240 4% 22%;
+  --shadcn-ring: 240 5% 64%;
+  --shadcn-radius: 0.5rem;
+
+  /* Accent hues — OKLCH */
+  --accent-cool:   oklch(0.78 0.14 220);
+  --accent-warm:   oklch(0.78 0.14 60);
+  --accent-exotic: oklch(0.78 0.14 320);
 }
 
 html,
 body {
   padding: 0;
   margin: 0;
-  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  font-family: "Geist", "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: 'ss01', 'cv11';
   color: white;
   background: rgba(var(--background-black), 1);
   font-size: 100%;
+}
+
+.font-mono-catalogue {
+  font-family: "JetBrains Mono", "Geist Mono", ui-monospace, monospace;
+  font-feature-settings: 'tnum';
 }
 
 * {
