@@ -36,6 +36,10 @@
   --accent-cool:   oklch(0.78 0.14 220);
   --accent-warm:   oklch(0.78 0.14 60);
   --accent-exotic: oklch(0.78 0.14 320);
+
+  /* Font stack vars (referenced inline in catalogue) */
+  --font-sans: "Geist", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Geist Mono", ui-monospace, monospace;
 }
 
 html,
@@ -54,7 +58,9 @@ body {
   font-feature-settings: 'tnum';
 }
 
-* {
+/* Scope the px-unit font reset to 3D viewer routes only */
+#canvas-container *,
+.viewer-root * {
   font-size: 10px;
 }
 

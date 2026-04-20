@@ -8,7 +8,6 @@ import { PlanetCanvas } from "~/components/PlanetCanvas";
 import { Input } from "~/components/ui/input";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent } from "~/components/ui/card";
 
 export const meta: MetaFunction = () => [
   { title: "Exo·Catalogue" },
@@ -17,222 +16,378 @@ export const meta: MetaFunction = () => [
 
 export const loader = async () => {
   const xmlFiles = await getXmlFilesList();
-  const systemNames = xmlFiles.map((f: string) => f.replace(".xml", ""));
-  return { totalSystems: systemNames.length };
+  return { totalSystems: xmlFiles.length };
 };
 
-// ---------- parallax hook ----------
+// ─── parallax ────────────────────────────────────────────────────────────────
 
 function useParallax(strength = 6) {
   const ref = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
 
-  const onMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const el = ref.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const nx = (e.clientX - cx) / (rect.width / 2);
-    const ny = (e.clientY - cy) / (rect.height / 2);
-    setOffset({ x: nx * strength, y: ny * strength });
-  }, [strength]);
+  const onMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const el = ref.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const nx = (e.clientX - rect.left - rect.width / 2) / (rect.width / 2);
+      const ny = (e.clientY - rect.top - rect.height / 2) / (rect.height / 2);
+      setOffset({ x: nx * strength, y: ny * strength });
+    },
+    [strength],
+  );
 
   const onLeave = useCallback(() => setOffset({ x: 0, y: 0 }), []);
-
   return { ref, offset, onMove, onLeave };
 }
 
-// ---------- featured card (Direction B / editorial) ----------
+// ─── hero card (Direction B · planet variant) ────────────────────────────────
 
 function FeaturedCard({ system }: { system: CatalogueSystem }) {
   const { ref, offset, onMove, onLeave } = useParallax(6);
 
   return (
-    <Card
+    <div
       ref={ref}
       onMouseMove={onMove}
       onMouseLeave={onLeave}
-      className="relative overflow-hidden"
-      style={{ boxShadow: "0 20px 50px -18px rgba(0,0,0,.7), 0 4px 14px -6px rgba(0,0,0,.55)" }}
+      className="relative grid overflow-hidden rounded-sm"
+      style={{
+        gridTemplateColumns: "1fr 580px",
+        minHeight: 600,
+        background: "oklch(0.11 0.012 260 / 0.5)",
+        border: "1px solid oklch(0.32 0.01 260 / 0.55)",
+        backdropFilter: "blur(24px) saturate(1.2)",
+        boxShadow: "0 30px 80px -20px rgba(0,0,0,.75), 0 8px 24px -8px rgba(0,0,0,.6)",
+      }}
     >
-      <CardContent className="p-0">
-        <div className="flex flex-col gap-6 p-8 md:flex-row md:items-center">
-          {/* Left: text */}
-          <div className="flex-1 space-y-4">
-            {/* star badge */}
-            <div className="flex items-center gap-2">
-              <span
-                className="inline-block h-2 w-2 rounded-full"
-                style={{ background: system.star.color }}
-              />
-              <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-                {system.star.label} · {system.star.type}
-              </span>
-            </div>
+      {/* ── left: text ── */}
+      <div
+        className="relative z-10 flex flex-col gap-5 p-14"
+        style={{ borderRight: "1px solid oklch(0.28 0.01 260 / 0.45)" }}
+      >
+        {/* eyebrow */}
+        <div className="flex items-center gap-2.5" style={{ color: "oklch(0.58 0.01 240)" }}>
+          <span
+            className="inline-block h-2 w-2 rounded-full flex-shrink-0"
+            style={{ background: system.star.color }}
+          />
+          <span
+            className="uppercase tracking-widest"
+            style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11 }}
+          >
+            {system.star.label} · {system.star.type}
+          </span>
+        </div>
 
-            <div>
-              <h2 className="text-2xl font-medium tracking-tight">{system.name}</h2>
-              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{system.blurb}</p>
-            </div>
+        {/* title */}
+        <h2
+          className="font-normal leading-[0.95]"
+          style={{
+            fontSize: "clamp(44px, 5.5vw, 80px)",
+            letterSpacing: "-0.035em",
+            color: "oklch(0.98 0.005 240)",
+          }}
+        >
+          {system.name}
+        </h2>
 
-            {/* featured planet note */}
-            <div className="border-l-2 border-border pl-3">
-              <p className="text-xs text-muted-foreground uppercase tracking-widest font-mono">
-                {system.featured.name}
-              </p>
-              <p className="text-sm text-foreground/80">{system.featured.note}</p>
-            </div>
+        {/* blurb */}
+        <p style={{ fontSize: 17, lineHeight: 1.55, color: "oklch(0.78 0.008 240)", maxWidth: "48ch" }}>
+          {system.blurb}
+        </p>
 
-            {/* tags */}
-            <div className="flex flex-wrap gap-1.5">
-              {system.tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-xs rounded-sm">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-
-            {/* meta row */}
-            <div className="flex gap-6 font-mono text-xs text-muted-foreground">
-              <span>{system.distance}</span>
-              {system.discovered && <span>Disc. {system.discovered}</span>}
-              <span>{system.planets.length} planets</span>
-            </div>
-
-            <Button asChild variant="default" className="rounded-full">
-              <Link to={`/system/${encodeURIComponent(system.filename)}`}>
-                Explore system →
-              </Link>
-            </Button>
+        {/* featured planet note */}
+        <div
+          className="flex flex-col gap-1.5 py-4"
+          style={{ borderTop: "1px solid oklch(0.28 0.01 260 / 0.45)", borderBottom: "1px solid oklch(0.28 0.01 260 / 0.45)" }}
+        >
+          <div className="flex items-baseline gap-2.5 flex-wrap" style={{ fontSize: 15, color: "oklch(0.78 0.008 240)" }}>
+            <span style={{ fontFamily: "var(--font-mono, monospace)", color: "oklch(0.98 0.005 240)", letterSpacing: "0.02em" }}>
+              {system.featured.name}
+            </span>
+            <span style={{ color: "oklch(0.42 0.01 240)" }}>—</span>
+            <span>{system.featured.note}</span>
           </div>
+        </div>
 
-          {/* Right: planet canvas with parallax */}
-          <div className="flex shrink-0 items-center justify-center md:justify-end">
-            <div
+        {/* companion planets row */}
+        <div className="flex flex-col gap-2">
+          <span
+            className="uppercase tracking-widest"
+            style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 10.5, color: "oklch(0.42 0.01 240)" }}
+          >
+            System · {system.planets.length} planets
+          </span>
+          <div className="flex items-center gap-2">
+            {system.planets.map((p, i) => {
+              const sz = Math.round(22 + p.r * 12);
+              return (
+                <PlanetCanvas
+                  key={i}
+                  type={p.type}
+                  seed={p.seed}
+                  size={sz}
+                  animate={false}
+                  tilt={0.08}
+                  lightAngle={-0.55}
+                  style={{ filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.6))" }}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        {/* meta */}
+        <div className="flex gap-6" style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12, color: "oklch(0.58 0.01 240)" }}>
+          <span>{system.distance}</span>
+          {system.discovered && <span>Disc. {system.discovered}</span>}
+        </div>
+
+        {/* tags */}
+        <div className="flex flex-wrap gap-1.5">
+          {system.tags.map((tag) => (
+            <span
+              key={tag}
+              className="inline-flex items-center"
               style={{
-                transform: `translate(${offset.x}px, ${offset.y}px)`,
-                transition: "transform 0.15s ease-out",
+                fontSize: 11,
+                padding: "2px 8px",
+                borderRadius: 4,
+                background: "hsl(var(--secondary))",
+                color: "hsl(var(--secondary-foreground))",
+                height: 22,
               }}
             >
-              <PlanetCanvas
-                type={system.featured.type}
-                seed={system.featured.seed}
-                size={260}
-                animate={false}
-                atmosphere={system.featured.atmosphere}
-                tilt={0.12}
-                lightAngle={-0.6}
-              />
-            </div>
-          </div>
+              {tag}
+            </span>
+          ))}
         </div>
 
-        {/* Companion planets strip */}
-        <div className="flex items-center gap-3 border-t border-border/40 px-8 py-4">
-          <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest mr-2">
-            System
-          </span>
-          {system.planets.map((p, i) => {
-            const sz = Math.round(24 + p.r * 14);
-            return (
-              <PlanetCanvas
-                key={i}
-                type={p.type}
-                seed={p.seed}
-                size={sz}
-                animate={false}
-                tilt={0.08}
-                lightAngle={-0.55}
-              />
-            );
-          })}
+        {/* CTA */}
+        <div className="mt-auto">
+          <Button asChild className="rounded-full h-11 px-6 text-sm font-medium">
+            <Link to={`/system/${encodeURIComponent(system.filename)}`}>
+              Explore system →
+            </Link>
+          </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* ── right: planet art ── */}
+      <div
+        className="relative flex items-center justify-center overflow-hidden"
+        style={{
+          background: "radial-gradient(circle at 50% 55%, oklch(0.2 0.04 240 / 0.35), transparent 65%), oklch(0.08 0.012 260)",
+        }}
+      >
+        {/* glow */}
+        <div
+          className="pointer-events-none absolute"
+          style={{
+            width: 480,
+            height: 480,
+            borderRadius: "50%",
+            background: "radial-gradient(circle, oklch(0.4 0.1 220 / 0.2), transparent 60%)",
+            filter: "blur(40px)",
+          }}
+        />
+        {/* planet */}
+        <div
+          style={{
+            transform: `translate(${offset.x}px, ${offset.y}px)`,
+            transition: "transform 0.15s ease-out",
+            position: "relative",
+            zIndex: 2,
+          }}
+        >
+          <PlanetCanvas
+            type={system.featured.type}
+            seed={system.featured.seed}
+            size={360}
+            animate={false}
+            atmosphere={system.featured.atmosphere}
+            tilt={0.12}
+            lightAngle={-0.6}
+            style={{ filter: "drop-shadow(0 30px 80px rgba(0,0,0,0.7))" }}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
 
-// ---------- system grid card ----------
+// ─── system grid card (Direction B) ──────────────────────────────────────────
 
 function SystemCard({ system }: { system: CatalogueSystem }) {
   const { ref, offset, onMove, onLeave } = useParallax(5);
 
   return (
     <Link to={`/system/${encodeURIComponent(system.filename)}`} className="group block">
-      <Card
+      <div
         ref={ref}
         onMouseMove={onMove}
         onMouseLeave={onLeave}
-        className="relative h-full overflow-hidden transition-transform duration-150 group-hover:-translate-y-0.5"
-        style={{ boxShadow: "0 20px 50px -18px rgba(0,0,0,.7), 0 4px 14px -6px rgba(0,0,0,.55)" }}
+        className="relative flex flex-col overflow-hidden rounded-sm h-full"
+        style={{
+          background: "oklch(0.13 0.01 260 / 0.55)",
+          border: "1px solid oklch(0.28 0.01 260 / 0.45)",
+          backdropFilter: "blur(18px) saturate(1.2)",
+          boxShadow: "0 20px 50px -18px rgba(0,0,0,.7), 0 4px 14px -6px rgba(0,0,0,.55)",
+          transition: "transform 0.45s cubic-bezier(0.2,0.8,0.2,1), border-color 0.4s, background 0.4s",
+        }}
       >
-        <CardContent className="p-5">
-          {/* Planet — top right corner */}
+        {/* art panel */}
+        <div
+          className="relative flex items-center justify-center overflow-hidden"
+          style={{
+            height: 220,
+            background: "radial-gradient(circle at 50% 55%, oklch(0.22 0.04 220 / 0.5), transparent 65%), oklch(0.08 0.012 260)",
+          }}
+        >
+          {/* inner frame */}
           <div
-            className="absolute right-4 top-4 z-0"
+            className="pointer-events-none absolute"
+            style={{ inset: 14, border: "1px solid oklch(0.3 0.01 260 / 0.35)" }}
+          />
+
+          {/* planet with parallax */}
+          <div
             style={{
               transform: `translate(${offset.x}px, ${offset.y}px)`,
-              transition: "transform 0.15s ease-out",
+              transition: "transform 0.5s cubic-bezier(0.2,0.8,0.2,1)",
             }}
           >
             <PlanetCanvas
               type={system.featured.type}
               seed={system.featured.seed}
-              size={88}
+              size={140}
               animate={false}
               atmosphere={system.featured.atmosphere ?? null}
               tilt={0.1}
               lightAngle={-0.6}
+              style={{ filter: "drop-shadow(0 14px 36px rgba(0,0,0,0.55))" }}
             />
           </div>
 
-          {/* Text content */}
-          <div className="relative z-10 pr-24">
-            {/* star type */}
-            <div className="flex items-center gap-1.5 mb-3">
-              <span
-                className="inline-block h-1.5 w-1.5 rounded-full"
-                style={{ background: system.star.color }}
-              />
-              <span className="text-xs font-mono text-muted-foreground">
-                {system.star.type}
-              </span>
-            </div>
+          {/* art labels */}
+          <span
+            className="absolute left-3.5 top-3.5 uppercase tracking-widest"
+            style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 9.5, color: "oklch(0.58 0.01 240)" }}
+          >
+            {system.star.type}
+          </span>
+          <span
+            className="absolute right-3.5 top-3.5 uppercase tracking-widest"
+            style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 9.5, color: "oklch(0.58 0.01 240)" }}
+          >
+            {system.distance}
+          </span>
+        </div>
 
-            <h3 className="text-base font-medium tracking-tight leading-tight">{system.name}</h3>
-            <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed line-clamp-3">
-              {system.blurb}
-            </p>
+        {/* body */}
+        <div className="flex flex-1 flex-col gap-2.5 p-5">
+          {/* star */}
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ background: system.star.color }} />
+            <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 10.5, color: "oklch(0.58 0.01 240)", letterSpacing: "0.04em" }}>
+              {system.star.label}
+            </span>
+          </div>
+
+          <h3
+            className="font-medium leading-tight"
+            style={{ fontSize: 20, letterSpacing: "-0.02em", color: "oklch(0.98 0.005 240)" }}
+          >
+            {system.name}
+          </h3>
+
+          <p
+            className="line-clamp-2"
+            style={{ fontSize: 13.5, lineHeight: 1.55, color: "oklch(0.78 0.008 240)" }}
+          >
+            {system.blurb}
+          </p>
+
+          {/* featured planet inset */}
+          <div
+            className="flex flex-col gap-1 rounded-sm p-2.5"
+            style={{
+              background: "oklch(0.09 0.01 260 / 0.5)",
+              border: "1px solid oklch(0.28 0.01 260 / 0.45)",
+              fontSize: 12,
+            }}
+          >
+            <span style={{ fontFamily: "var(--font-mono, monospace)", color: "oklch(0.98 0.005 240)", letterSpacing: "0.04em" }}>
+              {system.featured.name}
+            </span>
+            <span className="line-clamp-1" style={{ color: "oklch(0.78 0.008 240)", fontSize: 12.5 }}>
+              {system.featured.note}
+            </span>
+          </div>
+
+          {/* footer */}
+          <div
+            className="mt-auto flex items-center justify-between gap-2 pt-3"
+            style={{ borderTop: "1px solid oklch(0.28 0.01 260 / 0.45)" }}
+          >
+            {/* companion dots */}
+            <div className="flex items-center gap-1">
+              {system.planets.slice(0, 6).map((p, i) => {
+                const sz = Math.round(14 + p.r * 6);
+                return (
+                  <PlanetCanvas
+                    key={i}
+                    type={p.type}
+                    seed={p.seed}
+                    size={sz}
+                    animate={false}
+                    tilt={0.06}
+                    lightAngle={-0.5}
+                    style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.7))" }}
+                  />
+                );
+              })}
+              {system.planets.length > 6 && (
+                <span style={{ fontSize: 10, color: "oklch(0.42 0.01 240)", marginLeft: 2 }}>
+                  +{system.planets.length - 6}
+                </span>
+              )}
+            </div>
 
             {/* tags */}
-            <div className="mt-3 flex flex-wrap gap-1">
-              {system.tags.slice(0, 3).map((tag) => (
-                <Badge key={tag} variant="outline" className="text-[10px] rounded-sm px-1.5 py-0">
+            <div className="flex gap-1 flex-wrap justify-end">
+              {system.tags.slice(0, 2).map((tag) => (
+                <span
+                  key={tag}
+                  style={{
+                    fontSize: 10.5,
+                    padding: "2px 7px",
+                    borderRadius: 4,
+                    border: "1px solid hsl(var(--border))",
+                    color: "oklch(0.78 0.008 240)",
+                    background: "transparent",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   {tag}
-                </Badge>
+                </span>
               ))}
             </div>
-
-            {/* meta */}
-            <div className="mt-3 flex gap-4 font-mono text-[10px] text-muted-foreground/70">
-              <span>{system.distance}</span>
-              {system.discovered && <span>{system.discovered}</span>}
-            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </Link>
   );
 }
 
-// ---------- page ----------
+// ─── page ─────────────────────────────────────────────────────────────────────
 
 const SORT_OPTIONS = [
   { value: "default", label: "Default" },
   { value: "distance", label: "Distance" },
-  { value: "discovered", label: "Year discovered" },
-  { value: "name", label: "Name" },
+  { value: "discovered", label: "Year" },
+  { value: "name", label: "Name A–Z" },
 ];
 
 export default function Index() {
@@ -241,114 +396,188 @@ export default function Index() {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [sort, setSort] = useState("default");
 
-  const featured = catalogueSystems[0]; // TRAPPIST-1 as hero
+  const featured = catalogueSystems[0]; // TRAPPIST-1
 
   const filteredSystems = useMemo(() => {
-    let systems = catalogueSystems;
+    let systems = [...catalogueSystems];
 
-    // Tag filter
     if (activeFilter) {
       if (activeFilter === "gas giant") {
         systems = systems.filter((s) =>
-          s.tags.some((t) => t.includes("gas giant") || t.includes("hot jupiter"))
+          s.tags.some((t) => t.includes("gas giant") || t.includes("hot jupiter")),
         );
       } else {
         systems = systems.filter((s) => s.tags.includes(activeFilter));
       }
     }
 
-    // Search filter
     if (search.trim()) {
       const q = search.toLowerCase();
       systems = systems.filter(
         (s) =>
           s.name.toLowerCase().includes(q) ||
           s.blurb.toLowerCase().includes(q) ||
-          s.tags.some((t) => t.toLowerCase().includes(q))
+          s.tags.some((t) => t.toLowerCase().includes(q)),
       );
     }
 
-    // Sort
     if (sort === "distance") {
-      systems = [...systems].sort((a, b) => {
-        const pa = parseFloat(a.distance) || 0;
-        const pb = parseFloat(b.distance) || 0;
-        return pa - pb;
-      });
+      systems = systems.sort((a, b) => (parseFloat(a.distance) || 0) - (parseFloat(b.distance) || 0));
     } else if (sort === "discovered") {
-      systems = [...systems].sort((a, b) => (a.discovered ?? 9999) - (b.discovered ?? 9999));
+      systems = systems.sort((a, b) => (a.discovered ?? 9999) - (b.discovered ?? 9999));
     } else if (sort === "name") {
-      systems = [...systems].sort((a, b) => a.name.localeCompare(b.name));
+      systems = systems.sort((a, b) => a.name.localeCompare(b.name));
     }
 
     return systems;
   }, [activeFilter, search, sort]);
 
-  // Separate hero from grid (don't show featured in grid when no filter/search active)
   const showHero = !activeFilter && !search.trim();
   const gridSystems = showHero
     ? filteredSystems.filter((s) => s.filename !== featured.filename)
     : filteredSystems;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* ── NAV ── */}
-      <nav className="sticky top-0 z-50 border-b border-border/40 bg-background/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center gap-6 px-6 py-3">
-          {/* Wordmark */}
-          <span className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-foreground shrink-0">
-            EXO·CATALOGUE
-          </span>
+    <>
+      {/* ── stars background ── */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-0"
+        style={{
+          background: `
+            radial-gradient(circle at 20% 10%, oklch(0.2 0.05 260 / 0.5), transparent 40%),
+            radial-gradient(circle at 85% 70%, oklch(0.2 0.04 220 / 0.35), transparent 45%),
+            radial-gradient(circle at 50% 100%, oklch(0.18 0.03 60 / 0.25), transparent 50%),
+            oklch(0.08 0.012 260)
+          `,
+        }}
+      />
 
-          {/* Nav links */}
-          <div className="hidden items-center gap-5 md:flex">
-            {["Systems", "Catalogue", "Telemetry", "About"].map((label) => (
+      <div className="relative z-10 min-h-screen text-foreground" style={{ fontFamily: "var(--font-sans, sans-serif)" }}>
+
+        {/* ── NAV ── */}
+        <nav
+          className="sticky top-0 z-50 flex items-center gap-6 px-12 py-[18px]"
+          style={{
+            background: "oklch(0.08 0.01 260 / 0.55)",
+            backdropFilter: "blur(16px) saturate(1.2)",
+            WebkitBackdropFilter: "blur(16px) saturate(1.2)",
+            borderBottom: "1px solid oklch(0.32 0.012 260 / 0.55)",
+          }}
+        >
+          {/* brand */}
+          <div className="flex items-center gap-3 shrink-0">
+            {/* planet glyph */}
+            <span
+              className="inline-block h-[18px] w-[18px] rounded-full"
+              style={{
+                background: "radial-gradient(circle at 35% 35%, #fff, oklch(0.75 0.1 220) 50%, oklch(0.3 0.1 260) 85%)",
+                boxShadow: "0 0 12px oklch(0.75 0.12 220 / 0.5)",
+              }}
+            />
+            <span
+              className="uppercase tracking-[0.1em]"
+              style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 13, letterSpacing: "0.1em" }}
+            >
+              EXO·CATALOGUE
+            </span>
+          </div>
+
+          {/* links */}
+          <div className="hidden items-center gap-[22px] md:flex">
+            {["Systems", "Catalogue", "Telemetry", "About"].map((l) => (
               <span
-                key={label}
-                className="text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                key={l}
+                className="cursor-pointer transition-colors"
+                style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12, color: "oklch(0.58 0.01 240)", letterSpacing: "0.08em" }}
               >
-                {label}
+                {l}
               </span>
             ))}
           </div>
 
           <div className="ml-auto flex items-center gap-3">
-            {/* Search */}
-            <div className="relative">
-              <Input
+            {/* search */}
+            <div
+              className="flex items-center gap-2.5 transition-shadow focus-within:ring-1"
+              style={{
+                height: 36,
+                padding: "0 12px",
+                border: "1px solid hsl(var(--input))",
+                borderRadius: "calc(var(--radius) - 2px)",
+                background: "hsl(var(--background) / 0.6)",
+                backdropFilter: "blur(8px)",
+                minWidth: 280,
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, opacity: 0.4 }}>
+                <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M11 11L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              <input
                 type="text"
                 placeholder="Search systems…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-9 w-48 pr-10 text-xs md:w-64"
+                className="flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
+                style={{ fontSize: 13, color: "oklch(0.98 0.005 240)", fontFamily: "var(--font-sans, sans-serif)" }}
               />
-              <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-border/60 px-1 py-0.5 font-mono text-[9px] text-muted-foreground">
+              <kbd
+                style={{
+                  fontFamily: "var(--font-mono, monospace)",
+                  fontSize: 10,
+                  padding: "2px 6px",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: 4,
+                  color: "oklch(0.58 0.01 240)",
+                  background: "hsl(var(--muted) / 0.7)",
+                  marginLeft: "auto",
+                  flexShrink: 0,
+                }}
+              >
                 ⌘K
               </kbd>
             </div>
 
-            {/* Result count */}
-            <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap">
+            {/* count */}
+            <span
+              style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12, color: "oklch(0.58 0.01 240)", letterSpacing: "0.08em", whiteSpace: "nowrap" }}
+            >
               {filteredSystems.length} systems
             </span>
           </div>
-        </div>
-      </nav>
+        </nav>
 
-      {/* ── MASTHEAD ── */}
-      <section className="relative overflow-hidden px-6 pb-16 pt-20">
-        <div className="mx-auto max-w-7xl">
-          {/* Title */}
-          <div className="relative z-10 max-w-2xl">
-            <h1
-              className="font-normal leading-[0.95] tracking-[-0.035em]"
-              style={{ fontSize: "clamp(54px, 7.6vw, 116px)" }}
+        {/* ── MASTHEAD ── */}
+        <section
+          className="relative overflow-hidden px-12 pb-14 pt-[88px]"
+          style={{ minHeight: 520, borderBottom: "1px solid oklch(0.28 0.01 260 / 0.45)" }}
+        >
+          <div className="relative z-10 max-w-3xl">
+            {/* breadcrumb */}
+            <p
+              className="mb-6 uppercase tracking-widest"
+              style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "oklch(0.42 0.01 240)", letterSpacing: "0.14em" }}
             >
-              <span className="block">Nearby</span>
+              Exoplanet catalogue · {new Date().getFullYear()}
+            </p>
+
+            {/* title */}
+            <h1
+              className="flex flex-col font-normal"
+              style={{
+                fontSize: "clamp(54px, 7.6vw, 116px)",
+                fontWeight: 400,
+                lineHeight: 0.95,
+                letterSpacing: "-0.035em",
+                gap: 2,
+                color: "oklch(0.98 0.005 240)",
+              }}
+            >
+              <span>Nearby</span>
               <span
-                className="block"
                 style={{
-                  background: "linear-gradient(to bottom, oklch(0.78 0.14 320), oklch(0.55 0.18 320))",
+                  background: "linear-gradient(180deg, var(--accent-exotic, oklch(0.78 0.14 320)) 0%, oklch(0.98 0.005 240) 85%)",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text",
@@ -356,144 +585,217 @@ export default function Index() {
               >
                 worlds
               </span>
-              <span className="block">catalogue</span>
+              <span>catalogue</span>
             </h1>
           </div>
 
-          {/* Stats strip */}
-          <div className="relative z-10 mt-10 flex flex-wrap gap-x-10 gap-y-3">
+          {/* stats strip */}
+          <div
+            className="relative z-10 mt-7 flex items-stretch"
+            style={{ borderTop: "1px solid oklch(0.28 0.01 260 / 0.45)", paddingTop: 20 }}
+          >
             {[
               { value: totalSystems.toLocaleString(), label: "confirmed" },
               { value: "4,231", label: "systems" },
               { value: "62", label: "habitable zone" },
               { value: "147", label: "earth-like" },
-            ].map(({ value, label }) => (
-              <div key={label} className="flex items-baseline gap-2">
-                <span className="font-mono text-2xl font-medium tabular-nums">{value}</span>
-                <span className="text-xs text-muted-foreground">{label}</span>
+            ].map(({ value, label }, i, arr) => (
+              <div
+                key={label}
+                style={{
+                  paddingRight: i < arr.length - 1 ? 48 : 0,
+                  marginRight: i < arr.length - 1 ? 48 : 0,
+                  borderRight: i < arr.length - 1 ? "1px solid oklch(0.28 0.01 260 / 0.45)" : "none",
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: "var(--font-mono, monospace)",
+                    fontSize: 30,
+                    fontWeight: 400,
+                    lineHeight: 1,
+                    letterSpacing: "-0.02em",
+                    fontVariantNumeric: "tabular-nums",
+                    color: "oklch(0.98 0.005 240)",
+                  }}
+                >
+                  {value}
+                </div>
+                <div
+                  style={{
+                    fontFamily: "var(--font-mono, monospace)",
+                    fontSize: 10.5,
+                    letterSpacing: "0.16em",
+                    textTransform: "uppercase",
+                    marginTop: 8,
+                    color: "oklch(0.42 0.01 240)",
+                  }}
+                >
+                  {label}
+                </div>
               </div>
             ))}
           </div>
-        </div>
 
-        {/* Giant background planet */}
+          {/* giant background planet */}
+          <div
+            className="pointer-events-none absolute"
+            style={{
+              right: "-50vw",
+              top: "50%",
+              transform: "translateY(-50%)",
+              width: "min(100vw, 1800px)",
+              height: "min(100vw, 1800px)",
+              opacity: 0.85,
+              zIndex: 1,
+            }}
+          >
+            <PlanetCanvas
+              type={featured.featured.type}
+              seed={featured.featured.seed}
+              size={900}
+              animate={false}
+              atmosphere={featured.featured.atmosphere}
+              tilt={0.1}
+              lightAngle={-0.5}
+              style={{ width: "100%", height: "100%" }}
+            />
+          </div>
+        </section>
+
+        {/* ── TOOLBAR ── */}
         <div
-          className="pointer-events-none absolute"
+          className="sticky flex flex-wrap items-center gap-3 px-12 py-5"
           style={{
-            right: "-50vw",
-            top: "50%",
-            transform: "translateY(-50%)",
-            width: "min(100vw, 1800px)",
-            height: "min(100vw, 1800px)",
-            opacity: 0.85,
-            zIndex: 0,
+            top: 57,
+            zIndex: 40,
+            background: "oklch(0.1 0.01 260 / 0.3)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            borderBottom: "1px solid oklch(0.28 0.01 260 / 0.45)",
           }}
         >
-          <PlanetCanvas
-            type={featured.featured.type}
-            seed={featured.featured.seed}
-            size={Math.min(typeof window !== "undefined" ? window.innerWidth : 800, 1800)}
-            animate={false}
-            atmosphere={featured.featured.atmosphere}
-            tilt={0.1}
-            lightAngle={-0.5}
-            style={{ width: "100%", height: "100%" }}
-          />
-        </div>
-      </section>
-
-      {/* ── TOOLBAR ── */}
-      <div className="sticky top-[49px] z-40 border-b border-border/40 bg-background/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center gap-2 px-6 py-3">
-          {/* Filter chips */}
-          <div className="flex flex-wrap gap-2 flex-1">
-            <button
-              onClick={() => setActiveFilter(null)}
-              className={[
-                "rounded-full border px-4 py-1.5 text-[13px] transition-colors",
-                activeFilter === null
-                  ? "border-foreground/30 bg-secondary text-foreground"
-                  : "border-border/50 text-muted-foreground hover:text-foreground",
-              ].join(" ")}
-            >
-              All
-            </button>
-            {FILTER_TAGS.filter((t) => t !== "all").map((tag) => (
-              <button
-                key={tag}
-                onClick={() => setActiveFilter(activeFilter === tag ? null : tag)}
-                className={[
-                  "rounded-full border px-4 py-1.5 text-[13px] transition-colors",
-                  activeFilter === tag
-                    ? "border-foreground/30 bg-secondary text-foreground"
-                    : "border-border/50 text-muted-foreground hover:text-foreground",
-                ].join(" ")}
-              >
-                {tag}
-              </button>
-            ))}
+          {/* chips */}
+          <div className="flex flex-wrap gap-1.5 flex-1">
+            {(["all", ...FILTER_TAGS.filter((t) => t !== "all")] as const).map((tag) => {
+              const isActive = tag === "all" ? activeFilter === null : activeFilter === tag;
+              return (
+                <button
+                  key={tag}
+                  onClick={() => setActiveFilter(tag === "all" ? null : tag)}
+                  className="cursor-pointer transition-all"
+                  style={{
+                    fontFamily: "var(--font-sans, sans-serif)",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    padding: "8px 16px",
+                    borderRadius: 999,
+                    border: `1px solid ${isActive ? "hsl(var(--border))" : "hsl(var(--border) / 0.6)"}`,
+                    background: isActive ? "hsl(var(--secondary))" : "transparent",
+                    color: isActive ? "hsl(var(--secondary-foreground))" : "oklch(0.65 0.01 240)",
+                    textTransform: "none",
+                  }}
+                >
+                  {tag === "all" ? "All" : tag}
+                </button>
+              );
+            })}
           </div>
 
-          {/* Sort */}
+          {/* sort */}
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="ml-auto shrink-0 bg-transparent font-mono text-xs text-muted-foreground focus:outline-none cursor-pointer"
+            className="cursor-pointer bg-transparent outline-none"
+            style={{
+              fontFamily: "var(--font-mono, monospace)",
+              fontSize: 11.5,
+              letterSpacing: "0.08em",
+              color: "oklch(0.58 0.01 240)",
+              textTransform: "uppercase",
+            }}
           >
             {SORT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
+              <option key={o.value} value={o.value} style={{ background: "hsl(var(--card))" }}>
                 Sort: {o.label}
               </option>
             ))}
           </select>
         </div>
-      </div>
 
-      <main className="mx-auto max-w-7xl px-6 py-10 space-y-10">
-        {/* ── FEATURED HERO CARD ── */}
-        {showHero && (
-          <section>
-            <h2 className="mb-4 font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-              Featured system
-            </h2>
-            <FeaturedCard system={featured} />
-          </section>
-        )}
+        {/* ── MAIN ── */}
+        <main className="mx-auto max-w-[1520px] px-12 py-10 space-y-12">
 
-        {/* ── SYSTEM GRID ── */}
-        <section>
-          <h2 className="mb-5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-            {activeFilter ? `${activeFilter} · ${gridSystems.length} systems` : `All systems · ${gridSystems.length}`}
-          </h2>
-
-          {gridSystems.length === 0 ? (
-            <p className="py-16 text-center text-sm text-muted-foreground">
-              No systems match "{search}"
-            </p>
-          ) : (
-            <div
-              className="grid gap-5"
-              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}
-            >
-              {gridSystems.map((system) => (
-                <SystemCard key={system.slug} system={system} />
-              ))}
-            </div>
+          {/* featured hero */}
+          {showHero && (
+            <section>
+              <div
+                className="mb-5 flex items-baseline justify-between pb-3.5"
+                style={{ borderBottom: "1px solid oklch(0.28 0.01 260 / 0.45)" }}
+              >
+                <span
+                  className="uppercase tracking-widest"
+                  style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "oklch(0.42 0.01 240)" }}
+                >
+                  Featured system
+                </span>
+              </div>
+              <FeaturedCard system={featured} />
+            </section>
           )}
-        </section>
-      </main>
 
-      {/* ── FOOTER ── */}
-      <footer className="border-t border-border/30 px-6 py-8 mt-10">
-        <div className="mx-auto max-w-7xl flex items-center justify-between">
-          <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
+          {/* grid */}
+          <section>
+            <div
+              className="mb-5 flex items-baseline justify-between pb-3.5"
+              style={{ borderBottom: "1px solid oklch(0.28 0.01 260 / 0.45)" }}
+            >
+              <span
+                className="uppercase tracking-widest"
+                style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "oklch(0.42 0.01 240)" }}
+              >
+                {activeFilter
+                  ? `${activeFilter} · ${gridSystems.length} systems`
+                  : `All systems · ${gridSystems.length}`}
+              </span>
+            </div>
+
+            {gridSystems.length === 0 ? (
+              <p
+                className="py-16 text-center"
+                style={{ fontSize: 14, color: "oklch(0.58 0.01 240)" }}
+              >
+                No systems match "{search}"
+              </p>
+            ) : (
+              <div
+                className="grid gap-5"
+                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}
+              >
+                {gridSystems.map((system) => (
+                  <SystemCard key={system.slug} system={system} />
+                ))}
+              </div>
+            )}
+          </section>
+        </main>
+
+        {/* ── FOOTER ── */}
+        <footer
+          className="mt-10 flex items-center justify-between px-12 py-8"
+          style={{ borderTop: "1px solid oklch(0.28 0.01 260 / 0.45)" }}
+        >
+          <span
+            className="uppercase tracking-widest"
+            style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "oklch(0.42 0.01 240)", letterSpacing: "0.14em" }}
+          >
             EXO·CATALOGUE
           </span>
-          <span className="text-xs text-muted-foreground">
+          <span style={{ fontSize: 12, color: "oklch(0.42 0.01 240)" }}>
             Data: Open Exoplanet Catalogue
           </span>
-        </div>
-      </footer>
-    </div>
+        </footer>
+      </div>
+    </>
   );
 }
