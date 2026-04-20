@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useCallback } from "react";
 import { getXmlFilesList } from "~/utils/getXmlFilesList";
 import { catalogueSystems, FILTER_TAGS } from "~/data/catalogueSystems";
 import type { CatalogueSystem } from "~/data/catalogueSystems";
-import { PlanetCanvas } from "~/components/PlanetCanvas";
+import { ShaderPlanet } from "~/components/ShaderPlanet";
 import { Input } from "~/components/ui/input";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -123,14 +123,11 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
             {system.planets.map((p, i) => {
               const sz = Math.round(22 + p.r * 12);
               return (
-                <PlanetCanvas
+                <ShaderPlanet
                   key={i}
                   type={p.type}
                   seed={p.seed}
                   size={sz}
-                  animate={false}
-                  tilt={0.08}
-                  lightAngle={-0.55}
                   style={{ filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.6))" }}
                 />
               );
@@ -201,14 +198,10 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
             zIndex: 2,
           }}
         >
-          <PlanetCanvas
+          <ShaderPlanet
             type={system.featured.type}
             seed={system.featured.seed}
             size={360}
-            animate={false}
-            atmosphere={system.featured.atmosphere}
-            tilt={0.12}
-            lightAngle={-0.6}
             style={{ filter: "drop-shadow(0 30px 80px rgba(0,0,0,0.7))" }}
           />
         </div>
@@ -258,14 +251,10 @@ function SystemCard({ system }: { system: CatalogueSystem }) {
               transition: "transform 0.5s cubic-bezier(0.2,0.8,0.2,1)",
             }}
           >
-            <PlanetCanvas
+            <ShaderPlanet
               type={system.featured.type}
               seed={system.featured.seed}
               size={140}
-              animate={false}
-              atmosphere={system.featured.atmosphere ?? null}
-              tilt={0.1}
-              lightAngle={-0.6}
               style={{ filter: "drop-shadow(0 14px 36px rgba(0,0,0,0.55))" }}
             />
           </div>
@@ -336,14 +325,11 @@ function SystemCard({ system }: { system: CatalogueSystem }) {
               {system.planets.slice(0, 6).map((p, i) => {
                 const sz = Math.round(14 + p.r * 6);
                 return (
-                  <PlanetCanvas
+                  <ShaderPlanet
                     key={i}
                     type={p.type}
                     seed={p.seed}
                     size={sz}
-                    animate={false}
-                    tilt={0.06}
-                    lightAngle={-0.5}
                     style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.7))" }}
                   />
                 );
@@ -650,14 +636,10 @@ export default function Index() {
               zIndex: 1,
             }}
           >
-            <PlanetCanvas
+            <ShaderPlanet
               type={featured.featured.type}
               seed={featured.featured.seed}
               size={900}
-              animate={false}
-              atmosphere={featured.featured.atmosphere}
-              tilt={0.1}
-              lightAngle={-0.5}
               style={{ width: "100%", height: "100%" }}
             />
           </div>
