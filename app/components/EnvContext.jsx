@@ -108,9 +108,9 @@ export const EnvProvider = ({ children }) => {
     // Frozen: cold rocky with ice surface (S_eff < 0.35)
     frozen: { atmos: 0.0, rim: 0.0, rimFalloff: 1.5, rimDay: '#6688aa', rimTwi: '#334455', shell: 0.0, halo: 0.0, haloScale: 1.5, haloFalloff: 2.0, haloWhiten: 0.5, haloShadow: 0.5 },
     // Water World: deep ocean with moderate haze
-    waterWorld: { seaLevel: 0.85, continentFreq: 0.05, coastDetail: 0.35, landContrast: 1.6, iceCap: 1.1, iceEdge: 0.025, iceWarp: 0.6, iceDetail: 0.8, warp: 0.4, ridgeFreq: 0.3, ridgeMix: 1.0, bump: 0.4, displace: 0.005, cloudCover: 0.36, cloudOpacity: 0.61, cloudSwirl: 0.35, cloudBands: 2.0, cloudWarp: 0.35, atmos: 0.0, rim: 0.0, rimFalloff: 1.0, rimDay: '#2266cc', rimTwi: '#ccccaa', shell: 0.0, halo: 0.50, haloScale: 1.3, haloFalloff: 1.6, haloWhiten: 0.30, haloShadow: 0.35 },
+    waterWorld: { seaLevel: 0.85, continentFreq: 0.05, coastDetail: 0.35, landContrast: 1.6, iceCap: 1.1, iceEdge: 0.025, iceWarp: 0.6, iceDetail: 0.8, warp: 0.4, ridgeFreq: 0.3, ridgeMix: 1.0, bump: 0.4, displace: 0.005, cloudCover: 0.71, cloudOpacity: 0.71, cloudSwirl: 0.35, cloudBands: 2.0, cloudWarp: 0.35, atmos: 0.0, rim: 0.0, rimFalloff: 1.0, rimDay: '#2266cc', rimTwi: '#ccccaa', shell: 0.0, halo: 0.50, haloScale: 1.3, haloFalloff: 1.6, haloWhiten: 0.30, haloShadow: 0.35 },
     // Sub-Neptune: thick atmosphere, blue-grey, no visible surface
-    subNeptune: { atmos: 0.0, rim: 0.0, rimFalloff: 0.8, rimDay: '#6688bb', rimTwi: '#445566', shell: 0.0, halo: 0.0, haloScale: 2.5, haloFalloff: 1.2, haloWhiten: 0.35, haloShadow: 0.7 },
+    subNeptune: { atmos: 0.0, rim: 0.0, rimFalloff: 0.8, rimDay: '#6688bb', rimTwi: '#445566', shell: 0.0, halo: 0.0, haloScale: 2.5, haloFalloff: 1.2, haloWhiten: 0.35, haloShadow: 0.7, cloudCover: 0.71, cloudOpacity: 0.71, cloudSwirl: 0.6, cloudBands: 3.0, cloudWarp: 0.35 },
     // Gas Giant: soft edge glow
     gasGiant: { atmos: 0.0, rim: 0.0, rimFalloff: 1.0, rimDay: '#aabbcc', rimTwi: '#556677', shell: 0.0, halo: 0.0, haloScale: 2.0, haloFalloff: 1.5, haloWhiten: 0.35, haloShadow: 0.7 },
     // Ice Giant: subtle blue edge

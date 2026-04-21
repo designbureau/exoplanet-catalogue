@@ -381,7 +381,7 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.landContrast = ww.landContrast ?? 1.6;
       base.swirlStrength = 0.15;
       base.cloudCoverage = ww.cloudCover ?? 0.50;
-      base.cloudOpacity = ww.cloudOpacity ?? 0.75;
+      base.cloudOpacity = ww.cloudOpacity ?? 0.71;
       base.cloudSwirl = ww.cloudSwirl ?? 0.8;
       base.cloudBands = ww.cloudBands ?? 3.0;
       base.cloudWarp = ww.cloudWarp ?? 0.35;
@@ -526,6 +526,11 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.haloFalloff = sn.haloFalloff ?? 1.2;
       base.haloWhiten = sn.haloWhiten ?? 0.35;
       base.haloShadow = sn.haloShadow ?? 0.7;
+      base.cloudCoverage = sn.cloudCover ?? 0.50;
+      base.cloudOpacity = sn.cloudOpacity ?? 0.71;
+      base.cloudSwirl = sn.cloudSwirl ?? 0.6;
+      base.cloudBands = sn.cloudBands ?? 3.0;
+      base.cloudWarp = sn.cloudWarp ?? 0.35;
       break;
     }
 

@@ -16,8 +16,33 @@ import type { PlanetType as CatType } from "~/components/PlanetCanvas";
 const CACHE = new Map<string, string>(); // key → data URL
 const PENDING = new Map<string, Promise<string>>();
 
+// ─── shared offscreen renderer ───────────────────────────────────────────────
+// We reuse a single WebGLRenderer for all thumbnail renders so we never hold
+// more than one offscreen WebGL context at a time.  Creating a new renderer per
+// render() call was consuming all 16 browser slots and killing the live Canvas.
+let _sharedRenderer: THREE.WebGLRenderer | null = null;
+let _sharedCanvas: HTMLCanvasElement | null = null;
+
+function getSharedRenderer(size: number): THREE.WebGLRenderer {
+  if (!_sharedRenderer) {
+    _sharedCanvas = document.createElement("canvas");
+    _sharedRenderer = new THREE.WebGLRenderer({
+      canvas: _sharedCanvas,
+      antialias: true,
+      alpha: true,
+      preserveDrawingBuffer: true,
+    });
+    _sharedRenderer.setPixelRatio(1);
+    _sharedRenderer.setClearColor(0x000000, 0);
+  }
+  if (_sharedCanvas!.width !== size || _sharedCanvas!.height !== size) {
+    _sharedRenderer.setSize(size, size, false);
+  }
+  return _sharedRenderer;
+}
+
 // ─── seed conversion ──────────────────────────────────────────────────────────
-function numericSeedToVec3(n: number): THREE.Vector3 {
+export function numericSeedToVec3(n: number): THREE.Vector3 {
   // Scatter a single integer across three 0..1 components with low correlation
   const a = ((n * 0x9e3779b9) >>> 0) / 0xffffffff;
   const b = ((n * 0x6c62272e) >>> 0) / 0xffffffff;
@@ -63,7 +88,7 @@ function baseParams(type: PlanetType, seed: THREE.Vector3): ShaderParams {
   };
 }
 
-function buildShaderParams(catType: CatType, seed: THREE.Vector3): ShaderParams {
+export function buildShaderParams(catType: CatType, seed: THREE.Vector3): ShaderParams {
   switch (catType) {
     case "eyeball_ice": {
       const p = baseParams(PlanetType.ICE_OCEAN_EYEBALL, seed);
@@ -280,46 +305,73 @@ export function renderOffscreenFromParams(params: ShaderParams, size: number): s
 }
 
 function renderOffscreen(params: ShaderParams, size: number): string {
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-
-  const renderer = new THREE.WebGLRenderer({
-    canvas,
-    antialias: size >= 128,
-    alpha: true,
-    preserveDrawingBuffer: true,
-  });
-  renderer.setSize(size, size, false);
-  renderer.setPixelRatio(1);
-  renderer.setClearColor(0x000000, 0);
+  const renderer = getSharedRenderer(size);
+  const canvas = _sharedCanvas!;
 
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(-1.15, 1.15, 1.15, -1.15, 0.1, 10);
   camera.position.set(0, 0, 3);
 
+  // For TEMPERATE worlds the HZ gradient can push cloud opacity very high (>0.8),
+  // completely obscuring the surface in a static thumbnail. Patch the params clone
+  // before material creation so the uniforms are set correctly from the start.
+  const snapParams: ShaderParams = { ...params };
+  if (snapParams.type === PlanetType.TEMPERATE) {
+    snapParams.cloudOpacity  = Math.min(snapParams.cloudOpacity  ?? 0.6,  0.42);
+    snapParams.cloudCoverage = Math.min(snapParams.cloudCoverage ?? 0.45, 0.38);
+  }
+
   // Sphere — 128 segs is enough for thumbnails; matches LOD "far" tier look
   const geo = new THREE.SphereGeometry(1, 128, 128);
-  const mat = createPlanetMaterial(params);
+  const mat = createPlanetMaterial(snapParams);
 
-  // Tilt sun slightly so the terminator shows
-  const sunDir = new THREE.Vector3(0.6, 0.35, 0.75).normalize();
+  // Tilt sun slightly so the terminator shows, but keep it fairly frontal for bright thumbnails
+  const sunDir = new THREE.Vector3(0.45, 0.25, 0.85).normalize();
   mat.uniforms.u_sunDirection.value.copy(sunDir);
   mat.uniforms.u_sunDirectionLocal.value.copy(sunDir);
   mat.uniforms.u_time.value = 0;
   mat.uniforms.u_lod.value = 0;
+
+  // Brighter ambient for thumbnail legibility (shader default is 0.06, viewer overrides live)
+  if (mat.uniforms.u_ambient) mat.uniforms.u_ambient.value = 0.32;
+  // Wider wrap range softens the terminator, spreading light further around the dark side
+  if (mat.uniforms.u_wrapRange) mat.uniforms.u_wrapRange.value = 0.65;
+
+  // Match EnvContext viewer defaults for gas band count (shader default 6.0 is too many)
+  if (mat.uniforms.u_gasBands) {
+    const isIceType = params.type === PlanetType.ICE_GIANT;
+    mat.uniforms.u_gasBands.value = isIceType ? 4.0 : 2.5;
+  }
 
   const mesh = new THREE.Mesh(geo, mat);
   scene.add(mesh);
 
   renderer.render(scene, camera);
 
-  const dataURL = canvas.toDataURL("image/png");
+  // ── Gamma lift for thumbnail legibility ─────────────────────────────────
+  // The shader is tuned for a live star-lit scene; in a static thumbnail the
+  // dark side of planets becomes illegibly black.  Apply a modest gamma curve
+  // (γ ≈ 0.62) that lifts shadows without blowing out bright surfaces.
+  const lift = document.createElement("canvas");
+  lift.width = size;
+  lift.height = size;
+  const ctx2d = lift.getContext("2d")!;
+  ctx2d.drawImage(canvas, 0, 0);
+  const id = ctx2d.getImageData(0, 0, size, size);
+  const px = id.data;
+  for (let i = 0; i < px.length; i += 4) {
+    if (px[i + 3] === 0) continue; // skip transparent (background)
+    px[i]     = Math.round(Math.pow(px[i]     / 255, 0.58) * 255);
+    px[i + 1] = Math.round(Math.pow(px[i + 1] / 255, 0.58) * 255);
+    px[i + 2] = Math.round(Math.pow(px[i + 2] / 255, 0.58) * 255);
+  }
+  ctx2d.putImageData(id, 0, 0);
 
-  // Dispose everything — we only needed it for one frame
+  const dataURL = lift.toDataURL("image/png");
+
+  // Dispose geometry and material — the shared renderer stays alive for reuse
   geo.dispose();
   mat.dispose();
-  renderer.dispose();
 
   return dataURL;
 }
