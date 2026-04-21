@@ -1,10 +1,11 @@
 import type { MetaFunction } from "react-router";
 import { useLoaderData, Link } from "react-router";
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { getXmlFilesList } from "~/utils/getXmlFilesList";
 import { catalogueSystems, FILTER_TAGS } from "~/data/catalogueSystems";
 import type { CatalogueSystem } from "~/data/catalogueSystems";
 import { ShaderPlanet } from "~/components/ShaderPlanet";
+import { LivePlanet } from "~/components/LivePlanet";
 import { Input } from "~/components/ui/input";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -19,38 +20,11 @@ export const loader = async () => {
   return { totalSystems: xmlFiles.length };
 };
 
-// ─── parallax ────────────────────────────────────────────────────────────────
-
-function useParallax(strength = 6) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-
-  const onMove = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      const el = ref.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const nx = (e.clientX - rect.left - rect.width / 2) / (rect.width / 2);
-      const ny = (e.clientY - rect.top - rect.height / 2) / (rect.height / 2);
-      setOffset({ x: nx * strength, y: ny * strength });
-    },
-    [strength],
-  );
-
-  const onLeave = useCallback(() => setOffset({ x: 0, y: 0 }), []);
-  return { ref, offset, onMove, onLeave };
-}
-
 // ─── hero card (Direction B · planet variant) ────────────────────────────────
 
 function FeaturedCard({ system }: { system: CatalogueSystem }) {
-  const { ref, offset, onMove, onLeave } = useParallax(6);
-
   return (
     <div
-      ref={ref}
-      onMouseMove={onMove}
-      onMouseLeave={onLeave}
       className="relative grid overflow-hidden rounded-sm"
       style={{
         gridTemplateColumns: "1fr 580px",
@@ -190,14 +164,7 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
           }}
         />
         {/* planet */}
-        <div
-          style={{
-            transform: `translate(${offset.x}px, ${offset.y}px)`,
-            transition: "transform 0.15s ease-out",
-            position: "relative",
-            zIndex: 2,
-          }}
-        >
+        <div style={{ position: "relative", zIndex: 2 }}>
           <ShaderPlanet
             type={system.featured.type}
             seed={system.featured.seed}
@@ -214,14 +181,9 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
 // ─── system grid card (Direction B) ──────────────────────────────────────────
 
 function SystemCard({ system }: { system: CatalogueSystem }) {
-  const { ref, offset, onMove, onLeave } = useParallax(5);
-
   return (
     <Link to={`/system/${encodeURIComponent(system.filename)}`} className="group block">
       <div
-        ref={ref}
-        onMouseMove={onMove}
-        onMouseLeave={onLeave}
         className="relative flex flex-col overflow-hidden rounded-sm h-full"
         style={{
           background: "oklch(0.13 0.01 260 / 0.55)",
@@ -245,13 +207,8 @@ function SystemCard({ system }: { system: CatalogueSystem }) {
             style={{ inset: 14, border: "1px solid oklch(0.3 0.01 260 / 0.35)" }}
           />
 
-          {/* planet with parallax */}
-          <div
-            style={{
-              transform: `translate(${offset.x}px, ${offset.y}px)`,
-              transition: "transform 0.5s cubic-bezier(0.2,0.8,0.2,1)",
-            }}
-          >
+          {/* planet */}
+          <div>
             <ShaderPlanet
               type={system.featured.type}
               seed={system.featured.seed}
@@ -625,7 +582,7 @@ export default function Index() {
             ))}
           </div>
 
-          {/* giant background planet */}
+          {/* giant background planet — live shader */}
           <div
             className="pointer-events-none absolute"
             style={{
@@ -638,12 +595,10 @@ export default function Index() {
               zIndex: 1,
             }}
           >
-            <ShaderPlanet
+            <LivePlanet
               type={featured.featured.type}
               seed={featured.featured.seed}
-              slug={featured.slug}
-              size={900}
-              style={{ width: "100%", height: "100%", borderRadius: 0 }}
+              style={{ width: "100%", height: "100%" }}
             />
           </div>
         </section>
