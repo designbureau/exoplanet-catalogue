@@ -1,0 +1,4 @@
+- [project_overview.md](project_overview.md) - Exoplanet Remix: stack, roadmap, and dynamic shader vision
+- [feedback_halo_dark_ring.md](feedback_halo_dark_ring.md) - Halo dark ring artifact with post-processing — unsolved
+- [reference_oec_data_pipeline.md](reference_oec_data_pipeline.md) - OEC data pipeline: NASA → oec_continuity → OEC → our weekly sync
+- [handover_catalogue_ui.md](handover_catalogue_ui.md) - Catalogue UI branch handover: index redesign, thumbnail pipeline, LivePlanet masthead (2026-04-21)

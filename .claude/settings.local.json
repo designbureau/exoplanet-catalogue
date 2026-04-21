@@ -30,7 +30,10 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:web.dev)",
       "WebSearch",
-      "Bash(find /Users/Shared/Repositories/exoplanet-remix -name *shader* -o -name *Shader*)"
+      "Bash(find /Users/Shared/Repositories/exoplanet-remix -name *shader* -o -name *Shader*)",
+      "Bash(git merge:*)",
+      "Bash(mkdir -p /Users/Shared/Repositories/exoplanet-remix/.claude/memory)",
+      "Bash(cp /Users/work/.claude/projects/-Users-Shared-Repositories-exoplanet-remix/memory/*.md /Users/Shared/Repositories/exoplanet-remix/.claude/memory/)"
     ]
   }
 }
