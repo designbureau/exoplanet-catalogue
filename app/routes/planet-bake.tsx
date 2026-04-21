@@ -28,24 +28,29 @@ function parseVal(v: any): number {
 }
 
 /** Recursively collect all { planet, star } pairs from xml2js-parsed system. */
-function collectPlanets(node: any, starData: any): Array<{ planet: any; star: any }> {
+function collectPlanets(node: any, parentStar: any = null): Array<{ planet: any; star: any }> {
   const out: Array<{ planet: any; star: any }> = [];
-  const stars: any[] = [
-    ...(node.star ?? []),
-    ...(node.binary ?? []).flatMap((b: any) => collectPlanets(b, starData)),
-  ];
+
+  // Planets directly under a star node
   for (const star of node.star ?? []) {
     for (const planet of star.planet ?? []) {
       out.push({ planet, star });
     }
-    // recurse into nested binary nodes within a star
     for (const b of star.binary ?? []) {
-      out.push(...collectPlanets(b, starData));
+      out.push(...collectPlanets(b, star));
     }
   }
+
+  // Planets directly under a binary node (circumbinary — e.g. Kepler-16 (AB) b)
   for (const b of node.binary ?? []) {
-    out.push(...collectPlanets(b, starData));
+    // Use first star of the binary as proxy for stellar params
+    const proxyStar = b.star?.[0] ?? parentStar ?? {};
+    for (const planet of b.planet ?? []) {
+      out.push({ planet, star: proxyStar });
+    }
+    out.push(...collectPlanets(b, proxyStar));
   }
+
   return out;
 }
 

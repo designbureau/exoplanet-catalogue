@@ -123,6 +123,8 @@ async function main() {
 
     try {
       await waitForHttp(BASE_URL + "/");
+      // Warm up the bake route so Vite compiles it before the first timed request
+      await waitForHttp(BASE_URL + "/planet-bake?slug=__warmup__");
       console.log(`   ✓ Dev server ready\n`);
     } catch (e) {
       devProc.kill();
