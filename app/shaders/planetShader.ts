@@ -282,15 +282,17 @@ const noiseLib = `
     return v;
   }
 
-  // ── High-detail noise (Perlin-based, LOD-aware: 6 oct close, 3 oct far) ──
-  // Octaves 7-10 contribute <1% each — imperceptible but double the cost.
+  // ── High-detail noise (Perlin-based, LOD-aware: 8 oct close, 3 oct far) ──
+  // Octaves 7-8 each contribute under ~1% of the raw range, but the contrast
+  // boost in hiFBM and the pow4 sharpen in hiRidged amplify them into visible
+  // micro-detail on close-up surfaces (catalogue thumbs, masthead).
 
-  // Base FBM: 6/3-octave, contrast-boosted
+  // Base FBM: 8/3-octave, contrast-boosted
   float hiFBM(vec3 pos, float frq, float sd) {
     float n = 0.0, amp = 0.5;
     vec3 p = pos * frq + vec3(sd);
-    int oct = (u_lod > 0.5) ? 6 : 3;
-    for (int i = 0; i < 6; i++) {
+    int oct = (u_lod > 0.5) ? 8 : 3;
+    for (int i = 0; i < 8; i++) {
       if (i >= oct) break;
       n += pnoise3d(p) * amp;
       p = p * 2.03 + vec3(float(i) * 13.7, float(i) * 7.3, float(i) * 19.1);
@@ -299,12 +301,12 @@ const noiseLib = `
     return clamp((n - 0.5) * 2.0 + 0.5, 0.0, 1.0);
   }
 
-  // Ridged: 6/3-octave, ridge-folded, pow4 sharpened
+  // Ridged: 8/3-octave, ridge-folded, pow4 sharpened
   float hiRidged(vec3 pos, float frq, float sd) {
     float n = 0.0, amp = 0.5;
     vec3 p = pos * frq + vec3(sd);
-    int oct = (u_lod > 0.5) ? 6 : 3;
-    for (int i = 0; i < 6; i++) {
+    int oct = (u_lod > 0.5) ? 8 : 3;
+    for (int i = 0; i < 8; i++) {
       if (i >= oct) break;
       float s = pnoise3d(p);
       s = 2.0 * (0.5 - abs(0.5 - s));
@@ -320,12 +322,12 @@ const noiseLib = `
     return 1.0 - hiRidged(pos, frq, sd);
   }
 
-  // Cloud noise: 6/3-octave sin-modulated for organic shapes
+  // Cloud noise: 8/3-octave sin-modulated for organic shapes
   float hiCloud(vec3 pos, float frq, float sd) {
     float n = 0.0, amp = 0.5;
     vec3 p = pos * frq + vec3(sd);
-    int oct = (u_lod > 0.5) ? 6 : 3;
-    for (int i = 0; i < 6; i++) {
+    int oct = (u_lod > 0.5) ? 8 : 3;
+    for (int i = 0; i < 8; i++) {
       if (i >= oct) break;
       float s = pnoise3d(p);
       s = sin(s * 5.0) * 0.5 + 0.5;
@@ -428,6 +430,7 @@ const noiseLib = `
   uniform float u_lavaAmbient;
   uniform float u_wrapRange;
   uniform float u_wrapPower;
+  uniform float u_sunIntensity;
   uniform vec3 u_atmosDayColor;
   uniform vec3 u_atmosTwilightColor;
   uniform float u_atmosIntensity;
@@ -448,7 +451,7 @@ const noiseLib = `
     float diff = wrapDiffuse(N, L);
     float rim = fresnelAmbient(N, V);
     float light = diff + ambient * rim * (1.0 - diff);
-    return color * light;
+    return color * light * u_sunIntensity;
   }
 
   vec3 applyAtmosphere(vec3 color, vec3 normal, vec3 worldPos) {
@@ -1789,6 +1792,7 @@ export function createPlanetMaterial(params: ShaderParams): THREE.ShaderMaterial
       u_lavaAmbient: { value: 0.08 },
       u_wrapRange: { value: 0.45 },
       u_wrapPower: { value: 1.0 },
+      u_sunIntensity: { value: 1.0 },
       u_displace: { value: 0 },
       u_vertLOD: { value: 0 },
       u_bumpStrength: { value: params.bumpStrength ?? 0.8 },
@@ -1835,6 +1839,7 @@ const cloudFragmentShader = `
   uniform float u_eyeSize;
   uniform float u_wrapRange;
   uniform float u_wrapPower;
+  uniform float u_sunIntensity;
   varying vec3 vPosition;
   varying vec3 vSphereDir;
   varying vec3 vNormal;
@@ -2029,7 +2034,7 @@ const cloudFragmentShader = `
 
     vec3 warmCloud = vec3(0.98, 0.97, 0.94);
     vec3 coolCloud = vec3(0.85, 0.88, 0.95);
-    vec3 cloudColor = mix(coolCloud, warmCloud, diff) * diff * selfShadow;
+    vec3 cloudColor = mix(coolCloud, warmCloud, diff) * diff * selfShadow * u_sunIntensity;
 
     // Fade clouds into shadow on dark side
     float dayFade = smoothstep(-0.1, 0.15, sunDot);
@@ -2066,6 +2071,7 @@ export function createCloudMaterial(params: ShaderParams): THREE.ShaderMaterial 
       u_eyeSize: { value: 0.15 },
       u_wrapRange: { value: 0.45 },
       u_wrapPower: { value: 1.0 },
+      u_sunIntensity: { value: 1.0 },
     },
   });
 }
