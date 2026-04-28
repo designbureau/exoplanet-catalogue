@@ -167,15 +167,15 @@ export function buildShaderParams(catType: CatType, seed: THREE.Vector3): Shader
       p.color3 = new THREE.Color("#7a6a50");   // highland / desert
       p.color4 = new THREE.Color("#e8e8e0");   // peaks / ice
       p.noiseScale = 10;
-      p.seaLevel = 0.38;
-      p.continentFreq = 0.15;
+      p.seaLevel = 0.78;          // ↑ Earth-realistic ~70%+ ocean coverage
+      p.continentFreq = 0.22;     // ↑ more, smaller landmasses → more land/ocean breakup
       p.iceCapSize = 0.96;
       p.iceEdge = 0.035;
       p.iceWarp = 0.5;
       p.iceDetail = 1.5;
-      p.warpIntensity = 3.5;
-      p.coastDetail = 0.35;
-      p.landContrast = 1.6;
+      p.warpIntensity = 4.5;      // ↑ more organic distortion of continent shapes
+      p.coastDetail = 0.6;        // ↑ crinklier coastlines → ocean texture at land edges
+      p.landContrast = 1.8;       // ↑ sharper land/ocean transition
       p.bumpStrength = 0.8;
       p.swirlStrength = 0.12;
       p.cloudCoverage = 0.45;
@@ -330,7 +330,9 @@ function renderOffscreen(params: ShaderParams, size: number): string {
   mat.uniforms.u_sunDirection.value.copy(sunDir);
   mat.uniforms.u_sunDirectionLocal.value.copy(sunDir);
   mat.uniforms.u_time.value = 0;
-  mat.uniforms.u_lod.value = 0;
+  // Pre-baked thumbs are static PNGs, so bake-time cost is one-shot — use the
+  // full 8-octave detail path so cards match the live masthead's fidelity.
+  mat.uniforms.u_lod.value = 1.0;
 
   // Brighter ambient for thumbnail legibility (shader default is 0.06, viewer overrides live)
   if (mat.uniforms.u_ambient) mat.uniforms.u_ambient.value = 0.32;
@@ -393,7 +395,12 @@ export function renderPlanetSnapshot(
       try {
         const vec3Seed = numericSeedToVec3(seed);
         const params = buildShaderParams(catType, vec3Seed);
-        const url = renderOffscreen(params, size);
+        // Oversample: render at ≥4× the requested CSS size (min 256px) so
+        // small companion-planet dots (22–34px in the system row) get crisp
+        // downsampling instead of rendering at native pixel size and looking
+        // blocky. Result is cached, so the cost is paid once per unique dot.
+        const renderSize = Math.max(size * 4, 256);
+        const url = renderOffscreen(params, renderSize);
         CACHE.set(key, url);
         resolve(url);
       } catch (err) {

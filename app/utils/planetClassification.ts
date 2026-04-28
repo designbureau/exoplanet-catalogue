@@ -628,9 +628,13 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       // 3-category presets: Mars (cold) → Earth (mid) → Venus (warm)
       // Piecewise linear interpolation through 3 anchor points
       const p = hzRanges || {};
-      const mars  = p.mars  || { atmos: 0.05, cloudCover: 0.15, cloudOpacity: 0.2,  seaLevel: 0.15, iceCap: 0.98, continentFreq: 0.10 };
-      const earth = p.earth || { atmos: 0.35, cloudCover: 0.45, cloudOpacity: 0.7,  seaLevel: 0.38, iceCap: 0.96, continentFreq: 0.16 };
-      const warm  = p.warm  || { atmos: 0.60, cloudCover: 0.60, cloudOpacity: 0.90, seaLevel: 0.10, iceCap: 0.99, continentFreq: 0.22 };
+      // NOTE: when no hzRanges passed (e.g. the offline bake script with no
+      // EnvContext), these defaults are the only source. They MUST include
+      // every key used by lerpPreset below — missing keys produce `undefined`
+      // params and the planet renders as a smooth blob.
+      const mars  = p.mars  || { atmos: 0.05, cloudCover: 0.15, cloudOpacity: 0.2,  cloudSwirl: 1.2, cloudBands: 3.0, cloudWarp: 0.2,  seaLevel: 0.45, iceCap: 0.98, iceEdge: 0.025, iceWarp: 0.75, iceDetail: 0.9, continentFreq: 0.18, warp: 0.4, ridgeFreq: 0.45, ridgeMix: 1.5, bump: 0.5, displace: 0.008 };
+      const earth = p.earth || { atmos: 0.35, cloudCover: 0.45, cloudOpacity: 0.7,  cloudSwirl: 0.5, cloudBands: 2.5, cloudWarp: 0.5,  seaLevel: 0.82, iceCap: 0.96, iceEdge: 0.035, iceWarp: 1.0,  iceDetail: 0.7, continentFreq: 0.22, warp: 0.7, ridgeFreq: 0.6,  ridgeMix: 1.8, bump: 0.6, displace: 0.008 };
+      const warm  = p.warm  || { atmos: 0.60, cloudCover: 0.60, cloudOpacity: 0.90, cloudSwirl: 1.2, cloudBands: 2.0, cloudWarp: 0.5,  seaLevel: 0.30, iceCap: 0.99, iceEdge: 0.035, iceWarp: 0.4,  iceDetail: 1.8, continentFreq: 0.26, warp: 0.85, ridgeFreq: 0.65, ridgeMix: 2.0, bump: 0.5, displace: 0.008 };
 
       // Real S_eff mapping: Mars≈0.43→hz≈0.12, Earth≈1.0→hz≈0.94
       // Anchor points: Mars at hz=0.15, Earth at hz=0.85, Warm at hz=1.0
@@ -675,6 +679,9 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.iceWarp = lerpPreset('iceWarp');
       base.iceDetail = lerpPreset('iceDetail');
       base.continentFreq = lerpPreset('continentFreq');
+      // warp preset is 0..1; multiply by 6.0 to match the warpIntensity range
+      // used elsewhere in this file (matches the WATER_WORLD convention).
+      base.warpIntensity = lerpPreset('warp') * 6.0;
       base.coastDetail = lerpPreset('ridgeFreq');
       base.landContrast = lerpPreset('ridgeMix');
       base.bumpStrength = lerpPreset('bump');
