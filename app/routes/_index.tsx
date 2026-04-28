@@ -1,11 +1,12 @@
 import type { MetaFunction } from "react-router";
 import { useLoaderData, Link } from "react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { getXmlFilesList } from "~/utils/getXmlFilesList";
 import { catalogueSystems, FILTER_TAGS } from "~/data/catalogueSystems";
 import type { CatalogueSystem } from "~/data/catalogueSystems";
 import { ShaderPlanet } from "~/components/ShaderPlanet";
 import { LivePlanet } from "~/components/LivePlanet";
+import type { PlanetType as CatType } from "~/components/PlanetCanvas";
 import { Input } from "~/components/ui/input";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -341,7 +342,55 @@ export default function Index() {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [sort, setSort] = useState("default");
 
-  const featured = catalogueSystems[0]; // TRAPPIST-1
+  const featured = catalogueSystems[0]; // stable for FeaturedCard (SSR-safe)
+
+  // Masthead cycles through every CatType (the catalogue's render-type string
+  // — "gas_giant", "rocky", "ocean"… — that buildShaderParams actually
+  // switches on). Starts from a random index; advances every CYCLE_MS.
+  // Seeds derived from type name char codes so each type is visually stable
+  // across reloads.
+  const CYCLE_MS = 6000;
+  const ALL_TYPES = useMemo<CatType[]>(
+    () => [
+      "rocky",
+      "rocky_earthlike",
+      "lava",
+      "eyeball_ice",
+      "gas_giant",
+      "ice_giant",
+      "ocean",
+      "hot_jupiter",
+      "carbon",
+    ],
+    [],
+  );
+  const seedFor = (t: string) => {
+    let h = 0;
+    for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
+    return h;
+  };
+  const [mastheadIdx, setMastheadIdx] = useState(0);
+  useEffect(() => {
+    setMastheadIdx(Math.floor(Math.random() * ALL_TYPES.length));
+    const id = window.setInterval(() => {
+      setMastheadIdx((i) => (i + 1) % ALL_TYPES.length);
+    }, CYCLE_MS);
+    return () => window.clearInterval(id);
+  }, [ALL_TYPES.length]);
+  const mastheadType = ALL_TYPES[mastheadIdx];
+  const mastheadSeed = seedFor(mastheadType);
+
+  // Desktop offsets the sphere right within the canvas. Listen to viewport
+  // width so the layout flips at the same `md` breakpoint Tailwind uses
+  // (768px). 0.22 ≈ shifts the centre 22% of the masthead width to the right.
+  const [mastheadOffsetX, setMastheadOffsetX] = useState(0);
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 768px)");
+    const apply = () => setMastheadOffsetX(mql.matches ? 0.22 : 0);
+    apply();
+    mql.addEventListener("change", apply);
+    return () => mql.removeEventListener("change", apply);
+  }, []);
 
   const filteredSystems = useMemo(() => {
     let systems = [...catalogueSystems];
@@ -502,7 +551,7 @@ export default function Index() {
             {/* breadcrumb */}
             <p
               className="mb-6 uppercase tracking-widest"
-              style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "oklch(0.42 0.01 240)", letterSpacing: "0.14em" }}
+              style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "#fff", letterSpacing: "0.14em" }}
             >
               Exoplanet catalogue · {new Date().getFullYear()}
             </p>
@@ -516,20 +565,11 @@ export default function Index() {
                 lineHeight: 0.95,
                 letterSpacing: "-0.035em",
                 gap: 2,
-                color: "oklch(0.98 0.005 240)",
+                color: "#fff",
               }}
             >
               <span>Nearby</span>
-              <span
-                style={{
-                  background: "linear-gradient(180deg, var(--accent-exotic, oklch(0.78 0.14 320)) 0%, oklch(0.98 0.005 240) 85%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                }}
-              >
-                worlds
-              </span>
+              <span>worlds</span>
               <span>catalogue</span>
             </h1>
           </div>
@@ -561,7 +601,7 @@ export default function Index() {
                     lineHeight: 1,
                     letterSpacing: "-0.02em",
                     fontVariantNumeric: "tabular-nums",
-                    color: "oklch(0.98 0.005 240)",
+                    color: "#fff",
                   }}
                 >
                   {value}
@@ -573,7 +613,7 @@ export default function Index() {
                     letterSpacing: "0.16em",
                     textTransform: "uppercase",
                     marginTop: 8,
-                    color: "oklch(0.42 0.01 240)",
+                    color: "#fff",
                   }}
                 >
                   {label}
@@ -582,22 +622,26 @@ export default function Index() {
             ))}
           </div>
 
-          {/* giant background planet — live shader */}
+          {/* giant background planet — live shader, fills the masthead behind
+              the text. inset:0 so the canvas covers the full section; LivePlanet
+              centers a fixed-resolution sphere within whatever container size
+              it gets, so a tall-but-wide masthead crops top/bottom of the
+              sphere naturally via overflow:hidden on the section. */}
+          {/*
+           * Container fills the entire masthead (inset-0) so the WebGL
+           * canvas spans the full width — no clipped straight edge. The
+           * sphere itself is offset horizontally inside the canvas via
+           * LivePlanet's offsetX prop, which translates the inner div.
+           * On mobile, offsetX=0 keeps the planet centered behind the text.
+           */}
           <div
-            className="pointer-events-none absolute"
-            style={{
-              right: "-50vw",
-              top: "50%",
-              transform: "translateY(-50%)",
-              width: "min(100vw, 1800px)",
-              height: "min(100vw, 1800px)",
-              opacity: 0.85,
-              zIndex: 1,
-            }}
+            className="pointer-events-none absolute inset-0"
+            style={{ opacity: 0.85, zIndex: 0 }}
           >
             <LivePlanet
-              type={featured.featured.type}
-              seed={featured.featured.seed}
+              type={mastheadType}
+              seed={mastheadSeed}
+              offsetX={mastheadOffsetX}
               style={{ width: "100%", height: "100%" }}
             />
           </div>
