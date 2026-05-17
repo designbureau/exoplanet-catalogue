@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import chroma from "chroma-js";
 
 // Ported from sun/js/shader/ — single-pass version combining the perlin cubemap
 // bake + sun sphere sampling into one fragment shader for R3F compatibility.
@@ -184,29 +185,26 @@ const fragmentShader = `
   }
 `;
 
-// Star temperature to tint parameter mapping
-// Lower tint = redder (cool stars), higher = bluer/whiter (hot stars)
+// Star temperature → tint parameter for the `brightnessToColor` curve in
+// the fragment shader. Lower = redder, higher = whiter/bluer.
+//
+// Derived from the blue/red ratio of `chroma.temperature(temp)` (a continuous
+// Planck-blackbody curve in chroma-js) so the value is smooth across the full
+// 1500–40000K range — no spectral-class steps. Scaling/offset matches the
+// previous discrete table at the anchor temperatures (Sun ≈ 5778K → ~0.55,
+// hot O-type → ~1.8, deep red L/T → ~0.15).
 function tempToTint(temp: number): number {
-  if (temp > 30000) return 1.8;   // O-type: blue-white
-  if (temp > 10000) return 1.4;   // B-type: blue-white
-  if (temp > 7500) return 1.15;   // A-type: white
-  if (temp > 6000) return 0.85;   // F-type: yellow-white
-  if (temp > 5200) return 0.55;   // G-type: yellow (Sun-like)
-  if (temp > 3700) return 0.35;   // K-type: orange
-  if (temp > 2400) return 0.22;   // M-type: red
-  return 0.15;                     // L/T-type: deep red
+  const [r, , b] = chroma.temperature(temp).rgb();
+  const ratio = b / Math.max(1, r);              // 0 at cool red end, ~1.8 at O-type
+  return Math.max(0.15, Math.min(1.8, 0.15 + ratio));
 }
 
-// Star temperature to glow colour
+// Star temperature → glow sprite tint. Continuous blackbody curve from
+// chroma-js — matches the colour basis used by StarEffects.tsx for the
+// surrounding glow / rays / flares, so the body and its halo stay consistent.
 function tempToGlowColor(temp: number): THREE.Color {
-  if (temp > 30000) return new THREE.Color(0.6, 0.7, 1.0);
-  if (temp > 10000) return new THREE.Color(0.7, 0.8, 1.0);
-  if (temp > 7500) return new THREE.Color(0.9, 0.9, 1.0);
-  if (temp > 6000) return new THREE.Color(1.0, 0.95, 0.85);
-  if (temp > 5200) return new THREE.Color(1.0, 0.9, 0.6);
-  if (temp > 3700) return new THREE.Color(1.0, 0.65, 0.3);
-  if (temp > 2400) return new THREE.Color(1.0, 0.4, 0.15);
-  return new THREE.Color(0.9, 0.25, 0.1);
+  const [r, g, b] = chroma.temperature(temp).gl();
+  return new THREE.Color(r, g, b);
 }
 
 export interface StarShaderParams {
