@@ -28,6 +28,11 @@ priorities shift and details get stale.
   (8-octave instead of 3); runtime `renderPlanetSnapshot` oversamples to
   `max(size * 4, 256)` so small companion-planet dots downsample crisply.
 - **Nebula off by default** in the system view.
+- **Star colours on the chroma blackbody curve** — `tempToTint` and
+  `tempToGlowColor` in `starShader.ts` now derive from
+  `chroma.temperature()` instead of stepped spectral-class lookup tables.
+  Body and surrounding effects (glow / rays / flares) finally share one
+  colour basis.
 
 ## In progress / short term
 
@@ -75,8 +80,6 @@ priorities shift and details get stale.
   or improve the fallback.
 - Frozen-planet preset tuning (sibling to the TEMPERATE preset fix).
 - Gas giant Sudarsky class sub-presets.
-- Star spectral-type colour refinement on the surface shader — replace
-  `tempToTint` lookup with `chroma.js`.
 - Dynamic LOD for orbit lines based on camera distance.
 - Performance profiling and optimisation for the 4 000+ system galaxy view.
 - Vercel deployment optimisation.
