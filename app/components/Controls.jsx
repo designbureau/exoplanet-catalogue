@@ -123,7 +123,14 @@ const Controls = ({ follow, autoRotate = false, viewAzimuth = 0, viewPolar = Mat
       const tz = _objectPosition.z;
 
       if (follow) {
-        cameraControlsRef.current.moveTo(tx, ty, tz, true);
+        // Snap the follow target exactly to the planet each frame (no
+        // transition). With enableTransition=true the camera eased toward a
+        // target that moves every frame, so it perpetually lagged and chased
+        // — for fast, tight orbits (e.g. Alpha Centauri B b, 3.2-day period at
+        // 0.04 AU) the constant-magnitude lag vector rotates with the orbit
+        // and reads as wobble. Snapping locks the planet rock-steady in frame;
+        // the selection animation in the effect above still uses a transition.
+        cameraControlsRef.current.moveTo(tx, ty, tz, false);
       } else {
         cameraControlsRef.current.setTarget(tx, ty, tz, true);
       }

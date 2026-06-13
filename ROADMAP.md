@@ -28,6 +28,11 @@ priorities shift and details get stale.
   (8-octave instead of 3); runtime `renderPlanetSnapshot` oversamples to
   `max(size * 4, 256)` so small companion-planet dots downsample crisply.
 - **Nebula off by default** in the system view.
+- **Camera follow no longer wobbles on fast orbits** — the per-frame follow
+  target now snaps exactly (`moveTo(..., false)`) instead of easing toward a
+  target that moves every frame. The damped chase produced a rotating lag
+  vector that read as wobble on tight short-period orbits (e.g. Alpha
+  Centauri B b). Selection still animates with a transition.
 - **Star colours on the chroma blackbody curve** — `tempToTint` and
   `tempToGlowColor` in `starShader.ts` now derive from
   `chroma.temperature()` instead of stepped spectral-class lookup tables.
@@ -43,8 +48,6 @@ priorities shift and details get stale.
   (Pluto orbit jitter, wide binary z-fighting at 1:1 scale).
 - **Binary star orbital dynamics** — proper period/separation motion.
 - **N-body gravitational perturbations** between planets.
-- **Camera follow wobble on n-body orbits** — tracking feels jittery; may be
-  sampling rate, interpolation, or camera spring/damping.
 
 ## Near term
 
