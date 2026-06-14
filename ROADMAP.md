@@ -28,11 +28,17 @@ priorities shift and details get stale.
   (8-octave instead of 3); runtime `renderPlanetSnapshot` oversamples to
   `max(size * 4, 256)` so small companion-planet dots downsample crisply.
 - **Nebula off by default** in the system view.
-- **Camera follow no longer wobbles on fast orbits** — the per-frame follow
-  target now snaps exactly (`moveTo(..., false)`) instead of easing toward a
-  target that moves every frame. The damped chase produced a rotating lag
-  vector that read as wobble on tight short-period orbits (e.g. Alpha
-  Centauri B b). Selection still animates with a transition.
+- **Binary-companion orbit bob fixed (float32 precision)** — planets in deep
+  hierarchies (e.g. Alpha Centauri B b) were placed millions of scene units
+  from the origin because the wide outer-pair separation (15000 AU for the
+  AB–Proxima pair) scaled to a ~3,000,000-unit nesting offset. GPU float32
+  matrices resolve only ~0.25 units at that magnitude, so the planet's
+  vertices snapped to the grid and visibly bobbed. `Binary.jsx` now clamps
+  any binary/hierarchy offset to `MAX_BINARY_OFFSET` (20000 units), pulling
+  Alpha Cen B b from 3,007,248 → 27,254 units (ULP 0.25 → 0.0032). This is a
+  stopgap; the real fix is camera-relative rendering (below). Camera follow
+  also snaps its target exactly each frame now (`moveTo(..., false)` +
+  `update(0)`), eliminating a separate sub-pixel one-frame lag.
 - **Star colours on the chroma blackbody curve** — `tempToTint` and
   `tempToGlowColor` in `starShader.ts` now derive from
   `chroma.temperature()` instead of stepped spectral-class lookup tables.
@@ -45,7 +51,10 @@ priorities shift and details get stale.
   tried; needs a fundamentally different solution (screen-space bloom or
   stencil masking).
 - **Camera-relative rendering** for float32 precision at large distances
-  (Pluto orbit jitter, wide binary z-fighting at 1:1 scale).
+  (Pluto orbit jitter, wide binary z-fighting at 1:1 scale). The
+  `MAX_BINARY_OFFSET` clamp in `Binary.jsx` is a stopgap that bounds the worst
+  offsets; the real fix is subtracting the camera position on the GPU so
+  precision is highest near what you're looking at.
 - **Binary star orbital dynamics** — proper period/separation motion.
 - **N-body gravitational perturbations** between planets.
 

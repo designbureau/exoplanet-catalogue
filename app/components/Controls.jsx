@@ -128,9 +128,15 @@ const Controls = ({ follow, autoRotate = false, viewAzimuth = 0, viewPolar = Mat
         // target that moves every frame, so it perpetually lagged and chased
         // — for fast, tight orbits (e.g. Alpha Centauri B b, 3.2-day period at
         // 0.04 AU) the constant-magnitude lag vector rotates with the orbit
-        // and reads as wobble. Snapping locks the planet rock-steady in frame;
-        // the selection animation in the effect above still uses a transition.
+        // and reads as wobble.
         cameraControlsRef.current.moveTo(tx, ty, tz, false);
+        // CameraControls.update() composes the camera matrix from the target,
+        // but its own useFrame is a child subscriber so it runs BEFORE this
+        // one — meaning it used last frame's target and the render would lag
+        // the planet by one frame (a sub-pixel circle traced once per orbit =
+        // visible bob on fast orbits). Recompose now with the fresh target.
+        // update(0) doesn't advance in-progress selection transitions.
+        cameraControlsRef.current.update(0);
       } else {
         cameraControlsRef.current.setTarget(tx, ty, tz, true);
       }

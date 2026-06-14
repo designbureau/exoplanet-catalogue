@@ -5,6 +5,17 @@ import Star from "./Star";
 import Planet from "./Planet";
 import { getPosition, getMass } from "../utils/helperFunctions";
 
+// Hard cap on how far (in scene units) any binary offset can place a
+// subsystem from its parent's centre. Hierarchical systems can have enormous
+// separations — Alpha Centauri's outer pair is 15000 AU, which at the default
+// scale lands the inner AB binary ~3,000,000 units from the origin. GPU
+// float32 matrices have ~0.25-unit resolution at that magnitude, so any
+// planet there (e.g. Alpha Centauri B b, an 80-unit-radius orbit) shimmers
+// and bobs as its vertices snap to the float32 grid. Clamping keeps every
+// body inside a precision-safe envelope (ULP < ~0.003 units) while still
+// reading as "far apart". Proper fix is camera-relative rendering (roadmap).
+const MAX_BINARY_OFFSET = 20000;
+
 const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
   if (!data) return null;
 
@@ -42,7 +53,7 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
   const star1Radius = (parseFloat(stars[0]?.radius?.[0] ?? stars[0]?.mass?.[0] ?? 1) || 1) * Constants.radius.sol * Constants.radius.scale;
   const star2Radius = (parseFloat(stars[1]?.radius?.[0] ?? stars[1]?.mass?.[0] ?? 1) || 1) * Constants.radius.sol * Constants.radius.scale;
   const minSeparation = Math.max(star1Radius, star2Radius) * 3;
-  const separation = Math.max(rawSeparation, minSeparation);
+  const separation = Math.min(Math.max(rawSeparation, minSeparation), MAX_BINARY_OFFSET);
 
   const positionAngleDegrees = parseFloat(data.positionangle?.[0] ?? 0);
   let mass1 = stars[0] ? getMass({ data: stars[0] }) : 1;
@@ -78,7 +89,10 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
         data.binary.map((binary, index) => {
           // Nested binaries get offset from this binary's center
           const nestedOffset = getPosition({
-            separation: parseFloat(binary.separation?.[0] ?? binary.semimajoraxis?.[0] ?? 16) * binaryDistanceScale,
+            separation: Math.min(
+              parseFloat(binary.separation?.[0] ?? binary.semimajoraxis?.[0] ?? 16) * binaryDistanceScale,
+              MAX_BINARY_OFFSET,
+            ),
             positionAngleDegrees: parseFloat(binary.positionangle?.[0] ?? 0),
           });
           return (
