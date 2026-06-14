@@ -1328,18 +1328,30 @@ const terrestrialFragment = `
                       + noise3d(p * 5.0 + vec3(43.0)) * 0.12;
       float poolDepth = smoothstep(effectiveSeaLevel, effectiveSeaLevel - 0.2, continent);
 
-      // Heat within pool: macro (sun angle) + micro (depth, noise)
-      float poolHeat = heatGradient * (0.5 + poolDepth * 0.5) * (0.8 + poolNoise);
+      // Heat within pool. The macro term is a RADIAL falloff from the
+      // sub-stellar point (rawSun=1), squared so the hot zone concentrates into
+      // a distinct hot pole and fades outward — NOT heatGradient, which
+      // saturates across the whole day side and made the pool uniformly patchy
+      // with no hotter middle. Depth + noise modulate it as a secondary effect.
+      float poleHeat = smoothstep(-0.15, 1.0, rawSun);
+      poleHeat *= poleHeat;
+      float poolHeat = poleHeat * (0.65 + poolDepth * 0.35) * (0.82 + poolNoise);
       poolHeat = clamp(poolHeat, 0.0, 1.0);
+      // Gentle bias to keep the fading periphery red-dominant. Mild because the
+      // squared radial term already concentrates the hot core.
+      poolHeat = pow(poolHeat, 1.15);
 
-      // Graduated lava color: near-black → dark red → deep red → orange → yellow
-      // Dark edge is very dark for high contrast; orange→yellow spread is gradual.
+      // Graduated lava color: near-black cooling crust → deep red (dominant,
+      // cooler pool) → red-orange → orange → bright orange → a small yellow-hot
+      // core confined to the sub-stellar peak. Reads as a temperature map with
+      // a yellow centre grading out through orange to red.
       vec3 poolColor = vec3(0.05, 0.004, 0.001);                                             // near-black cooling crust
-      poolColor = mix(poolColor, vec3(0.32, 0.03, 0.003), smoothstep(0.06, 0.20, poolHeat)); // very dark red
-      poolColor = mix(poolColor, vec3(0.72, 0.10, 0.008), smoothstep(0.20, 0.40, poolHeat)); // deep red
-      poolColor = mix(poolColor, vec3(1.0,  0.36, 0.025), smoothstep(0.40, 0.58, poolHeat)); // orange
-      poolColor = mix(poolColor, vec3(1.1,  0.62, 0.055), smoothstep(0.58, 0.76, poolHeat)); // orange-yellow (gradual)
-      poolColor = mix(poolColor, vec3(1.2,  0.88, 0.16),  smoothstep(0.76, 0.95, poolHeat)); // yellow core (gradual)
+      poolColor = mix(poolColor, vec3(0.40, 0.02,  0.002), smoothstep(0.05, 0.22, poolHeat)); // very dark red
+      poolColor = mix(poolColor, vec3(0.85, 0.06,  0.004), smoothstep(0.22, 0.48, poolHeat)); // deep red (dominant band)
+      poolColor = mix(poolColor, vec3(0.97, 0.15,  0.009), smoothstep(0.48, 0.68, poolHeat)); // red-orange
+      poolColor = mix(poolColor, vec3(1.08, 0.26,  0.018), smoothstep(0.68, 0.84, poolHeat)); // orange
+      poolColor = mix(poolColor, vec3(1.20, 0.40,  0.035), smoothstep(0.84, 0.93, poolHeat)); // bright orange
+      poolColor = mix(poolColor, vec3(1.45, 0.70,  0.13),  smoothstep(0.93, 1.0,  poolHeat)); // yellow-hot core (small peak)
 
       // Replace surface color in pool areas (not additive)
       surfaceColor = mix(surfaceColor, poolColor, poolMask);
@@ -1388,7 +1400,11 @@ const terrestrialFragment = `
       // Rivers: glow on crack lines only — NOT the whole pool (which already has
       // poolColor). deepLava widens the crack where terrain dips below sea level.
       float deepLava = smoothstep(effectiveSeaLevel + 0.05, effectiveSeaLevel - 0.08, continent);
-      float riverMask = eyeMajorEdge * mix(0.6, 1.0, deepLava);
+      // Per-channel flow variation: low-freq noise makes some channels run hot
+      // (bright, active flow) and others dim (crusting over), so the major
+      // network reads as natural rivers instead of a uniform glowing net.
+      float riverFlow = 0.45 + 0.55 * noise3d(p * 0.85 + vec3(101.0));
+      float riverMask = eyeMajorEdge * mix(0.6, 1.0, deepLava) * riverFlow;
       surfaceColor += riverCore * riverMask * heatGradient * emissiveIntensity * 2.2;
 
       // ── Hairline red glow along MINOR Voronoi edges ──
@@ -1415,6 +1431,10 @@ const terrestrialFragment = `
       float coldZone = (1.0 - heatGradient) * isLand;
       // Major cracks: faint ember glow from magma far below
       surfaceColor += vec3(0.06, 0.012, 0.004) * eyeMajorEdge * coldZone * emissiveIntensity;
+      // Hairline cracks: the fine minor network also survives on the crust as
+      // thin cooled dark-red seams, completing the unified major/minor
+      // hierarchy across the whole anti-stellar side (not just the hot pool).
+      surfaceColor += vec3(0.03, 0.006, 0.002) * eyeMinorEdge * coldZone * emissiveIntensity;
       // Cell faces: slight warm variation so plates don't read as identical black
       float cellFace = adjustedIceCap * (1.0 - eyeMajorEdge) * (1.0 - poolMask);
       surfaceColor += vec3(0.025, 0.008, 0.004) * cellFace * coldZone * emissiveIntensity;
