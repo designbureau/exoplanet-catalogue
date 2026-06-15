@@ -912,7 +912,12 @@ const terrestrialFragment = `
       // on the SAME cell boundaries, so the hierarchy looks unified rather
       // than two independent layers crossing each other. Low-frequency noise
       // decides which edges get drawn wide (major cracks) vs hairline (minor).
-      vec2 v = voronoi(warpedP * 0.7);
+      // Cell size grows toward the cool anti-stellar pole: a lower frequency
+      // multiplier = larger cells. rawSun = 1 sub-stellar (hot), -1 anti-stellar
+      // (cool), so map cold→bigger plates as the crust freezes into wider slabs.
+      float cellCold = smoothstep(0.6, -0.8, dot(baseDir, u_sunDirectionLocal));
+      float cellFreq = mix(0.72, 0.52, cellCold);
+      vec2 v = voronoi(warpedP * cellFreq);
       float edgeDist = v.y - v.x;
 
       // ── Crack edge roughness ──
