@@ -77,6 +77,13 @@ priorities shift and details get stale.
   (`u_eyeAridEdge > 1.0` branch in `planetShader.ts`); lava lighting/colour
   needs retuning so major lava channels and hairline cooled cracks both
   read well on the same tessellation.
+- **Lava eyeball prominence flares** — parked. A first pass exists in
+  `app/components/LavaFlares.jsx` (arcing ribbons adapted from the star-flare
+  shader, mounted on `LAVA_EYEBALL` planets, masked to the hot pole). Both the
+  usage and import in `Planet.jsx` are commented out. Issues to solve on
+  return: motion still reads janky, and the arched ribbons look basic at small
+  scale. Next idea to try: **more vertical flares** (jets erupting straight out
+  from the surface rather than low arcs between two anchor points).
 - **Volumetric clouds revisited** — pre-baked 3D noise texture instead of
   per-frame procedural noise.
 

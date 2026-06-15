@@ -99,7 +99,7 @@ import { createPlanetMaterial, createCloudMaterial } from "../shaders/planetShad
 import { bakeTerrainMaps } from "../shaders/terrainTexture";
 import { getAtmosphereParams } from "../shaders/atmosphereShader";
 import { getScatteringPreset, createScatteringMaterial } from "../shaders/scatteringShader";
-import LavaFlares from "./LavaFlares";
+// import LavaFlares from "./LavaFlares"; // parked — see ROADMAP.md (lava flares)
 
 const _starWorldPos = new THREE.Vector3();
 const _sunDirLocal = new THREE.Vector3();
@@ -760,9 +760,12 @@ const Planet = ({ data, starData, starRef }) => {
       )}
       <mesh ref={ref} name={name} onClick={handleClick} material={shaderMaterial}
         geometry={getLodSphereGeo(scale, 32)}>
-        {planetType === PlanetType.LAVA_EYEBALL && (
+        {/* Lava-eyeball prominence flares — parked: motion still reads janky and
+            the arched look needs work. Component kept in LavaFlares.jsx; see
+            ROADMAP.md (try more vertical flares). Re-enable when revisited. */}
+        {/* {planetType === PlanetType.LAVA_EYEBALL && (
           <LavaFlares radius={scale} sourceMaterial={shaderMaterial} />
-        )}
+        )} */}
       </mesh>
       {cloudMat && (
         <mesh ref={cloudRef} material={cloudMat} frustumCulled={false}>
