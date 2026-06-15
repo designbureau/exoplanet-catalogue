@@ -1395,8 +1395,8 @@ const terrestrialFragment = `
       // visible regardless of whether terrain carved below sea level.
       vec3 riverCore = vec3(0.04, 0.007, 0.002);
       riverCore = mix(riverCore, vec3(0.38, 0.045, 0.007), smoothstep(-0.5, -0.05, rawSun)); // dark red
-      riverCore = mix(riverCore, vec3(0.95, 0.28,  0.022), smoothstep(-0.05, 0.2, rawSun)); // orange
-      riverCore = mix(riverCore, vec3(1.15, 0.52,  0.06),  smoothstep(0.2,  0.55, rawSun)); // orange-yellow
+      riverCore = mix(riverCore, vec3(0.90, 0.18,  0.014), smoothstep(-0.05, 0.2, rawSun)); // red-orange
+      riverCore = mix(riverCore, vec3(1.05, 0.30,  0.028), smoothstep(0.2,  0.55, rawSun)); // bright red-orange (less green)
       // Rivers: glow on crack lines only — NOT the whole pool (which already has
       // poolColor). deepLava widens the crack where terrain dips below sea level.
       float deepLava = smoothstep(effectiveSeaLevel + 0.05, effectiveSeaLevel - 0.08, continent);
