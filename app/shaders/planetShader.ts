@@ -947,6 +947,16 @@ const terrestrialFragment = `
 
       float rawSunH = dot(baseDir, u_sunDirectionLocal);
 
+      // Lava: fade the crack network toward the sub-stellar pole so the molten
+      // "eye" reads as a clean pool, with fractures only emerging away from the
+      // hottest centre. 0 at the pole (rawSunH→1) → 1 by mid day-side.
+      if (emissiveIntensity > 0.01) {
+        float poleFade = smoothstep(0.92, 0.45, rawSunH);
+        eyeMajorEdge *= poleFade;
+        eyeMinorEdge *= poleFade;
+        crackDepth   *= poleFade;
+      }
+
       if (emissiveIntensity > 0.01) {
         // Lava: cracks deeper near sub-stellar (hotter, more molten)
         float heatCarve = smoothstep(-0.5, 0.5, rawSunH);
