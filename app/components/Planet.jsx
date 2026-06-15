@@ -99,6 +99,7 @@ import { createPlanetMaterial, createCloudMaterial } from "../shaders/planetShad
 import { bakeTerrainMaps } from "../shaders/terrainTexture";
 import { getAtmosphereParams } from "../shaders/atmosphereShader";
 import { getScatteringPreset, createScatteringMaterial } from "../shaders/scatteringShader";
+import LavaFlares from "./LavaFlares";
 
 const _starWorldPos = new THREE.Vector3();
 const _sunDirLocal = new THREE.Vector3();
@@ -758,7 +759,11 @@ const Planet = ({ data, starData, starRef }) => {
         <line geometry={orbitGeo} material={orbitMat} />
       )}
       <mesh ref={ref} name={name} onClick={handleClick} material={shaderMaterial}
-        geometry={getLodSphereGeo(scale, 32)} />
+        geometry={getLodSphereGeo(scale, 32)}>
+        {planetType === PlanetType.LAVA_EYEBALL && (
+          <LavaFlares radius={scale} sourceMaterial={shaderMaterial} />
+        )}
+      </mesh>
       {cloudMat && (
         <mesh ref={cloudRef} material={cloudMat} frustumCulled={false}>
           <sphereGeometry args={[scale * (1.0 + (hasHzGradient && paramDisplaceScale != null ? paramDisplaceScale : terrDisplaceScale) + 0.006), 64, 32]} />
