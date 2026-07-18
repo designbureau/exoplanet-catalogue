@@ -579,16 +579,16 @@ export default function GalaxyMap() {
       <div className="fixed top-20 left-2 z-10 flex flex-col gap-2">
         <Link
           to="/"
-          className="rounded-md bg-black/60 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm hover:text-foreground"
+          className="rounded-md bg-black/60 px-3 py-1.5 text-xs text-left text-muted-foreground backdrop-blur-sm hover:text-foreground"
         >
           Back
         </Link>
-        <div className="rounded-md bg-black/60 px-3 py-1.5 text-[10px] text-muted-foreground backdrop-blur-sm">
+        <div className="rounded-md bg-black/60 px-3 py-1.5 text-[10px] text-left text-muted-foreground backdrop-blur-sm">
           {systems.length.toLocaleString()} systems
         </div>
         <button
           onClick={() => setShowZodiac(!showZodiac)}
-          className={`rounded-md px-3 py-1.5 text-[10px] backdrop-blur-sm ${showZodiac ? "bg-amber-900/40 text-amber-300" : "bg-black/60 text-muted-foreground"}`}
+          className={`rounded-md px-3 py-1.5 text-[10px] text-left backdrop-blur-sm ${showZodiac ? "bg-amber-900/40 text-amber-300" : "bg-black/60 text-muted-foreground"}`}
         >
           {showZodiac ? "Zodiac on" : "Zodiac off"}
         </button>
@@ -610,13 +610,15 @@ export default function GalaxyMap() {
         </div>
       </div>
 
-      {/* Galaxy controls */}
+      {/* Galaxy controls toggle — hidden (dev tuning panel) */}
+      {false && (
       <button
         onClick={() => setShowControls(!showControls)}
         className="fixed bottom-2 right-2 z-20 rounded-md bg-black/60 px-3 py-1.5 text-[10px] text-muted-foreground backdrop-blur-sm hover:text-foreground"
       >
         {showControls ? "Hide controls" : "Controls"}
       </button>
+      )}
       {showControls && <div className="fixed bottom-8 right-2 z-10 flex flex-col gap-1 rounded-md bg-black/60 px-3 py-2 backdrop-blur-sm">
         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
           <label className="w-20 shrink-0">Galaxy scale</label>

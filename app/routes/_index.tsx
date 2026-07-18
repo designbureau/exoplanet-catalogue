@@ -230,7 +230,7 @@ function SystemCard({ system }: { system: CatalogueSystem }) {
         </div>
 
         {/* body */}
-        <div className="flex flex-1 flex-col gap-2.5 p-5">
+        <div className="flex flex-1 flex-col gap-2.5 p-5" style={{ background: "#000" }}>
           {/* star */}
           <div className="flex items-center gap-1.5">
             <span className="inline-block h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ background: system.star.color }} />
