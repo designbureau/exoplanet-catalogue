@@ -2,38 +2,20 @@
   "permissions": {
     "allow": [
       "mcp__Claude_Preview__preview_start",
-      "Bash(git -C /Users/Shared/Repositories/exoplanet-remix status)",
-      "Bash(git -C /Users/Shared/Repositories/exoplanet-remix diff --stat)",
-      "Bash(git -C /Users/Shared/Repositories/exoplanet-remix log --oneline -5)",
-      "Bash(git -C /Users/Shared/Repositories/exoplanet-remix diff --stat -- app/entry.client.tsx app/entry.server.tsx app/routes/_system.tsx app/routes/_system.system.$filename.tsx app/components/SystemMenu.tsx vite.config.ts tsconfig.json .gitignore)",
-      "Bash(git -C /Users/Shared/Repositories/exoplanet-remix status -u)",
-      "Bash(git -C /Users/Shared/Repositories/exoplanet-remix diff HEAD -- vite.config.ts tsconfig.json .gitignore app/entry.client.tsx app/entry.server.tsx app/routes/_system.tsx \"app/routes/_system.system.$filename.tsx\" app/components/SystemMenu.tsx --stat)",
-      "Bash(git -C /Users/Shared/Repositories/exoplanet-remix diff HEAD -- vite.config.ts)",
-      "Bash(git -C /Users/Shared/Repositories/exoplanet-remix show ecdccfc:vite.config.ts)",
-      "Bash(git -C /Users/Shared/Repositories/exoplanet-remix add app/components/Binary.jsx app/components/Controls.jsx app/components/EnvContext.jsx app/components/Menu.jsx app/components/Planet.jsx app/components/Star.jsx app/root.tsx app/routes/_index.tsx app/tailwind.css app/utils/getHabitableZone.jsx app/utils/helperFunctions.tsx package-lock.json package.json tailwind.config.ts app/components/ui/badge.tsx app/components/ui/card.tsx app/components/ui/input.tsx app/components/ui/scroll-area.tsx app/data/featuredSystems.ts .claude/launch.json components.json app/lib/utils.ts app/components/ui/button.tsx)",
-      "Bash(git -C /Users/Shared/Repositories/exoplanet-remix add components.json app/lib/utils.ts app/components/ui/button.tsx)",
       "Bash(git -C:*)",
       "Bash(gh pr:*)",
-      "Bash(grep -c \"<rightascension>\" /Users/Shared/Repositories/exoplanet-remix/app/data/open_exoplanet_catalogue/systems/*.xml)",
       "Bash(grep -v \":0$\")",
-      "Bash(grep -c \"<distance\" /Users/Shared/Repositories/exoplanet-remix/app/data/open_exoplanet_catalogue/systems/*.xml)",
       "Bash(npx react-router:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(/Users/work/.nvm/versions/node/v23.6.0/bin/node --version)",
       "Bash(git push:*)",
-      "Bash(/Users/work/.nvm/versions/node/v23.6.0/bin/npx react-router:*)",
-      "Bash(PATH=\"/Users/work/.nvm/versions/node/v23.6.0/bin:$PATH\" npx react-router build)",
       "Bash(git checkout:*)",
-      "Bash(rm -f /Users/Shared/Repositories/exoplanet-remix/.git/index.lock)",
       "Bash(git stash:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:web.dev)",
       "WebSearch",
-      "Bash(find /Users/Shared/Repositories/exoplanet-remix -name *shader* -o -name *Shader*)",
       "Bash(git merge:*)",
-      "Bash(mkdir -p /Users/Shared/Repositories/exoplanet-remix/.claude/memory)",
-      "Bash(cp /Users/work/.claude/projects/-Users-Shared-Repositories-exoplanet-remix/memory/*.md /Users/Shared/Repositories/exoplanet-remix/.claude/memory/)"
+      "Bash(git pull *)"
     ]
   }
 }
