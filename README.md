@@ -6,11 +6,6 @@ planets rendered live, and read a curated catalogue of featured worlds — every
 planet drawn with procedural GLSL shaders driven by its real physical
 parameters.
 
-> **Not a Remix app.** Despite the lineage, this runs on **React Router v7**
-> (framework mode, SSR) — there are no `@remix-run/*` packages here. Remix v2
-> became React Router v7's framework mode, so this is that same thing under the
-> current name.
-
 ## Stack
 
 - **[React Router v7](https://reactrouter.com)** — framework mode, SSR enabled
