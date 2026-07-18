@@ -67,7 +67,6 @@ app/
   routes/            React Router file routes (see table above)
   components/         R3F scene components — Planet, Star, Binary, Nebula,
                       MilkyWay, PlanetCanvas, LivePlanet, menus, ui/ (shadcn)
-    old/             Legacy pre-shader components, kept for reference
   shaders/           GLSL: planetShader, starShader, atmosphereShader,
                       ringShader, scatteringShader, gasGiant, terrainTexture…
   utils/             kepler.ts (orbital mechanics), planetClassification.ts,
