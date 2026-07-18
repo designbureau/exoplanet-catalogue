@@ -78,21 +78,44 @@ export function ShaderPlanet({
   }
 
   return (
-    <img
-      src={src}
-      width={size}
-      height={size}
-      alt=""
-      onError={handleError}
+    <div
       className={className}
       style={{
+        position: "relative",
         width: size,
         height: size,
         borderRadius: "50%",
         flexShrink: 0,
-        display: "block",
         ...style,
       }}
-    />
+    >
+      <img
+        src={src}
+        width={size}
+        height={size}
+        alt=""
+        onError={handleError}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          display: "block",
+        }}
+      />
+      {/* terminator: inset shadow crescent. On card hover it shifts slightly
+          smaller and further to the lower-left (see .crescent-overlay in global.css). */}
+      <span
+        aria-hidden
+        className="crescent-overlay"
+        style={{
+          position: "absolute",
+          inset: 0,
+          borderRadius: "50%",
+          pointerEvents: "none",
+          ["--cr-base" as string]: `inset ${size * 0.32}px ${size * -0.28}px ${size * 0.3}px ${size * 0.01}px rgba(0,0,0,0.98)`,
+          ["--cr-hover" as string]: `inset ${size * 0.26}px ${size * -0.22}px ${size * 0.3}px ${size * 0}px rgba(0,0,0,0.72)`,
+        } as React.CSSProperties}
+      />
+    </div>
   );
 }

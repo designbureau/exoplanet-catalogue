@@ -154,3 +154,14 @@ input[type="range"]::-moz-range-thumb {
   0%, 100% { opacity: 0.4; }
   50%       { opacity: 0.7; }
 }
+
+/* Planet terminator crescent — shifts slightly smaller / further lower-left
+   when its card (.group) is hovered. Values are per-size CSS vars set inline
+   by ShaderPlanet. */
+.crescent-overlay {
+  box-shadow: var(--cr-base);
+  transition: box-shadow 0.35s ease;
+}
+.group:hover .crescent-overlay {
+  box-shadow: var(--cr-hover);
+}

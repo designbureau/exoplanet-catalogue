@@ -5,6 +5,7 @@ import { getXmlFilesList } from "~/utils/getXmlFilesList";
 import { catalogueSystems, FILTER_TAGS } from "~/data/catalogueSystems";
 import type { CatalogueSystem } from "~/data/catalogueSystems";
 import { ShaderPlanet } from "~/components/ShaderPlanet";
+import { SiteHeader } from "~/components/SiteHeader";
 import { LivePlanet } from "~/components/LivePlanet";
 import type { PlanetType as CatType } from "~/components/PlanetCanvas";
 import { Input } from "~/components/ui/input";
@@ -18,7 +19,7 @@ export const meta: MetaFunction = () => [
 
 export const loader = async () => {
   const xmlFiles = await getXmlFilesList();
-  return { totalSystems: xmlFiles.length };
+  return { totalSystems: xmlFiles.length, xmlFiles };
 };
 
 // ─── hero card (Direction B · planet variant) ────────────────────────────────
@@ -38,8 +39,7 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
     >
       {/* ── left: text ── */}
       <div
-        className="relative z-10 flex flex-col gap-5 p-14"
-        style={{ borderRight: "1px solid oklch(0.28 0.01 260 / 0.45)" }}
+        className="relative z-10 flex flex-col gap-5 p-10"
       >
         {/* eyebrow */}
         <div className="flex items-center gap-2.5" style={{ color: "oklch(0.58 0.01 240)" }}>
@@ -75,7 +75,6 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
         {/* featured planet note */}
         <div
           className="flex flex-col gap-1.5 py-4"
-          style={{ borderTop: "1px solid oklch(0.28 0.01 260 / 0.45)", borderBottom: "1px solid oklch(0.28 0.01 260 / 0.45)" }}
         >
           <div className="flex items-baseline gap-2.5 flex-wrap" style={{ fontSize: 15, color: "oklch(0.78 0.008 240)" }}>
             <span style={{ fontFamily: "var(--font-mono, monospace)", color: "oklch(0.98 0.005 240)", letterSpacing: "0.02em" }}>
@@ -129,6 +128,8 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
                 background: "hsl(var(--secondary))",
                 color: "hsl(var(--secondary-foreground))",
                 height: 22,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
               }}
             >
               {tag}
@@ -202,19 +203,13 @@ function SystemCard({ system }: { system: CatalogueSystem }) {
             background: "radial-gradient(circle at 50% 55%, oklch(0.22 0.04 220 / 0.5), transparent 65%), oklch(0.08 0.012 260)",
           }}
         >
-          {/* inner frame */}
-          <div
-            className="pointer-events-none absolute"
-            style={{ inset: 14, border: "1px solid oklch(0.3 0.01 260 / 0.35)" }}
-          />
-
           {/* planet */}
           <div>
             <ShaderPlanet
               type={system.featured.type}
               seed={system.featured.seed}
               slug={system.slug}
-              size={140}
+              size={160}
               style={{ filter: "drop-shadow(0 14px 36px rgba(0,0,0,0.55))" }}
             />
           </div>
@@ -260,10 +255,9 @@ function SystemCard({ system }: { system: CatalogueSystem }) {
 
           {/* featured planet inset */}
           <div
-            className="flex flex-col gap-1 rounded-sm p-2.5"
+            className="flex flex-col gap-1 rounded-sm py-2.5"
             style={{
               background: "oklch(0.09 0.01 260 / 0.5)",
-              border: "1px solid oklch(0.28 0.01 260 / 0.45)",
               fontSize: 12,
             }}
           >
@@ -278,7 +272,6 @@ function SystemCard({ system }: { system: CatalogueSystem }) {
           {/* footer */}
           <div
             className="mt-auto flex items-center justify-between gap-2 pt-3"
-            style={{ borderTop: "1px solid oklch(0.28 0.01 260 / 0.45)" }}
           >
             {/* companion dots */}
             <div className="flex items-center gap-1">
@@ -314,6 +307,8 @@ function SystemCard({ system }: { system: CatalogueSystem }) {
                     color: "oklch(0.78 0.008 240)",
                     background: "transparent",
                     whiteSpace: "nowrap",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
                   }}
                 >
                   {tag}
@@ -337,7 +332,7 @@ const SORT_OPTIONS = [
 ];
 
 export default function Index() {
-  const { totalSystems } = useLoaderData<{ totalSystems: number }>();
+  const { totalSystems, xmlFiles } = useLoaderData<{ totalSystems: number; xmlFiles: string[] }>();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [sort, setSort] = useState("default");
@@ -450,112 +445,14 @@ export default function Index() {
       <div className="relative z-10 min-h-screen text-foreground" style={{ fontFamily: "var(--font-sans, sans-serif)" }}>
 
         {/* ── NAV ── */}
-        <nav
-          className="sticky top-0 z-50 flex items-center gap-6 px-12 py-[18px]"
-          style={{
-            background: "oklch(0.08 0.01 260 / 0.55)",
-            backdropFilter: "blur(16px) saturate(1.2)",
-            WebkitBackdropFilter: "blur(16px) saturate(1.2)",
-            borderBottom: "1px solid oklch(0.32 0.012 260 / 0.55)",
-          }}
-        >
-          {/* brand */}
-          <div className="flex items-center gap-3 shrink-0">
-            {/* planet glyph */}
-            <span
-              className="inline-block h-[18px] w-[18px] rounded-full"
-              style={{
-                background: "radial-gradient(circle at 35% 35%, #fff, oklch(0.75 0.1 220) 50%, oklch(0.3 0.1 260) 85%)",
-                boxShadow: "0 0 12px oklch(0.75 0.12 220 / 0.5)",
-              }}
-            />
-            <span
-              className="uppercase tracking-[0.1em]"
-              style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 13, letterSpacing: "0.1em" }}
-            >
-              EXO·CATALOGUE
-            </span>
-          </div>
-
-          {/* links */}
-          <div className="hidden items-center gap-[22px] md:flex">
-            {["Systems", "Catalogue", "Telemetry", "About"].map((l) => (
-              <span
-                key={l}
-                className="cursor-pointer transition-colors"
-                style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12, color: "oklch(0.58 0.01 240)", letterSpacing: "0.08em" }}
-              >
-                {l}
-              </span>
-            ))}
-          </div>
-
-          <div className="ml-auto flex items-center gap-3">
-            {/* search */}
-            <div
-              className="flex items-center gap-2.5 transition-shadow focus-within:ring-1"
-              style={{
-                height: 36,
-                padding: "0 12px",
-                border: "1px solid hsl(var(--input))",
-                borderRadius: "calc(var(--radius) - 2px)",
-                background: "hsl(var(--background) / 0.6)",
-                backdropFilter: "blur(8px)",
-                minWidth: 280,
-              }}
-            >
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, opacity: 0.4 }}>
-                <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M11 11L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-              <input
-                type="text"
-                placeholder="Search systems…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
-                style={{ fontSize: 13, color: "oklch(0.98 0.005 240)", fontFamily: "var(--font-sans, sans-serif)" }}
-              />
-              <kbd
-                style={{
-                  fontFamily: "var(--font-mono, monospace)",
-                  fontSize: 10,
-                  padding: "2px 6px",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: 4,
-                  color: "oklch(0.58 0.01 240)",
-                  background: "hsl(var(--muted) / 0.7)",
-                  marginLeft: "auto",
-                  flexShrink: 0,
-                }}
-              >
-                ⌘K
-              </kbd>
-            </div>
-
-            {/* count */}
-            <span
-              style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12, color: "oklch(0.58 0.01 240)", letterSpacing: "0.08em", whiteSpace: "nowrap" }}
-            >
-              {filteredSystems.length} systems
-            </span>
-          </div>
-        </nav>
+        <SiteHeader xmlFiles={xmlFiles} />
 
         {/* ── MASTHEAD ── */}
         <section
-          className="relative overflow-hidden px-12 pb-14 pt-[88px]"
+          className="relative flex flex-col overflow-hidden px-12 pb-14 pt-[88px]"
           style={{ minHeight: 520, borderBottom: "1px solid oklch(0.28 0.01 260 / 0.45)" }}
         >
           <div className="relative z-10 max-w-3xl">
-            {/* breadcrumb */}
-            <p
-              className="mb-6 uppercase tracking-widest"
-              style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "#fff", letterSpacing: "0.14em" }}
-            >
-              Exoplanet catalogue · {new Date().getFullYear()}
-            </p>
-
             {/* title */}
             <h1
               className="flex flex-col font-normal"
@@ -566,6 +463,7 @@ export default function Index() {
                 letterSpacing: "-0.035em",
                 gap: 2,
                 color: "#fff",
+                marginBottom: 24,
               }}
             >
               <span>Nearby</span>
@@ -576,8 +474,8 @@ export default function Index() {
 
           {/* stats strip */}
           <div
-            className="relative z-10 mt-7 flex items-stretch"
-            style={{ borderTop: "1px solid oklch(0.28 0.01 260 / 0.45)", paddingTop: 20 }}
+            className="relative z-10 mt-auto flex items-stretch"
+            style={{ paddingTop: 20 }}
           >
             {[
               { value: totalSystems.toLocaleString(), label: "confirmed" },
@@ -590,7 +488,6 @@ export default function Index() {
                 style={{
                   paddingRight: i < arr.length - 1 ? 48 : 0,
                   marginRight: i < arr.length - 1 ? 48 : 0,
-                  borderRight: i < arr.length - 1 ? "1px solid oklch(0.28 0.01 260 / 0.45)" : "none",
                 }}
               >
                 <div
@@ -651,7 +548,7 @@ export default function Index() {
         <div
           className="sticky flex flex-wrap items-center gap-3 px-12 py-5"
           style={{
-            top: 57,
+            top: 73,
             zIndex: 40,
             background: "oklch(0.1 0.01 260 / 0.3)",
             backdropFilter: "blur(10px)",
@@ -660,7 +557,7 @@ export default function Index() {
           }}
         >
           {/* chips */}
-          <div className="flex flex-wrap gap-1.5 flex-1">
+          <div className="flex flex-wrap gap-1 flex-1">
             {(["all", ...FILTER_TAGS.filter((t) => t !== "all")] as const).map((tag) => {
               const isActive = tag === "all" ? activeFilter === null : activeFilter === tag;
               return (
@@ -670,14 +567,15 @@ export default function Index() {
                   className="cursor-pointer transition-all"
                   style={{
                     fontFamily: "var(--font-sans, sans-serif)",
-                    fontSize: 13,
-                    fontWeight: 500,
+                    fontSize: 11,
+                    fontWeight: 400,
+                    letterSpacing: "0.08em",
                     padding: "8px 16px",
                     borderRadius: 999,
                     border: `1px solid ${isActive ? "hsl(var(--border))" : "hsl(var(--border) / 0.6)"}`,
                     background: isActive ? "hsl(var(--secondary))" : "transparent",
                     color: isActive ? "hsl(var(--secondary-foreground))" : "oklch(0.65 0.01 240)",
-                    textTransform: "none",
+                    textTransform: "uppercase",
                   }}
                 >
                   {tag === "all" ? "All" : tag}
@@ -715,7 +613,6 @@ export default function Index() {
             <section>
               <div
                 className="mb-5 flex items-baseline justify-between pb-3.5"
-                style={{ borderBottom: "1px solid oklch(0.28 0.01 260 / 0.45)" }}
               >
                 <span
                   className="uppercase tracking-widest"
@@ -732,7 +629,6 @@ export default function Index() {
           <section>
             <div
               className="mb-5 flex items-baseline justify-between pb-3.5"
-              style={{ borderBottom: "1px solid oklch(0.28 0.01 260 / 0.45)" }}
             >
               <span
                 className="uppercase tracking-widest"
@@ -769,12 +665,6 @@ export default function Index() {
           className="mt-10 flex items-center justify-between px-12 py-8"
           style={{ borderTop: "1px solid oklch(0.28 0.01 260 / 0.45)" }}
         >
-          <span
-            className="uppercase tracking-widest"
-            style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "oklch(0.42 0.01 240)", letterSpacing: "0.14em" }}
-          >
-            EXO·CATALOGUE
-          </span>
           <span style={{ fontSize: 12, color: "oklch(0.42 0.01 240)" }}>
             Data: Open Exoplanet Catalogue
           </span>

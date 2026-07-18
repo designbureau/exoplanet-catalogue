@@ -490,7 +490,7 @@ const App = ({ data }: any) => {
         </div>
       )}
       {showPostFxGui && (
-        <div className="fixed top-2 left-2 z-10 flex flex-col gap-1 rounded-md bg-black/60 px-4 py-3 backdrop-blur-sm max-h-[80vh] overflow-y-auto text-[10px] text-muted-foreground w-72" style={{ scrollbarWidth: 'thin' }}>
+        <div className="fixed top-20 left-2 z-10 flex flex-col gap-1 rounded-md bg-black/60 px-4 py-3 backdrop-blur-sm max-h-[calc(100vh-6rem)] overflow-y-auto text-[10px] text-muted-foreground w-72" style={{ scrollbarWidth: 'thin' }}>
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs font-medium text-purple-300">Post FX</span>
             <button onClick={() => setFxKey(k => k + 1)} className="text-[9px] px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 hover:bg-purple-900/70">Rebuild</button>
@@ -560,7 +560,7 @@ const App = ({ data }: any) => {
           {fx.noise.on && <Slider label="Opacity" min={0} max={0.5} step={0.01} value={fx.noise.opacity} onChange={(v: number) => updateFx('noise', {opacity: v})} />}
         </div>
       )}
-      {showControls && <div className="fixed top-2 right-2 z-10 flex flex-col gap-0.5 rounded-md bg-black/60 px-3 py-2 backdrop-blur-sm max-h-[90vh] overflow-y-auto text-[10px] text-muted-foreground" style={{ scrollbarWidth: 'thin' }}>
+      {showControls && <div className="fixed top-20 right-2 z-10 flex flex-col gap-0.5 rounded-md bg-black/60 px-3 py-2 backdrop-blur-sm max-h-[calc(100vh-6rem)] overflow-y-auto text-[10px] text-muted-foreground" style={{ scrollbarWidth: 'thin' }}>
         {/* Scale controls — always visible */}
         <Slider label="Orbit" min={0.01} max={2} step={0.01} value={planetDistanceFactor} onChange={setPlanetDistanceFactor} />
         <Slider label="Stars" min={0.01} max={1.0} step={0.01} value={binaryDistanceFactor} onChange={setBinaryDistanceFactor} />

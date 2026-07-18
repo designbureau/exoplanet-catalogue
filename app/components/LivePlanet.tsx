@@ -389,12 +389,13 @@ export function LivePlanet({ type, seed, className, style, offsetX = 0 }: LivePl
           />
         </Canvas>
       </div>
+      {/* Temporarily hidden — light-tuning GUI
       <LightGuiPanel
         value={light}
         onChange={setLight}
         onReset={() => setLight(DEFAULT_LIGHT)}
         currentType={String(type)}
-      />
+      /> */}
     </div>
   );
 }

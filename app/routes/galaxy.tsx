@@ -12,14 +12,19 @@ import MilkyWay, { defaultParams, type MilkyWayParams } from "~/components/Milky
 import { createStarMaterial, createStarGlowMaterial } from "~/shaders/starShader";
 import StarEffects from "~/components/StarEffects";
 import { ZODIAC_CONSTELLATIONS, type ConstellationStar } from "~/data/zodiacConstellations";
+import { getXmlFilesList } from "~/utils/getXmlFilesList";
+import { SiteHeader } from "~/components/SiteHeader";
 
 export const meta: MetaFunction = () => [
   { title: "Galaxy Map - Exoplanet Explorer" },
 ];
 
 export const loader = async () => {
-  const systems = await getSystemPositions();
-  return { systems };
+  const [systems, xmlFiles] = await Promise.all([
+    getSystemPositions(),
+    getXmlFilesList(),
+  ]);
+  return { systems, xmlFiles };
 };
 
 // Scale parsec distances down so the scene is navigable
@@ -527,7 +532,7 @@ function GalacticReference({ onSolClick }: { onSolClick: () => void }) {
 }
 
 export default function GalaxyMap() {
-  const { systems } = useLoaderData<{ systems: SystemPosition[] }>();
+  const { systems, xmlFiles } = useLoaderData<{ systems: SystemPosition[]; xmlFiles: string[] }>();
   const [selected, setSelected] = useState<SystemPosition | null>(null);
   const [hovered, setHovered] = useState<SystemPosition | null>(null);
   const [flyTarget, setFlyTarget] = useState<SystemPosition | null>(null);
@@ -568,8 +573,10 @@ export default function GalaxyMap() {
 
   return (
     <div className="relative h-screen w-screen">
+      <SiteHeader xmlFiles={xmlFiles} variant="fixed" />
+
       {/* HUD */}
-      <div className="fixed top-2 left-2 z-10 flex flex-col gap-2">
+      <div className="fixed top-16 left-2 z-10 flex flex-col gap-2">
         <Link
           to="/"
           className="rounded-md bg-black/60 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm hover:text-foreground"
@@ -672,7 +679,7 @@ export default function GalaxyMap() {
 
       {/* Hover tooltip */}
       {hovered && !selected && (
-        <div className="fixed top-2 right-2 z-10 rounded-md bg-black/60 px-3 py-2 backdrop-blur-sm pointer-events-none">
+        <div className="fixed top-16 right-2 z-10 rounded-md bg-black/60 px-3 py-2 backdrop-blur-sm pointer-events-none">
           <p className="text-xs font-medium text-foreground">{hovered.name}</p>
           <p className="text-[10px] text-muted-foreground">
             {hovered.distance.toFixed(1)} pc &middot; {hovered.planetCount} planet{hovered.planetCount !== 1 ? "s" : ""}
@@ -682,7 +689,7 @@ export default function GalaxyMap() {
 
       {/* Selected system info */}
       {selected && (
-        <div className="fixed top-2 right-2 z-10 rounded-md bg-black/80 px-4 py-3 backdrop-blur-sm">
+        <div className="fixed top-16 right-2 z-10 rounded-md bg-black/80 px-4 py-3 backdrop-blur-sm">
           <p className="text-sm font-medium text-foreground">{selected.name}</p>
           <p className="text-[10px] text-muted-foreground">
             {selected.distance.toFixed(1)} pc &middot; {selected.planetCount} planet{selected.planetCount !== 1 ? "s" : ""}

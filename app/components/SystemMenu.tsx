@@ -26,7 +26,7 @@ const SystemMenu = ({ xmlFiles, setNavActive }: any) => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-2">
+      <div className="p-4">
         <input
           type="text"
           placeholder="Search systems..."
@@ -40,7 +40,10 @@ const SystemMenu = ({ xmlFiles, setNavActive }: any) => {
           autoFocus
         />
       </div>
-      <ul className="overflow-y-auto flex-1 px-1 pb-2" style={{ scrollbarWidth: 'thin' }}>
+      <ul
+        className="overflow-y-auto flex-1 px-4 pb-4 grid gap-x-6 content-start"
+        style={{ scrollbarWidth: 'thin', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}
+      >
         {filteredFiles.map((fileName: string, index: number) => (
           <li key={fileName}>
             <Link
