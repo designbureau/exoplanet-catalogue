@@ -364,7 +364,7 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       // Ocean-dominated terrestrial — driven by waterWorld preset
       const ww = (hzRanges as any)?.waterWorld || {};
       // Deep ocean, volcanic islands, reef/sand, pale peaks
-      base.color1 = new THREE.Color('#0a1a3d'); // deep ocean
+      base.color1 = new THREE.Color('#1a4d8f'); // deep ocean
       base.color2 = new THREE.Color('#2a3025'); // dark volcanic rock
       base.color3 = new THREE.Color('#1a2a1a'); // mossy island
       base.color4 = new THREE.Color('#8a8a7a'); // pale reef/sand
@@ -380,8 +380,8 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.coastDetail = ww.coastDetail ?? 0.35;
       base.landContrast = ww.landContrast ?? 1.6;
       base.swirlStrength = 0.15;
-      base.cloudCoverage = ww.cloudCover ?? 0.50;
-      base.cloudOpacity = ww.cloudOpacity ?? 0.71;
+      base.cloudCoverage = ww.cloudCover ?? 0.72;
+      base.cloudOpacity = ww.cloudOpacity ?? 0.34;
       base.cloudSwirl = ww.cloudSwirl ?? 0.8;
       base.cloudBands = ww.cloudBands ?? 3.0;
       base.cloudWarp = ww.cloudWarp ?? 0.35;
@@ -427,7 +427,7 @@ function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: 
       base.bumpStrength = 0.5;
       base.tidallyLocked = true;
       base.eyeAridEdge = 1.5;        // beyond max — no arid zone at all, entire day side is wet ocean
-      base.eyeIceEdge = -0.1;        // ice starts just past terminator
+      base.eyeIceEdge = 0.1;         // ice starts on the day side (small water eye)
       base.eyeIceBergDensity = 0.85;
       base.cloudCoverage = 0.65;
       base.cloudOpacity = 0.4;

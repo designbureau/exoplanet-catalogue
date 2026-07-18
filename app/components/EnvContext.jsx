@@ -79,7 +79,7 @@ export const EnvProvider = ({ children }) => {
 
   // Eyeball planet controls
   const [eyeAridEdge, setEyeAridEdge] = useState(0.3);
-  const [eyeIceEdge, setEyeIceEdge] = useState(-0.15);
+  const [eyeIceEdge, setEyeIceEdge] = useState(0.1);
   const [eyeIceBergDensity, setEyeIceBergDensity] = useState(0.5);
   // Ice-ocean eyeball (tidally locked ice world)
   const [iceOceanPolarFade, setIceOceanPolarFade] = useState(0.5);
@@ -128,8 +128,8 @@ export const EnvProvider = ({ children }) => {
 
   // Rocky controls
   // Wrap lighting controls
-  const [wrapRange, setWrapRange] = useState(0.45);
-  const [wrapPower, setWrapPower] = useState(1.0);
+  const [wrapRange, setWrapRange] = useState(0.5);
+  const [wrapPower, setWrapPower] = useState(4.0);
 
   const [rockyCraterScale, setRockyCraterScale] = useState(1.0);
   const [rockyRidgeStrength, setRockyRidgeStrength] = useState(0.35);

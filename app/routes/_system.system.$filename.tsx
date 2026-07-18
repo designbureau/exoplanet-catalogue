@@ -463,6 +463,22 @@ const App = ({ data }: any) => {
         >
           {autoRotate ? "Rotating" : "Static"}
         </button>
+        <button
+          className={`px-3 py-1.5 text-xs rounded-md backdrop-blur-sm transition-colors ${
+            showHabitableZone ? "bg-teal-400/20 text-teal-300" : "bg-black/60 text-muted-foreground hover:text-white"
+          }`}
+          onClick={() => setShowHabitableZone(!showHabitableZone)}
+        >
+          Habitable Zone
+        </button>
+        <button
+          className={`px-3 py-1.5 text-xs rounded-md backdrop-blur-sm transition-colors ${
+            showOrbits ? "bg-cyan-400/20 text-cyan-300" : "bg-black/60 text-muted-foreground hover:text-white"
+          }`}
+          onClick={() => setShowOrbits(!showOrbits)}
+        >
+          Orbits
+        </button>
       </div>
       {showLightsGui && (
         <div className="fixed bottom-12 left-2 z-10 flex flex-col gap-1 rounded-md bg-black/60 px-4 py-3 backdrop-blur-sm text-[10px] text-muted-foreground w-64" style={{ scrollbarWidth: 'thin' }}>
@@ -567,10 +583,8 @@ const App = ({ data }: any) => {
         <Slider label="Bodies" min={1} max={50} step={1} value={bodyScale} onChange={setBodyScale} suffix="x" />
 
         <Accordion title="Environment" defaultOpen={false}>
-          <Toggle label="Orbits" checked={showOrbits} onChange={setShowOrbits} />
           <Slider label="Azimuth" min={-3.14} max={3.14} step={0.05} value={viewAzimuth} onChange={setViewAzimuth} />
           <Slider label="Polar" min={0.1} max={3.0} step={0.05} value={viewPolar} onChange={setViewPolar} />
-          <Toggle label="Habitable Zone" checked={showHabitableZone} onChange={setShowHabitableZone} />
           <Toggle label="Starfield" checked={showSkybox} onChange={setShowSkybox} />
           <Slider label="Sky Brt" min={0.1} max={3} step={0.05} value={skyBrightness} onChange={setSkyBrightness} />
           <Slider label="Sky Con" min={0.1} max={3} step={0.05} value={skyContrast} onChange={setSkyContrast} />

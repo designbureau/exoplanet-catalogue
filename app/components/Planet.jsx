@@ -104,6 +104,9 @@ import { getScatteringPreset, createScatteringMaterial } from "../shaders/scatte
 const _starWorldPos = new THREE.Vector3();
 const _sunDirLocal = new THREE.Vector3();
 const _invMatrix = new THREE.Matrix4();
+// Relative-to-eye orbit line: camera position in the orbit group's local space
+const _orbitInvMat = new THREE.Matrix4();
+const _orbitCamLocal = new THREE.Vector3();
 
 const Planet = ({ data, starData, starRef }) => {
   const ref = useRef();
@@ -563,6 +566,26 @@ const Planet = ({ data, starData, starRef }) => {
       orbitMat.uniforms.uPhase.value = ((meanAnomaly % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2);
     }
 
+    // RTE orbit line: express the camera in the orbit group's local space and
+    // split into high/low so the shader can cancel the large magnitude exactly.
+    if (orbitMat?.uniforms?.uCamHigh && orbitGroupRef.current) {
+      orbitGroupRef.current.updateWorldMatrix(true, false);
+      _orbitInvMat.copy(orbitGroupRef.current.matrixWorld).invert();
+      _orbitCamLocal.copy(state.camera.position).applyMatrix4(_orbitInvMat);
+      const cx = _orbitCamLocal.x, cy = _orbitCamLocal.y, cz = _orbitCamLocal.z;
+      const chx = Math.fround(cx), chy = Math.fround(cy), chz = Math.fround(cz);
+      orbitMat.uniforms.uCamHigh.value.set(chx, chy, chz);
+      orbitMat.uniforms.uCamLow.value.set(cx - chx, cy - chy, cz - chz);
+
+      // Fade the line out when the camera is right on the planet (following it
+      // up close), where the huge-coordinate line streaks/flickers past the
+      // camera. Fade back in as you pull away to view the orbit.
+      const distToPlanet = Math.hypot(cx - kep.x, cy - kep.y, cz);
+      const sma = Math.abs(semimajoraxis) || 1;
+      const fadeT = Math.min(1, Math.max(0, (distToPlanet - sma * 0.05) / (sma * 0.15)));
+      orbitMat.uniforms.uFade.value = fadeT;
+    }
+
     // Time + LOD — only animate active planet's clouds
     const isActive = activeRef?.current === ref.current;
     if (shaderMaterial.uniforms.u_time && isActive) {
@@ -716,25 +739,34 @@ const Planet = ({ data, starData, starRef }) => {
   });
 
   const position = [0, 0, 0]; // star at focus, keplerPosition handles offset
-  // Orbit line with per-vertex alpha for taper effect
+  // Orbit line with per-vertex alpha for taper effect.
+  // Rendered relative-to-eye (RTE): distant orbits (e.g. Pluto ~79k units) blow
+  // past float32 precision, so vertex − camera in the usual modelView pipeline
+  // cancels two huge equal values and jitters. Instead each vertex is stored as
+  // a high/low float pair (recovering the double-precision Kepler position), and
+  // the camera position (in this group's local space) is subtracted per-pair in
+  // the shader so the large parts cancel exactly, leaving a small precise offset.
   const orbitLine = useRef();
+  const orbitGroupRef = useRef();
   const { orbitGeo, orbitMat } = useMemo(() => {
     const circumference = Math.PI * (ellipse.xRadius + ellipse.yRadius);
     const segments = Math.max(256, Math.min(8192, Math.round(circumference * 4.0)));
-    // Generate orbit from Kepler positions so line matches planet motion
-    const points = [];
-    for (let i = 0; i <= segments; i++) {
+    const n = segments + 1;
+    const posHigh = new Float32Array(n * 3); // float32 part of each vertex
+    const posLow = new Float32Array(n * 3);  // residual (double − float32)
+    const tValues = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
       const M = (i / segments) * Math.PI * 2;
       const { x, y } = keplerPosition(M, eccentricity, semimajoraxis);
-      points.push(new THREE.Vector3(x, y, 0));
-    }
-    const geo = new THREE.BufferGeometry().setFromPoints(points);
-
-    // Store normalized mean anomaly (0→1) per vertex — linear, no wrapping issues
-    const tValues = new Float32Array(segments + 1);
-    for (let i = 0; i <= segments; i++) {
+      const hx = Math.fround(x), hy = Math.fround(y);
+      posHigh[i * 3] = hx;     posHigh[i * 3 + 1] = hy;     posHigh[i * 3 + 2] = 0;
+      posLow[i * 3] = x - hx;  posLow[i * 3 + 1] = y - hy;  posLow[i * 3 + 2] = 0;
       tValues[i] = i / segments;
     }
+    const geo = new THREE.BufferGeometry();
+    // "position" holds the high part (also used for bounds); aPosLow the residual
+    geo.setAttribute("position", new THREE.BufferAttribute(posHigh, 3));
+    geo.setAttribute("aPosLow", new THREE.BufferAttribute(posLow, 3));
     geo.setAttribute("aT", new THREE.BufferAttribute(tValues, 1));
 
     const mat = new THREE.ShaderMaterial({
@@ -742,19 +774,31 @@ const Planet = ({ data, starData, starRef }) => {
       depthWrite: false,
       uniforms: {
         uPhase: { value: 0 },
+        uCamHigh: { value: new THREE.Vector3() },
+        uCamLow: { value: new THREE.Vector3() },
+        uFade: { value: 1 }, // 0 when camera is right on the planet, 1 when pulled back
       },
       vertexShader: `
+        attribute vec3 aPosLow;
         attribute float aT;
+        uniform vec3 uCamHigh;
+        uniform vec3 uCamLow;
         varying float vT;
         void main() {
           vT = aT;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          // position (high) − camera (high) cancels the large magnitude exactly;
+          // add the residuals for the precise local offset from the camera.
+          vec3 rel = (position - uCamHigh) + (aPosLow - uCamLow);
+          // rel is local-space camera-relative; rotate to view space (no
+          // translation) and project. The huge translation is already handled.
+          gl_Position = projectionMatrix * mat4(mat3(modelViewMatrix)) * vec4(rel, 1.0);
         }
       `,
       fragmentShader: `
         precision highp float;
         varying float vT;
         uniform float uPhase;
+        uniform float uFade;
         void main() {
           // How far behind the planet (0=at planet, 1=full orbit)
           float dist = vT - uPhase;
@@ -763,7 +807,7 @@ const Planet = ({ data, starData, starRef }) => {
           // 75% trail: fade opacity along entire length, taper at end
           float taper = 1.0 - smoothstep(0.65, 0.75, dist);
           float fade = 1.0 - dist / 0.75; // linear fade from planet to tail
-          float alpha = taper * fade * 0.3;
+          float alpha = taper * fade * 0.3 * uFade;
           if (alpha < 0.005) discard;
 
           gl_FragColor = vec4(1.0, 1.0, 1.0, alpha);
@@ -775,9 +819,9 @@ const Planet = ({ data, starData, starRef }) => {
   }, [semimajoraxis, eccentricity]);
 
   return (
-    <group position={position} rotation={[(inclination * Math.PI) / 90, 0, 0]}>
+    <group ref={orbitGroupRef} position={position} rotation={[(inclination * Math.PI) / 90, 0, 0]}>
       {showOrbits && (
-        <line geometry={orbitGeo} material={orbitMat} />
+        <line geometry={orbitGeo} material={orbitMat} frustumCulled={false} />
       )}
       <mesh ref={ref} name={name} onClick={handleClick} material={shaderMaterial}
         geometry={getLodSphereGeo(scale, 32)}>

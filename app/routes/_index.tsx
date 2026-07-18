@@ -21,13 +21,38 @@ export const loader = async () => {
   return { totalSystems: xmlFiles.length, xmlFiles };
 };
 
+// ─── count-up stat number (animates 0 → end once on mount) ───────────────────
+
+function CountUp({ end, duration = 1400 }: { end: number; duration?: number }) {
+  // Initial state = final value so SSR / no-JS renders the real number; the
+  // mount effect resets to 0 and animates up.
+  const [display, setDisplay] = useState(end);
+  useEffect(() => {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    let raf = 0;
+    let start: number | null = null;
+    setDisplay(0);
+    const tick = (t: number) => {
+      if (start === null) start = t;
+      const p = Math.min((t - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      setDisplay(Math.round(end * eased));
+      if (p < 1) raf = requestAnimationFrame(tick);
+      else setDisplay(end);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [end, duration]);
+  return <>{display.toLocaleString()}</>;
+}
+
 // ─── hero card (Direction B · planet variant) ────────────────────────────────
 
 function FeaturedCard({ system }: { system: CatalogueSystem }) {
   return (
     <Link
       to={`/system/${encodeURIComponent(system.filename)}`}
-      className="group relative grid overflow-hidden rounded-sm"
+      className="group card-draw relative grid overflow-hidden"
       style={{
         gridTemplateColumns: "1fr 580px",
         background: "#000",
@@ -115,17 +140,15 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
         </div>
 
         {/* tags */}
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-4">
           {system.tags.map((tag) => (
             <span
               key={tag}
               className="inline-flex items-center"
               style={{
                 fontSize: 11,
-                padding: "2px 8px",
-                borderRadius: 4,
+                padding: 0,
                 background: "transparent",
-                border: "1px solid hsl(var(--border))",
                 color: "oklch(0.78 0.008 240)",
                 height: 22,
                 textTransform: "uppercase",
@@ -164,9 +187,9 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
 
 function SystemCard({ system }: { system: CatalogueSystem }) {
   return (
-    <Link to={`/system/${encodeURIComponent(system.filename)}`} className="group block">
+    <Link to={`/system/${encodeURIComponent(system.filename)}`} className="group card-draw block">
       <div
-        className="relative flex flex-col overflow-hidden rounded-sm h-full"
+        className="relative flex flex-col overflow-hidden h-full"
         style={{
           background: "oklch(0.13 0.01 260 / 0.55)",
           border: "1px solid oklch(0.28 0.01 260 / 0.45)",
@@ -442,7 +465,7 @@ export default function Index() {
               }}
             >
               <span>Explore</span>
-              <span>nearby</span>
+              <span>alien</span>
               <span>worlds</span>
             </h1>
           </div>
@@ -453,10 +476,10 @@ export default function Index() {
             style={{ paddingTop: 20 }}
           >
             {[
-              { value: totalSystems.toLocaleString(), label: "confirmed" },
-              { value: "4,231", label: "systems" },
-              { value: "62", label: "habitable zone" },
-              { value: "147", label: "earth-like" },
+              { value: totalSystems, label: "confirmed" },
+              { value: 4231, label: "systems" },
+              { value: 62, label: "habitable zone" },
+              { value: 147, label: "earth-like" },
             ].map(({ value, label }, i, arr) => (
               <div
                 key={label}
@@ -476,7 +499,7 @@ export default function Index() {
                     color: "#fff",
                   }}
                 >
-                  {value}
+                  <CountUp end={value} />
                 </div>
                 <div
                   style={{

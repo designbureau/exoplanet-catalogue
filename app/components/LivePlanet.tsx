@@ -39,6 +39,7 @@ interface LightParams {
   intensity: number; // u_sunIntensity (0..3) — overall lit-side brightness
   ambient: number;   // u_ambient (0..1) — night-side brightness lift
   wrapRange: number; // u_wrapRange (0..1) — terminator softness
+  wrapPower: number; // u_wrapPower (1..6) — terminator falloff sharpness
 }
 
 const DEFAULT_LIGHT: LightParams = {
@@ -46,8 +47,9 @@ const DEFAULT_LIGHT: LightParams = {
   y: 0.2,
   z: 0.45,
   intensity: 1.0,
-  ambient: 0.22,
+  ambient: 0.0,
   wrapRange: 0.65,
+  wrapPower: 4.0,
 };
 
 // ── camera setup ─────────────────────────────────────────────────────────────
@@ -100,6 +102,7 @@ function PlanetMesh({ type, seed, isDragging, rotY, vel, lightRef }: PlanetMeshP
     m.uniforms.u_lod.value = 1.0;
     m.uniforms.u_ambient.value = lightRef.current.ambient;
     m.uniforms.u_wrapRange.value = lightRef.current.wrapRange;
+    if (m.uniforms.u_wrapPower) m.uniforms.u_wrapPower.value = lightRef.current.wrapPower;
     if (m.uniforms.u_sunIntensity) m.uniforms.u_sunIntensity.value = lightRef.current.intensity;
     if (m.uniforms.u_gasBands) m.uniforms.u_gasBands.value = 2.5;
     return m;
@@ -116,6 +119,7 @@ function PlanetMesh({ type, seed, isDragging, rotY, vel, lightRef }: PlanetMeshP
     cm.uniforms.u_sunDirectionLocal.value.copy(v);
     cm.uniforms.u_lod.value = 1.0;
     cm.uniforms.u_wrapRange.value = lightRef.current.wrapRange;
+    if (cm.uniforms.u_wrapPower) cm.uniforms.u_wrapPower.value = lightRef.current.wrapPower;
     if (cm.uniforms.u_sunIntensity) cm.uniforms.u_sunIntensity.value = lightRef.current.intensity;
     return cm;
   }, [params, lightRef]);
@@ -128,7 +132,7 @@ function PlanetMesh({ type, seed, isDragging, rotY, vel, lightRef }: PlanetMeshP
 
     // live light tuning: pull latest values from the ref each frame so slider
     // movement takes effect without re-creating the material
-    const { x, y, z, intensity, ambient, wrapRange } = lightRef.current;
+    const { x, y, z, intensity, ambient, wrapRange, wrapPower } = lightRef.current;
     const sun = mat.uniforms.u_sunDirection.value as THREE.Vector3;
     sun.set(x, y, z);
     const len = sun.length();
@@ -136,6 +140,7 @@ function PlanetMesh({ type, seed, isDragging, rotY, vel, lightRef }: PlanetMeshP
     (mat.uniforms.u_sunDirectionLocal.value as THREE.Vector3).copy(sun);
     mat.uniforms.u_ambient.value = ambient;
     mat.uniforms.u_wrapRange.value = wrapRange;
+    if (mat.uniforms.u_wrapPower) mat.uniforms.u_wrapPower.value = wrapPower;
     if (mat.uniforms.u_sunIntensity) mat.uniforms.u_sunIntensity.value = intensity;
 
     // Mirror onto cloud material (when present) so clouds stay lit consistently
@@ -144,6 +149,7 @@ function PlanetMesh({ type, seed, isDragging, rotY, vel, lightRef }: PlanetMeshP
       (cloudMat.uniforms.u_sunDirection.value as THREE.Vector3).copy(sun);
       (cloudMat.uniforms.u_sunDirectionLocal.value as THREE.Vector3).copy(sun);
       cloudMat.uniforms.u_wrapRange.value = wrapRange;
+      if (cloudMat.uniforms.u_wrapPower) cloudMat.uniforms.u_wrapPower.value = wrapPower;
       if (cloudMat.uniforms.u_sunIntensity) cloudMat.uniforms.u_sunIntensity.value = intensity;
     }
 
@@ -275,6 +281,7 @@ function LightGuiPanel({
       {row("intensity", "intensity", 0, 3)}
       {row("ambient", "ambient", 0, 1)}
       {row("wrap", "wrapRange", 0, 1)}
+      {row("power", "wrapPower", 1, 6)}
       <div style={{ opacity: 0.5, fontSize: 11 }}>
         +X = source on screen-left · +Y = above · +Z = behind camera
       </div>
@@ -389,13 +396,14 @@ export function LivePlanet({ type, seed, className, style, offsetX = 0 }: LivePl
           />
         </Canvas>
       </div>
-      {/* Temporarily hidden — light-tuning GUI
+      {/* Temporary light-tuning GUI — hidden. Re-enable by uncommenting.
       <LightGuiPanel
         value={light}
         onChange={setLight}
         onReset={() => setLight(DEFAULT_LIGHT)}
         currentType={String(type)}
-      /> */}
+      />
+      */}
     </div>
   );
 }

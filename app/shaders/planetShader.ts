@@ -1112,11 +1112,12 @@ const terrestrialFragment = `
     float microNoise = noise3d(p * 4.0);
     float warpNoise = noise3d(p * 3.0 + vec3(77.0));
 
-    // Ocean / basins: on arid planets, "ocean" is dark dusty lowland, not water
-    // deepWater matches the crevasse crack colour (color1 * 0.12) so the ocean
-    // gradient reaches the same deepest blue as the dark water in ice cracks,
-    // unifying the two visually.
-    vec3 deepWater = color1 * 0.12;
+    // Ocean / basins: on arid planets, "ocean" is dark dusty lowland, not water.
+    // Eyeball (tidally-locked) worlds keep the very dark deep water (color1 * 0.12)
+    // so it matches the crevasse crack colour and unifies with the ice cracks.
+    // Open-ocean worlds (WATER_WORLD / TEMPERATE) lift the deep-water floor so the
+    // sea reads as water rather than crushing to near-black under the cloud layer.
+    vec3 deepWater = color1 * (u_tidallyLocked > 0.5 ? 0.12 : 0.4);
     vec3 midWater = color1 * 0.6;
     vec3 shallowWater = color1 * 0.95 + vec3(0.01, 0.02, 0.015);
     // Arid basins: dark rusty lowlands instead of blue water

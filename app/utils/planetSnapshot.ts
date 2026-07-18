@@ -162,7 +162,7 @@ export function buildShaderParams(catType: CatType, seed: THREE.Vector3): Shader
     case "rocky_earthlike": {
       const p = baseParams(PlanetType.TEMPERATE, seed);
       // Earth-like: ocean + continent + ice cap
-      p.color1 = new THREE.Color("#0a2050");   // deep ocean
+      p.color1 = new THREE.Color("#16407e");   // deep ocean
       p.color2 = new THREE.Color("#2a5c28");   // vegetation
       p.color3 = new THREE.Color("#7a6a50");   // highland / desert
       p.color4 = new THREE.Color("#e8e8e0");   // peaks / ice
@@ -178,10 +178,10 @@ export function buildShaderParams(catType: CatType, seed: THREE.Vector3): Shader
       p.landContrast = 1.8;       // ↑ sharper land/ocean transition
       p.bumpStrength = 0.8;
       p.swirlStrength = 0.12;
-      p.cloudCoverage = 0.45;
-      p.cloudOpacity = 0.65;
+      p.cloudCoverage = 0.55;     // thinner cover so ocean + continents read
+      p.cloudOpacity = 0.42;
       p.cloudSwirl = 0.8;
-      p.cloudBands = 5.0;
+      p.cloudBands = 2.5;         // ↓ softer, less banded cloud structure
       p.cloudWarp = 0.35;
       p.hasAtmosphere = true;
       p.showRim = true;
@@ -237,7 +237,7 @@ export function buildShaderParams(catType: CatType, seed: THREE.Vector3): Shader
 
     case "ocean": {
       const p = baseParams(PlanetType.WATER_WORLD, seed);
-      p.color1 = new THREE.Color("#0a1a3d");
+      p.color1 = new THREE.Color("#1a4d8f");
       p.color2 = new THREE.Color("#2a3025");
       p.color3 = new THREE.Color("#1a2a1a");
       p.color4 = new THREE.Color("#8a8a7a");
@@ -252,8 +252,8 @@ export function buildShaderParams(catType: CatType, seed: THREE.Vector3): Shader
       p.coastDetail = 0.35;
       p.landContrast = 1.6;
       p.swirlStrength = 0.15;
-      p.cloudCoverage = 0.55;
-      p.cloudOpacity = 0.7;
+      p.cloudCoverage = 0.72;
+      p.cloudOpacity = 0.34;
       p.cloudSwirl = 0.8;
       p.cloudBands = 3.0;
       p.cloudWarp = 0.35;
