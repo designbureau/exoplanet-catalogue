@@ -36,7 +36,7 @@ const SystemMenu = ({ xmlFiles, setNavActive }: any) => {
             setActiveIndex(-1);
           }}
           onKeyDown={handleKeyPress}
-          className="w-full px-2.5 py-1.5 text-xs rounded bg-white/5 border border-white/10 outline-none focus:border-cyan-400 text-white placeholder:text-muted-foreground"
+          className="w-full px-3.5 py-2.5 text-sm rounded bg-white/5 border border-white/10 outline-none focus:border-cyan-400 text-white placeholder:text-muted-foreground"
           autoFocus
         />
       </div>

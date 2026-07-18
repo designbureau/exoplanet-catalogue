@@ -27,7 +27,7 @@ export const loader = async () => {
 function FeaturedCard({ system }: { system: CatalogueSystem }) {
   return (
     <div
-      className="relative grid overflow-hidden rounded-sm"
+      className="group relative grid overflow-hidden rounded-sm"
       style={{
         gridTemplateColumns: "1fr 580px",
         minHeight: 600,

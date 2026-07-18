@@ -576,7 +576,7 @@ export default function GalaxyMap() {
       <SiteHeader xmlFiles={xmlFiles} variant="fixed" />
 
       {/* HUD */}
-      <div className="fixed top-16 left-2 z-10 flex flex-col gap-2">
+      <div className="fixed top-20 left-2 z-10 flex flex-col gap-2">
         <Link
           to="/"
           className="rounded-md bg-black/60 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm hover:text-foreground"
@@ -679,7 +679,7 @@ export default function GalaxyMap() {
 
       {/* Hover tooltip */}
       {hovered && !selected && (
-        <div className="fixed top-16 right-2 z-10 rounded-md bg-black/60 px-3 py-2 backdrop-blur-sm pointer-events-none">
+        <div className="fixed top-20 right-2 z-10 rounded-md bg-black/60 px-3 py-2 backdrop-blur-sm pointer-events-none">
           <p className="text-xs font-medium text-foreground">{hovered.name}</p>
           <p className="text-[10px] text-muted-foreground">
             {hovered.distance.toFixed(1)} pc &middot; {hovered.planetCount} planet{hovered.planetCount !== 1 ? "s" : ""}
@@ -689,7 +689,7 @@ export default function GalaxyMap() {
 
       {/* Selected system info */}
       {selected && (
-        <div className="fixed top-16 right-2 z-10 rounded-md bg-black/80 px-4 py-3 backdrop-blur-sm">
+        <div className="fixed top-20 right-2 z-10 rounded-md bg-black/80 px-4 py-3 backdrop-blur-sm">
           <p className="text-sm font-medium text-foreground">{selected.name}</p>
           <p className="text-[10px] text-muted-foreground">
             {selected.distance.toFixed(1)} pc &middot; {selected.planetCount} planet{selected.planetCount !== 1 ? "s" : ""}
