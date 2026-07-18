@@ -32,7 +32,7 @@ export function SiteHeader({
       <nav
         className={`${
           variant === "fixed" ? "fixed inset-x-0" : "sticky"
-        } top-0 z-50 flex items-center gap-6 px-12 py-[18px]`}
+        } top-0 z-50 flex items-center gap-6 px-8 py-[18px]`}
         style={{
           background: "oklch(0.08 0.01 260 / 0.28)",
           backdropFilter: "blur(16px) saturate(1.2)",

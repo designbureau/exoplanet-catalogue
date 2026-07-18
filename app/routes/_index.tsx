@@ -10,7 +10,6 @@ import { LivePlanet } from "~/components/LivePlanet";
 import type { PlanetType as CatType } from "~/components/PlanetCanvas";
 import { Input } from "~/components/ui/input";
 import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
 
 export const meta: MetaFunction = () => [
   { title: "Exo·Catalogue" },
@@ -26,12 +25,12 @@ export const loader = async () => {
 
 function FeaturedCard({ system }: { system: CatalogueSystem }) {
   return (
-    <div
+    <Link
+      to={`/system/${encodeURIComponent(system.filename)}`}
       className="group relative grid overflow-hidden rounded-sm"
       style={{
         gridTemplateColumns: "1fr 580px",
-        minHeight: 600,
-        background: "oklch(0.11 0.012 260 / 0.5)",
+        background: "#000",
         border: "1px solid oklch(0.32 0.01 260 / 0.55)",
         backdropFilter: "blur(24px) saturate(1.2)",
         boxShadow: "0 30px 80px -20px rgba(0,0,0,.75), 0 8px 24px -8px rgba(0,0,0,.6)",
@@ -125,8 +124,9 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
                 fontSize: 11,
                 padding: "2px 8px",
                 borderRadius: 4,
-                background: "hsl(var(--secondary))",
-                color: "hsl(var(--secondary-foreground))",
+                background: "transparent",
+                border: "1px solid hsl(var(--border))",
+                color: "oklch(0.78 0.008 240)",
                 height: 22,
                 textTransform: "uppercase",
                 letterSpacing: "0.06em",
@@ -136,35 +136,15 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
             </span>
           ))}
         </div>
-
-        {/* CTA */}
-        <div className="mt-auto">
-          <Button asChild className="rounded-full h-11 px-6 text-sm font-medium">
-            <Link to={`/system/${encodeURIComponent(system.filename)}`}>
-              Explore system →
-            </Link>
-          </Button>
-        </div>
       </div>
 
       {/* ── right: planet art ── */}
       <div
         className="relative flex items-center justify-center overflow-hidden"
         style={{
-          background: "radial-gradient(circle at 50% 55%, oklch(0.2 0.04 240 / 0.35), transparent 65%), oklch(0.08 0.012 260)",
+          background: "#000",
         }}
       >
-        {/* glow */}
-        <div
-          className="pointer-events-none absolute"
-          style={{
-            width: 480,
-            height: 480,
-            borderRadius: "50%",
-            background: "radial-gradient(circle, oklch(0.4 0.1 220 / 0.2), transparent 60%)",
-            filter: "blur(40px)",
-          }}
-        />
         {/* planet */}
         <div style={{ position: "relative", zIndex: 2 }}>
           <ShaderPlanet
@@ -176,7 +156,7 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
           />
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -200,7 +180,7 @@ function SystemCard({ system }: { system: CatalogueSystem }) {
           className="relative flex items-center justify-center overflow-hidden"
           style={{
             height: 220,
-            background: "radial-gradient(circle at 50% 55%, oklch(0.22 0.04 220 / 0.5), transparent 65%), oklch(0.08 0.012 260)",
+            background: "#000",
           }}
         >
           {/* planet */}
@@ -433,12 +413,7 @@ export default function Index() {
         aria-hidden
         className="pointer-events-none fixed inset-0 z-0"
         style={{
-          background: `
-            radial-gradient(circle at 20% 10%, oklch(0.2 0.05 260 / 0.5), transparent 40%),
-            radial-gradient(circle at 85% 70%, oklch(0.2 0.04 220 / 0.35), transparent 45%),
-            radial-gradient(circle at 50% 100%, oklch(0.18 0.03 60 / 0.25), transparent 50%),
-            oklch(0.08 0.012 260)
-          `,
+          background: "#000",
         }}
       />
 
@@ -466,9 +441,9 @@ export default function Index() {
                 marginBottom: 24,
               }}
             >
-              <span>Nearby</span>
+              <span>Explore</span>
+              <span>nearby</span>
               <span>worlds</span>
-              <span>catalogue</span>
             </h1>
           </div>
 
@@ -554,6 +529,8 @@ export default function Index() {
             backdropFilter: "blur(10px)",
             WebkitBackdropFilter: "blur(10px)",
             borderBottom: "1px solid oklch(0.28 0.01 260 / 0.45)",
+            // deep shadow cast upward, over the masthead planet above
+            boxShadow: "0 -40px 70px -10px rgba(0,0,0,0.85)",
           }}
         >
           {/* chips */}

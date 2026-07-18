@@ -122,12 +122,28 @@ const Planet = ({ data, starData, starRef }) => {
 
   const name = data.name ? data.name[0] : "Unnamed planet";
 
-  const semimajoraxis = getSemimajoraxis({ data, Constants }) * planetDistanceFactor;
+  let semimajoraxis = getSemimajoraxis({ data, Constants }) * planetDistanceFactor;
   const period = getPeriod({ data });
   const eccentricity = getEccentricity({ data });
   const inclination = getInclination({ data });
   const mass = getMass({ data });
   const radius = getRadius({ data });
+
+  // Keep close-in planets (hot Jupiters) from rendering inside their star.
+  // Scene body radii are inflated by bodyScale while orbit distances are not,
+  // so a tight orbit (e.g. WASP-12 b at ~0.023 AU) can fall within the star's
+  // rendered sphere. Push the orbit out so periapsis clears the star surface
+  // plus the planet's own radius; only affects orbits that would collide.
+  const starSceneRadius = (parseFloat(starData?.radius) || 1) * Constants.radius.sol * Constants.radius.scale;
+  let planetScale = 1;
+  if (mass > 0) planetScale = mass * Constants.mass.jupiter_mass_in_earth_masses < 124 ? mass ** 0.55 : mass ** 0.01;
+  if (radius > 0) planetScale = radius;
+  const planetSceneRadius = planetScale * Constants.radius.jupiter * Constants.radius.scale;
+  const minPeriapsis = starSceneRadius + planetSceneRadius * 1.6;
+  if (semimajoraxis * (1 - eccentricity) < minPeriapsis) {
+    semimajoraxis = minPeriapsis / Math.max(1 - eccentricity, 0.05);
+  }
+
   const ellipse = getEllipse(semimajoraxis, eccentricity);
   const periapsis = getPeriapsis(semimajoraxis, eccentricity) - semimajoraxis;
   const phaseOffset = getPhaseOffset({ data, name });
@@ -667,7 +683,12 @@ const Planet = ({ data, starData, starRef }) => {
     if (cloudRef.current) {
       cloudRef.current.position.copy(ref.current.position);
       cloudRef.current.rotation.x = ref.current.rotation.x;
-      cloudRef.current.rotation.y += 0.0009;
+      // Clouds track the surface's own rotation (× 1.15 for a subtle prograde
+      // super-rotation) rather than spinning on their own clock. This keeps
+      // them locked to the surface on tidally-locked planets (where the surface
+      // doesn't rotate, so the clouds shouldn't either) instead of drifting the
+      // wrong way over a static globe.
+      cloudRef.current.rotation.y = ref.current.rotation.y * 1.15;
       // Distance cull: hide clouds when far away (saves ~2ms per planet)
       ref.current.getWorldPosition(_camRight);
       const cloudDist = state.camera.position.distanceTo(_camRight);

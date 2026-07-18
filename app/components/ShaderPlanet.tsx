@@ -77,6 +77,9 @@ export function ShaderPlanet({
     );
   }
 
+  // Effective sphere diameter: the baked image only fills ~90% of the frame.
+  const d = size * 0.9;
+
   return (
     <div
       className={className}
@@ -102,18 +105,21 @@ export function ShaderPlanet({
           display: "block",
         }}
       />
-      {/* terminator: inset shadow crescent. On card hover it shifts slightly
-          smaller and further to the lower-left (see .crescent-overlay in global.css). */}
+      {/* terminator: inset shadow crescent. Inset by 5% so the circle matches
+          the sphere inside the baked image (which only fills ~90% of the frame).
+          The 5% inset is a ratio, so it stays correct at any planet size.
+          Shadow offsets scale to the effective diameter (0.9 × size). On card
+          hover it lightens (see .crescent-overlay in global.css). */}
       <span
         aria-hidden
         className="crescent-overlay"
         style={{
           position: "absolute",
-          inset: 0,
+          inset: "5%",
           borderRadius: "50%",
           pointerEvents: "none",
-          ["--cr-base" as string]: `inset ${size * 0.32}px ${size * -0.28}px ${size * 0.3}px ${size * 0.01}px rgba(0,0,0,0.98)`,
-          ["--cr-hover" as string]: `inset ${size * 0.26}px ${size * -0.22}px ${size * 0.3}px ${size * 0}px rgba(0,0,0,0.72)`,
+          ["--cr-base" as string]: `inset ${d * 0.32}px ${d * -0.28}px ${d * 0.3}px ${d * 0.01}px rgba(0,0,0,0.98)`,
+          ["--cr-hover" as string]: `inset ${d * 0.26}px ${d * -0.22}px ${d * 0.3}px ${d * 0}px rgba(0,0,0,0.72)`,
         } as React.CSSProperties}
       />
     </div>

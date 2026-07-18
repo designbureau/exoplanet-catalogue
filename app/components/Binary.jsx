@@ -16,6 +16,18 @@ import { getPosition, getMass } from "../utils/helperFunctions";
 // reading as "far apart". Proper fix is camera-relative rendering (roadmap).
 const MAX_BINARY_OFFSET = 20000;
 
+// OEC binaries frequently list <separation> twice — once in arcsec, once in
+// AU — and unit attributes are stripped during parsing, leaving e.g.
+// ["1.064", "266"]. We want the AU value for scene placement; it is always the
+// larger of the pair for these systems, so pick the max. Falls back to the
+// semimajoraxis (also possibly an array) or a small default. Using [0] here
+// grabbed the arcsec value, collapsing companion stars onto the primary
+// (e.g. WASP-12's triple).
+function separationAU(sep, fallback) {
+  const nums = (Array.isArray(sep) ? sep : [sep]).map(parseFloat).filter((n) => !Number.isNaN(n));
+  return nums.length ? Math.max(...nums) : fallback;
+}
+
 const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
   if (!data) return null;
 
@@ -46,9 +58,7 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
   // Binary separation in scene units (adjustable via UI)
   const binaryDistanceScale = Constants.distance.au * binaryDistanceFactor;
   const rawSeparation =
-    parseFloat(
-      data.separation?.[0] ?? data.semimajoraxis?.[0] ?? 16
-    ) * binaryDistanceScale;
+    separationAU(data.separation ?? data.semimajoraxis, 16) * binaryDistanceScale;
   // Minimum visual separation: at least 3x the largest star radius so they don't overlap
   const star1Radius = (parseFloat(stars[0]?.radius?.[0] ?? stars[0]?.mass?.[0] ?? 1) || 1) * Constants.radius.sol * Constants.radius.scale;
   const star2Radius = (parseFloat(stars[1]?.radius?.[0] ?? stars[1]?.mass?.[0] ?? 1) || 1) * Constants.radius.sol * Constants.radius.scale;
@@ -90,7 +100,7 @@ const Binary = ({ data, parentPosition = { x: 0, y: 0, z: 0 } }) => {
           // Nested binaries get offset from this binary's center
           const nestedOffset = getPosition({
             separation: Math.min(
-              parseFloat(binary.separation?.[0] ?? binary.semimajoraxis?.[0] ?? 16) * binaryDistanceScale,
+              separationAU(binary.separation ?? binary.semimajoraxis, 16) * binaryDistanceScale,
               MAX_BINARY_OFFSET,
             ),
             positionAngleDegrees: parseFloat(binary.positionangle?.[0] ?? 0),

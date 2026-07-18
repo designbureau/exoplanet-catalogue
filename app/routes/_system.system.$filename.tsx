@@ -310,7 +310,7 @@ const App = ({ data }: any) => {
     const [c1, c2, c3, c4] = getNebulaColors(h, getPrimaryStarTemp(data));
     return ['#' + c1.getHexString(), '#' + c2.getHexString(), '#' + c3.getHexString(), '#' + c4.getHexString()] as [string, string, string, string];
   }, [data]);
-  const [showNebula, setShowNebula] = useState(false);
+  const [showNebula, setShowNebula] = useState(true);
   const [showSkybox, setShowSkybox] = useState(true);
   const [skyBrightness, setSkyBrightness] = useState(1.0);
   const [skyContrast, setSkyContrast] = useState(1.0);

@@ -49,14 +49,27 @@ const Controls = ({ follow, autoRotate = false, viewAzimuth = 0, viewPolar = Mat
         animate
       );
 
-      // Set min distance to the object's bounding sphere radius
       const bbox = new THREE.Box3().setFromObject(activeRef.current);
       const sphere = new THREE.Sphere();
       bbox.getBoundingSphere(sphere);
-      cameraControlsRef.current.minDistance = sphere.radius * 0.2;
 
       // Check if this is a binary group (has children with stars, not a mesh itself)
       const isBinary = !activeRef.current.geometry;
+
+      // Min distance: keep the camera outside the body's surface so you can't
+      // zoom inside a star (or planet). Base it on the body mesh's own radius —
+      // the full bounding sphere also captures glow/atmosphere children and
+      // would over-restrict — falling back to the bbox for binary groups.
+      if (!isBinary) {
+        const geo = activeRef.current.geometry;
+        if (!geo.boundingSphere) geo.computeBoundingSphere();
+        const worldScale = activeRef.current.getWorldScale(new THREE.Vector3());
+        const bodyRadius = (geo.boundingSphere?.radius || 1) *
+          Math.max(worldScale.x, worldScale.y, worldScale.z);
+        cameraControlsRef.current.minDistance = bodyRadius * 1.15;
+      } else {
+        cameraControlsRef.current.minDistance = sphere.radius * 0.2;
+      }
 
       if (isBinary) {
         // For binaries: zoom to a reasonable distance showing the stars,
