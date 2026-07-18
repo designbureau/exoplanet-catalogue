@@ -1,0 +1,430 @@
+# From Data Point to Destination
+
+### What visualisation can and cannot do for the public understanding of exoplanets
+
+**Ian Jamieson**
+
+July 2026
+
+*Survey and synthesis.*
+
+---
+
+## Abstract
+
+The two companion papers describe a single system: a catalogue interface that
+renders every system in the Open Exoplanet Catalogue as an explorable
+three-dimensional scene, and the classification-driven procedural pipeline
+that gives each planet a parameter-derived appearance. This paper steps back
+from the one case to ask what it is an instance of. Exoplanets are the most
+pictured objects in modern science that have never been seen: three decades of
+discoveries have reached the public almost entirely through imagery invented
+on their behalf, from press-release artist's impressions to planetarium
+software to procedural games. We survey that landscape, the institutional
+visualisers (NASA's Eyes on Exoplanets and the Exoplanet Travel Bureau; ESO
+and ESA press imagery), the open planetarium platforms (Celestia, Stellarium,
+OpenSpace, Gaia Sky), and the procedural universes (Space Engine, No Man's
+Sky), against what is actually measured, and against the research on how
+astronomical imagery is received.
+
+Two findings organise the synthesis. First, the axis that matters is not
+realism but *disclosure*: the systems that serve understanding best are those
+in which a viewer can discover which features are measured and which are
+invented, and the genre's recurring failure is the unlabelled blend. Second,
+interactivity changes the epistemics: a static image asserts, while an
+explorable model can expose its own parameters, and this, more than fidelity,
+is the medium's genuine advantage. We close with what generalises: a
+speculation-labelling discipline for scientific visualisation, the case for
+deterministic procedural imagery as reproducible and therefore criticisable
+illustration, and the limits of any picture as a substitute for understanding
+what a light curve is.
+
+---
+
+## 1. Introduction
+
+In February 2017 the discovery of seven temperate, Earth-sized planets around
+TRAPPIST-1 (Gillon et al. 2017) was announced with a press kit whose imagery
+travelled further than any measurement in the paper: surface vistas of reddish
+rock under a swollen salmon sun, and a poster advertising the best
+habitable-zone vacation within twelve parsecs of Earth. The data behind the
+announcement were transit light curves, periodic dips in one star's
+brightness, and masses inferred from the timing perturbations the planets
+exert on one another. No property of any TRAPPIST-1 planet's surface has ever
+been observed. The imagery was labelled as artist's concept in the caption, as
+the genre's conventions require; the label did not travel with the image.
+
+This episode is not a scandal; it is the normal condition of exoplanet
+communication, and it has been since 51 Pegasi b arrived in 1995 with no
+possible photograph (Mayor & Queloz 1995). The field's public existence is
+almost entirely visual, and almost entirely invented. What varies, and what
+this paper surveys, is *how* the invention is done, how it is disclosed, and
+what different choices cost and buy.
+
+The companion papers describe one set of choices: a whole-catalogue interface
+whose planet imagery is derived from recorded parameters through a documented
+classification (companion paper 1, the system; companion paper 2, the
+appearance pipeline and its speculation gradient). This paper situates those
+choices in the landscape and asks the general questions: what can
+visualisation actually do for the public understanding of objects that cannot
+be seen, and where are the limits that no rendering choice removes?
+
+### Contributions
+
+This paper is a synthesis; it reports no new system and no new measurements.
+
+1. **A map of the exoplanet-visualisation landscape** across five families,
+   press imagery, institutional interactives, open planetarium platforms,
+   procedural universes, and parameter-derived rendering, compared on data
+   fidelity, disclosure, interactivity and reproducibility.
+2. **An argument that disclosure, not realism, is the load-bearing axis**,
+   assembled from the imagery-reception literature and the survey.
+3. **A statement of what interactivity changes**: an explorable model can
+   surface its own evidential status in a way a static image cannot.
+4. **A statement of the limits**: what no visualisation, however honest, can
+   do, with the companion project located inside those limits rather than
+   above them.
+
+---
+
+## 2. A vocabulary
+
+Three distinctions recur and are worth fixing.
+
+**Index, illustration, simulation.** Borrowing the documentary vocabulary: an
+*index* is causally produced by its object (a transit light curve, a
+direct-imaging point source, a phase-curve temperature map); an *illustration*
+is made by an agent to depict the object (every exoplanet surface view ever
+published); a *simulation* is generated by a model whose inputs include
+measurements (a climate model of a locked world; a parameter-derived
+procedural render). The public reflexively reads astronomical images as
+indexical, as photographs, because for a century the genre's famous images,
+Hubble deep fields, Apollo earthrises, were, however processed, indexical
+(Kessler 2012; Rector et al. 2007). Exoplanet imagery inherits that reading
+without the underlying causation, which is the genre's structural hazard.
+
+**The disclosure problem.** "Artist's impression" is a caption-level label on
+an image-level artefact. Captions detach; images circulate. Any labelling
+regime that lives outside the pixels loses to reposting, a dynamic documented
+across misinformation research generally and visible to anyone who has met
+TRAPPIST-1 surface art without its caveat. Disclosure that survives
+circulation must be structural: either in the image itself, or carried by an
+interactive context the viewer cannot help but traverse.
+
+**The speculation gradient.** Companion paper 2 grades every feature of a
+rendered planet as measured, derived, theory-guided, or fictive. The grading
+generalises to the whole genre and is used as this paper's comparative
+instrument: for each system surveyed, the question is not how good it looks
+but which tiers it shows, and whether the viewer knows which is which.
+
+---
+
+## 3. Three decades of planets, as the public saw them
+
+A compressed history, keyed to what existed as evidence against what was
+shown.
+
+**1992–1995: planets with no possible face.** The first confirmed exoplanets
+orbited a millisecond pulsar (Wolszczan & Frail 1992), lethal, lightless
+worlds announced essentially without imagery. 51 Peg b (Mayor & Queloz 1995)
+established the pattern that held for a decade: a wobble in a spectrum,
+communicated as a painterly gas giant. The evidence was one number-pair
+(period, m sin i); everything visible in the art was tier 4.
+
+**2000–2008: shape and colour arrive at the margins.** The first transits
+(Charbonneau et al. 2000) made planets geometrical: a disc's area, if never
+its face. Thermal phase mapping put one number-map on a hot Jupiter (Knutson
+et al. 2007); HR 8799 delivered the first multi-planet direct image, four
+moving points of light (Marois et al. 2008), and press imagery duly rendered
+four banded giants no instrument had resolved.
+
+**2009–2015: the statistical era.** Kepler (Borucki et al. 2010) transformed
+the field from specimens to demographics, thousands of candidates, the radius
+distribution, occurrence rates, and visualisation bifurcated: scatterplots for
+the population, ever-richer artist's impressions for the individuals. The
+Fulton gap and the mass–radius relations on which companion paper 2 builds its
+classification are products of this era; so is the Exoplanet Travel Bureau
+(JPL's *Visions of the Future* poster series, 2015–), which abandoned realism
+for knowing retro-futurist tourism, arguably the genre's most honest artefact,
+because no viewer mistakes a WPA-style poster for a photograph.
+
+**2016–2017: the nearest and the seven.** Proxima b (Anglada-Escudé et al.
+2016) and TRAPPIST-1 (Gillon et al. 2017) put temperate rocky worlds around
+the nearest stars, and produced the imagery discussed in §1, including, in
+TRAPPIST-1's case, coordinated art direction across agencies that fixed the
+system's public look, the "1e as ocean world" iconography, from data that
+constrained bulk density at best. The companion project's featured
+TRAPPIST-1 e renders as a tidally locked ice-ocean eyeball for stated,
+literature-cited reasons; companion paper 2's point stands, that this too is a
+tier-3 reading, one possible world among the permitted.
+
+**2018–present: molecules, maps, and JWST.** TESS (Ricker et al. 2015)
+industrialised discovery; JWST moved characterisation from detection to
+inventory, carbon dioxide at WASP-39 b (JWST ERS Team 2023), spectra that
+distinguish clear from cloudy atmospheres (after Sing et al. 2016; Kreidberg
+et al. 2014). Evidence about *appearance* remains at the tier of a colour
+(Evans et al. 2013) and coarse brightness maps (Demory et al. 2016). The gap
+between what is measured and what is shown has narrowed slightly, and it
+remains vast.
+
+---
+
+## 4. The landscape of systems
+
+**Press imagery (ESO, ESA, NASA centres).** The highest craft and the widest
+reach; scientifically advised, caption-labelled, structurally undisclosed
+(§2). Its reception is the best-studied: the aesthetics-and-astronomy line of
+research finds that imagery drives engagement, and that the public's
+comprehension improves with explanatory scaffolding, captions, scale cues,
+expert framing, rather than with image fidelity itself (Smith et al. 2011;
+Rector et al. 2007 for the production ethics of observatory imagery). The
+finding transfers: what the audience needs attached to an exoplanet image is
+not more realism but more *status information*.
+
+**Institutional interactives.** NASA's Eyes on Exoplanets renders the
+confirmed population as a navigable 3D catalogue tied to the NASA Exoplanet
+Archive (Akeson et al. 2013): authoritative data, stock appearance classes,
+implicit disclosure (a viewer may infer the planets are generic; nothing says
+so). Its virtue is the tie between position in the interface and record in
+the archive, the interactive equivalent of a citation.
+
+**Open planetarium platforms.** Celestia (2001–) and Stellarium established
+open, extensible sky rendering; OpenSpace (Bock et al. 2020) and Gaia Sky
+(Sagristà et al. 2019) brought research-grade catalogue navigation,
+positional data at Gaia scale with presentation-quality contextualisation.
+Their centre of gravity is *where things are*, which is also where their data
+are strongest; planetary surfaces are textures, out of scope and mostly
+treated as such.
+
+**Procedural universes.** Space Engine renders a seamless universe,
+procedurally extending real catalogues into the unmeasured; No Man's Sky
+(2016) generates worlds without any observational referent. Both demonstrate
+the aesthetic power of the technique the companion project borrows, and both,
+by design, erase the measured–invented boundary entirely: in Space Engine a
+real catalogued star and a procedural filler star present identically. As
+science communication they are cautionary in precisely the dimension in which
+they are triumphant as experiences.
+
+**Parameter-derived rendering (the companion project).** Every planet's
+appearance a documented function of its record; every scale compromise
+stated; the speculation gradient articulated. Its weaknesses are the mirror
+of its commitments: no artist rescues an ugly or misleading procedural
+outcome, the disclosure currently lives in papers rather than in the
+interface, and its catalogue (the OEC) is community-maintained and ageing
+(companion paper 1, §6). It is presented here not as the genre's solution but
+as one point in the design space that the rest of the landscape leaves
+unoccupied: *auditable* invention.
+
+The comparison, compressed:
+
+| System | Data | Appearance | Disclosure | Reproducible imagery |
+|---|---|---|---|---|
+| Press art | strongest available | artist | caption only | no |
+| Eyes on Exoplanets | NASA archive, live | stock classes | implicit | n/a |
+| OpenSpace / Gaia Sky | research catalogues | textures/points | scope-limited | yes |
+| Space Engine | catalogues + filler | procedural | erased | yes (seeded) |
+| No Man's Sky | none | procedural | n/a (fiction) | yes (seeded) |
+| Companion project | OEC, vendored | procedural from record | papers; interface pending | yes (seeded) |
+
+---
+
+## 5. What visualisation can do
+
+Read against the reception research and the landscape, four capabilities are
+real and distinguishable.
+
+**Orientation.** Interactive 3D genuinely communicates configuration: that
+TRAPPIST-1's system would fit inside Mercury's orbit; that hot Jupiters skim
+their stars; what a resonant chain looks like in motion. These are tier 1–2
+facts, measured periods and derived geometry, the medium's home ground, and
+no static image or table communicates them as directly. The companion
+viewer's engineering (Keplerian propagation, true relative rates) spends its
+effort exactly here, deliberately.
+
+**Instantiation.** A rendered world makes a category graspable: "tidally
+locked ice-ocean eyeball" is a phrase until one orbits it. The risk, that
+instantiation is read as portrait, and the mitigation, graded disclosure, are
+the subject of companion paper 2; the capability itself is genuine, and it is
+why the genre exists.
+
+**Scaffolded engagement.** The reception literature's consistent finding:
+imagery recruits attention and interest across expertise levels, and
+understanding follows when explanation is attached (Smith et al. 2011). An
+interface that makes the explanation load-bearing, click the planet, see the
+record, the picture as the door to the data, converts the genre's hazard into
+its pedagogy.
+
+**Honest fiction, reproducibly.** A deterministic procedural pipeline makes
+illustration criticisable in a way one-off art is not: the same record
+renders the same world for every viewer, the mapping is versioned code, and a
+domain expert can audit the function rather than debate a painting. This is a
+small, real epistemic upgrade, peer-reviewable illustration, and it is the
+companion project's central offer to the genre.
+
+## 6. What visualisation cannot do
+
+**It cannot close the appearance gap.** Nothing renderable today is a
+prediction of any specific planet's face, and, outside a future of resolved
+imaging that no funded instrument promises, nothing will make it one. The
+ceiling of companion paper 2, plausibility rather than prediction, is the
+genre's ceiling, not one project's.
+
+**It cannot label itself into viewers' memories.** Structural disclosure
+improves on captions, but the reception research gives no licence for the
+belief that any regime makes speculation-status *stick* once images leave the
+interface. Screenshots strip context as surely as reposts strip captions. The
+honest statement is harm reduction, not solution.
+
+**It cannot substitute for the evidence's own form.** The deepest
+understanding of the field's epistemics is understanding what a light curve
+and a spectrum *are*: that we know these worlds as shadows and wobbles. A
+visualisation that only shows worlds, however scrupulously graded, teaches
+the conclusions while hiding the reasoning. The genre's unclaimed territory,
+and this survey's most concrete recommendation, is the interface that renders
+the *evidence* alongside the invention: the actual transit depth behind this
+planet's radius, the actual radial-velocity curve behind its mass, so that
+the plausible world and the real measurement are one click apart. The
+companion project does not yet do this either; it is the roadmap item this
+paper exists to motivate.
+
+**It cannot outrun its catalogue.** Every honest visualisation inherits its
+database's coverage, currency and biases; the transit surveys' geometric bias
+toward close-in planets skews any rendered population toward the very worlds,
+hot, locked, extreme, that look least like home. Companion paper 1's
+limitations section is one instance of a general law.
+
+---
+
+## 7. What generalises
+
+For builders of scientific visualisation beyond this field, the survey
+compresses to four transferable disciplines.
+
+1. **Grade the speculation** (measured, derived, theory-guided, fictive) as a
+   design artefact, not a caveat, and put the grading in the interface, not
+   the paper.
+2. **Make the picture the door to the data.** Every rendered object should
+   resolve, in one interaction, to the record that licensed it.
+3. **Prefer deterministic, versioned invention** where invention is
+   necessary: reproducible fiction can be audited, diffed and corrected;
+   inspired fiction can only be replaced.
+4. **State the compromises where they happen.** Scale lies, clamps and
+   exaggerations belong in code comments, in the interface, and in papers
+   like these, because a documented distortion is a teaching moment and an
+   undocumented one is a small fraud.
+
+And one deflationary through-line, the analogue of every honest survey's
+conclusion: the decisive factor is not the rendering technology. It is
+whether the maker treats the viewer as someone entitled to know what kind of
+statement each pixel is.
+
+---
+
+## 8. Conclusion
+
+Exoplanets will remain invisible for the foreseeable future, and they will
+remain among the most pictured objects in science. That combination is not a
+problem to be solved but a condition to be managed, and the survey's finding
+is that it is managed well or badly along one axis above all: disclosure. The
+companion project's wager, a whole public catalogue rendered as worlds, every
+world a documented function of its record, every distortion stated, at the
+cost of an interface that must eventually carry its own epistemics, is one
+way to manage it honestly. The genre's history suggests the images will
+travel either way. What a builder controls is whether, when an image is
+traced back to its source, the source can show its receipts. The two
+companion papers are this project's receipts.
+
+---
+
+## Acknowledgements
+
+This paper synthesises the work of the observers, archivists, artists and
+engineers it surveys, above all the maintainers of the open catalogues (Rein
+2012; Akeson et al. 2013; Schneider et al. 2011) on which the companion
+project and much of the landscape stand.
+
+---
+
+## References
+
+*Discoveries*
+
+- Wolszczan, A., & Frail, D. A. (1992). A planetary system around the
+  millisecond pulsar PSR1257+12. *Nature* 355, 145–147.
+- Mayor, M., & Queloz, D. (1995). A Jupiter-mass companion to a solar-type
+  star. *Nature* 378, 355–359.
+- Charbonneau, D., Brown, T. M., Latham, D. W., & Mayor, M. (2000). Detection
+  of Planetary Transits Across a Sun-like Star. *ApJ Letters* 529, L45–L48.
+- Marois, C., et al. (2008). Direct Imaging of Multiple Planets Orbiting the
+  Star HR 8799. *Science* 322, 1348–1352.
+- Borucki, W. J., et al. (2010). Kepler Planet-Detection Mission: Introduction
+  and First Results. *Science* 327, 977–980.
+- Ricker, G. R., et al. (2015). Transiting Exoplanet Survey Satellite (TESS).
+  *Journal of Astronomical Telescopes, Instruments, and Systems* 1, 014003.
+- Anglada-Escudé, G., et al. (2016). A terrestrial planet candidate in a
+  temperate orbit around Proxima Centauri. *Nature* 536, 437–440.
+- Gillon, M., et al. (2017). Seven temperate terrestrial planets around the
+  nearby ultracool dwarf star TRAPPIST-1. *Nature* 542, 456–460.
+
+*Characterisation (appearance-relevant; fuller list in companion paper 2)*
+
+- Knutson, H. A., et al. (2007). A map of the day–night contrast of the
+  extrasolar planet HD 189733b. *Nature* 447, 183–186.
+- Evans, T. M., et al. (2013). The Deep Blue Color of HD 189733b. *ApJ
+  Letters* 772, L16.
+- Kreidberg, L., et al. (2014). Clouds in the atmosphere of the super-Earth
+  exoplanet GJ 1214b. *Nature* 505, 69–72.
+- Sing, D. K., et al. (2016). A continuum from clear to cloudy hot-Jupiter
+  exoplanets. *Nature* 529, 59–62.
+- Demory, B.-O., et al. (2016). A map of the large day–night temperature
+  gradient of a super-Earth exoplanet. *Nature* 532, 207–209.
+- JWST Transiting Exoplanet Community ERS Team (2023). Identification of
+  carbon dioxide in an exoplanet atmosphere. *Nature* 614, 649–652.
+
+*Data infrastructure*
+
+- Rein, H. (2012). A proposal for community driven and decentralized
+  astronomical databases and the Open Exoplanet Catalogue. arXiv:1211.7121.
+- Akeson, R. L., et al. (2013). The NASA Exoplanet Archive. *PASP* 125, 989.
+- Schneider, J., et al. (2011). Defining and cataloging exoplanets: the
+  exoplanet.eu database. *A&A* 532, A79.
+
+*Visualisation systems and imagery studies*
+
+- Rector, T. A., Levay, Z. G., Frattare, L. M., English, J., &
+  Pu'uohau-Pummill, K. (2007). Image-processing techniques for the creation
+  of presentation-quality astronomical images. *AJ* 133, 598–611.
+- Smith, L. F., Smith, J. K., Arcand, K. K., Smith, R. K., Bookbinder, J., &
+  Keach, K. (2011). Aesthetics and Astronomy: Studying the public's
+  perception and understanding of imagery from space. *Science Communication*
+  33(2), 201–238.
+- Kessler, E. A. (2012). *Picturing the Cosmos: Hubble Space Telescope Images
+  and the Astronomical Sublime*. University of Minnesota Press.
+- Bock, A., et al. (2020). OpenSpace: A System for Astrographics. *IEEE TVCG*
+  26(1), 633–642.
+- Sagristà, A., Jordan, S., Müller, T., & Sadlo, F. (2019). Gaia Sky:
+  Navigating the Gaia Catalog. *IEEE TVCG* 25(1), 1070–1079.
+- NASA/JPL-Caltech. Eyes on Exoplanets; Exoplanet Travel Bureau / *Visions of
+  the Future* poster series (2015–). https://eyes.nasa.gov;
+  https://exoplanets.nasa.gov/alien-worlds/exoplanet-travel-bureau/
+- Space Engine. https://spaceengine.org (V. Romanyuk, 2010–).
+- Hello Games (2016). *No Man's Sky*.
+- Celestia (2001–), https://celestiaproject.space; Stellarium,
+  https://stellarium.org.
+
+---
+
+## Appendix: Sourcing notes
+
+1. Reception-research claims are drawn from the aesthetics-and-astronomy line
+   (Smith et al. 2011 and successor studies) and from the image-production
+   literature (Rector et al. 2007; Kessler 2012); the application of their
+   findings, developed on indexical observatory imagery, to non-indexical
+   exoplanet art is this paper's extrapolation, flagged as such.
+2. Descriptions of proprietary systems (Space Engine, No Man's Sky, Eyes on
+   Exoplanets) are from public documentation and direct use, not source
+   audit; their internal data handling may differ from the observed behaviour
+   described.
+3. The TRAPPIST-1 press-imagery account describes the public artefacts (the
+   February 2017 releases and the Travel Bureau poster) and asserts nothing
+   about internal editorial process at the agencies involved.

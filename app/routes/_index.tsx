@@ -52,9 +52,8 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
   return (
     <Link
       to={`/system/${encodeURIComponent(system.filename)}`}
-      className="group card-draw relative grid overflow-hidden"
+      className="group card-draw relative grid overflow-hidden grid-cols-1 lg:grid-cols-[minmax(0,1fr)_580px]"
       style={{
-        gridTemplateColumns: "1fr 580px",
         background: "#000",
         border: "1px solid oklch(0.32 0.01 260 / 0.55)",
         backdropFilter: "blur(24px) saturate(1.2)",
@@ -63,7 +62,7 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
     >
       {/* ── left: text ── */}
       <div
-        className="relative z-10 flex flex-col gap-5 p-10"
+        className="relative z-10 flex flex-col gap-5 p-6 sm:p-10"
       >
         {/* eyebrow */}
         <div className="flex items-center gap-2.5" style={{ color: "oklch(0.58 0.01 240)" }}>
@@ -104,7 +103,7 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
             <span style={{ fontFamily: "var(--font-mono, monospace)", color: "oklch(0.98 0.005 240)", letterSpacing: "0.02em" }}>
               {system.featured.name}
             </span>
-            <span style={{ color: "oklch(0.42 0.01 240)" }}>—</span>
+            <span style={{ color: "oklch(0.6 0.01 240)" }}>—</span>
             <span>{system.featured.note}</span>
           </div>
         </div>
@@ -113,7 +112,7 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
         <div className="flex flex-col gap-2">
           <span
             className="uppercase tracking-widest"
-            style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 10.5, color: "oklch(0.42 0.01 240)" }}
+            style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 10.5, color: "oklch(0.6 0.01 240)" }}
           >
             System · {system.planets.length} planets
           </span>
@@ -161,9 +160,11 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
         </div>
       </div>
 
-      {/* ── right: planet art ── */}
+      {/* ── right: planet art ──
+          On mobile the panel stacks below the text and needs its own height;
+          from lg up the grid row height governs it. */}
       <div
-        className="relative flex items-center justify-center overflow-hidden"
+        className="relative flex items-center justify-center overflow-hidden min-h-[300px] sm:min-h-[380px] lg:min-h-0"
         style={{
           background: "#000",
         }}
@@ -291,7 +292,7 @@ function SystemCard({ system }: { system: CatalogueSystem }) {
                 );
               })}
               {system.planets.length > 6 && (
-                <span style={{ fontSize: 10, color: "oklch(0.42 0.01 240)", marginLeft: 2 }}>
+                <span style={{ fontSize: 10, color: "oklch(0.6 0.01 240)", marginLeft: 2 }}>
                   +{system.planets.length - 6}
                 </span>
               )}
@@ -447,7 +448,8 @@ export default function Index() {
 
         {/* ── MASTHEAD ── */}
         <section
-          className="relative flex flex-col overflow-hidden px-12 pb-14 pt-[88px]"
+          aria-label="Overview"
+          className="relative flex flex-col overflow-hidden px-5 sm:px-8 md:px-12 pb-14 pt-[88px]"
           style={{ minHeight: 520, borderBottom: "1px solid oklch(0.28 0.01 260 / 0.45)" }}
         >
           <div className="relative z-10 max-w-3xl">
@@ -472,22 +474,16 @@ export default function Index() {
 
           {/* stats strip */}
           <div
-            className="relative z-10 mt-auto flex items-stretch"
-            style={{ paddingTop: 20 }}
+            className="relative z-10 mt-auto flex flex-wrap items-stretch"
+            style={{ paddingTop: 20, columnGap: "clamp(28px, 6vw, 96px)", rowGap: 24 }}
           >
             {[
               { value: totalSystems, label: "confirmed" },
               { value: 4231, label: "systems" },
               { value: 62, label: "habitable zone" },
               { value: 147, label: "earth-like" },
-            ].map(({ value, label }, i, arr) => (
-              <div
-                key={label}
-                style={{
-                  paddingRight: i < arr.length - 1 ? 48 : 0,
-                  marginRight: i < arr.length - 1 ? 48 : 0,
-                }}
-              >
+            ].map(({ value, label }) => (
+              <div key={label}>
                 <div
                   style={{
                     fontFamily: "var(--font-mono, monospace)",
@@ -530,6 +526,7 @@ export default function Index() {
            * On mobile, offsetX=0 keeps the planet centered behind the text.
            */}
           <div
+            aria-hidden="true"
             className="pointer-events-none absolute inset-0"
             style={{ opacity: 0.85, zIndex: 0 }}
           >
@@ -543,8 +540,9 @@ export default function Index() {
         </section>
 
         {/* ── TOOLBAR ── */}
-        <div
-          className="sticky flex flex-wrap items-center gap-3 px-12 py-5"
+        <section
+          aria-label="Filter and sort"
+          className="sticky flex flex-wrap items-center gap-3 px-5 sm:px-8 md:px-12 py-5"
           style={{
             top: 73,
             zIndex: 40,
@@ -556,15 +554,19 @@ export default function Index() {
             boxShadow: "0 -40px 70px -10px rgba(0,0,0,0.85)",
           }}
         >
-          {/* chips */}
-          <div className="flex flex-wrap gap-1 flex-1">
+          {/* chips — single scrollable row on mobile, wrapping from md up */}
+          <div
+            className="flex flex-1 gap-1 flex-nowrap overflow-x-auto md:flex-wrap md:overflow-visible"
+            style={{ scrollbarWidth: "none" }}
+          >
             {(["all", ...FILTER_TAGS.filter((t) => t !== "all")] as const).map((tag) => {
               const isActive = tag === "all" ? activeFilter === null : activeFilter === tag;
               return (
                 <button
                   key={tag}
                   onClick={() => setActiveFilter(tag === "all" ? null : tag)}
-                  className="cursor-pointer transition-all"
+                  aria-pressed={isActive}
+                  className="cursor-pointer transition-all whitespace-nowrap shrink-0"
                   style={{
                     fontFamily: "var(--font-sans, sans-serif)",
                     fontSize: 11,
@@ -588,7 +590,8 @@ export default function Index() {
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="cursor-pointer bg-transparent outline-none"
+            aria-label="Sort systems"
+            className="cursor-pointer bg-transparent"
             style={{
               fontFamily: "var(--font-mono, monospace)",
               fontSize: 11.5,
@@ -603,10 +606,10 @@ export default function Index() {
               </option>
             ))}
           </select>
-        </div>
+        </section>
 
         {/* ── MAIN ── */}
-        <main className="mx-auto max-w-[1520px] px-12 py-10 space-y-12">
+        <main id="main" className="mx-auto max-w-[1520px] px-5 sm:px-8 md:px-12 py-10 space-y-12">
 
           {/* featured hero */}
           {showHero && (
@@ -616,7 +619,7 @@ export default function Index() {
               >
                 <span
                   className="uppercase tracking-widest"
-                  style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "oklch(0.42 0.01 240)" }}
+                  style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "oklch(0.6 0.01 240)" }}
                 >
                   Featured system
                 </span>
@@ -632,7 +635,7 @@ export default function Index() {
             >
               <span
                 className="uppercase tracking-widest"
-                style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "oklch(0.42 0.01 240)" }}
+                style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "oklch(0.6 0.01 240)" }}
               >
                 {activeFilter
                   ? `${activeFilter} · ${gridSystems.length} systems`
@@ -662,10 +665,10 @@ export default function Index() {
 
         {/* ── FOOTER ── */}
         <footer
-          className="mt-10 flex items-center justify-between px-12 py-8"
+          className="mt-10 flex items-center justify-between px-5 sm:px-8 md:px-12 py-8"
           style={{ borderTop: "1px solid oklch(0.28 0.01 260 / 0.45)" }}
         >
-          <span style={{ fontSize: 12, color: "oklch(0.42 0.01 240)" }}>
+          <span style={{ fontSize: 12, color: "oklch(0.6 0.01 240)" }}>
             Data: Open Exoplanet Catalogue
           </span>
         </footer>
