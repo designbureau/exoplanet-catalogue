@@ -1,4 +1,4 @@
-# Exoplanet Remix
+# Exoplanet Catalogue
 
 An editorial, real-time 3D catalogue of nearby exoplanet systems. Browse a
 galaxy map of 4,000+ real systems, drop into any one to see its star(s) and
