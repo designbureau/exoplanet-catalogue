@@ -732,8 +732,11 @@ export default function GalaxyMap() {
       </div>}
 
       {/* Hover tooltip — follows the cursor so the name reads as attached to
-          the star under the pointer, rather than a detached corner panel. */}
-      {hovered && hoverPos && !selected && (
+          the star under the pointer, rather than a detached corner panel.
+          Suppressed only when hovering the already-selected star itself
+          (its name is already shown in the selected-system panel); hovering
+          any other star while one is selected still shows this tooltip. */}
+      {hovered && hoverPos && hovered.filename !== selected?.filename && (
         <div
           className="fixed z-10 rounded-md bg-black/70 px-3 py-2 backdrop-blur-sm pointer-events-none"
           style={{ left: hoverPos.x + 16, top: hoverPos.y + 16 }}
