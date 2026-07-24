@@ -29,7 +29,7 @@ export const papers: Paper[] = [
     register: "System description",
     date: "July 2026",
     teaser:
-      "The system paper: how 4,081 catalogued systems become explorable places. The XML-to-JSON pipeline, the Keplerian viewer, the star map, and the engineering required to stay numerically honest at seventy-nine thousand scene units.",
+      "The system paper: how 4,081 catalogued systems become explorable places. The XML-to-JSON pipeline, the Keplerian viewer, stars coloured by blackbody temperature, and a star map built from the catalogue's own astrometry at one parsec per scene unit.",
     markdown: cataloguePaper,
   },
   {

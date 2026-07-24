@@ -5,9 +5,10 @@
  * Brand → home, Star Map → /galaxy, About → /about, and a search button that
  * opens the full-catalogue system search (SystemMenu) as a top-right overlay.
  *
- * The bar stays a single 73px row at every breakpoint (the catalogue toolbar
- * sticks beneath it at top:73, so its height is load-bearing): on small
- * screens the type steps down and the search button collapses to an icon.
+ * A single row at every breakpoint: from md up the search trigger is the
+ * full faux searchbox (73px header); below md it collapses to a bare icon
+ * (57px header). The catalogue toolbar sticks beneath the header, so both
+ * heights are load-bearing there (top-[57px] md:top-[73px]).
  */
 
 import { useEffect, useState } from "react";
@@ -94,14 +95,42 @@ export function SiteHeader({
           </div>
 
           {/* search toggle → opens the full-catalogue system search.
-              Plain icon, matching the GitHub link beside it. */}
+              Full faux searchbox from md up; a bare icon below md, matching
+              the GitHub link beside it, so the row stays a single line on
+              phones. */}
           <button
             onClick={() => setMenuActive(true)}
             aria-label="Search systems"
             aria-haspopup="dialog"
             aria-expanded={menuActive}
-            className="shrink-0 transition-colors hover:text-white"
-            style={{ color: "oklch(0.58 0.01 240)", display: "flex", cursor: "pointer" }}
+            className="hidden md:flex items-center gap-2.5 transition-colors hover:text-white md:min-w-[200px] lg:min-w-[240px]"
+            style={{
+              height: 36,
+              padding: "0 12px",
+              border: "1px solid hsl(var(--input))",
+              borderRadius: "calc(var(--radius) - 2px)",
+              background: "hsl(var(--background) / 0.6)",
+              backdropFilter: "blur(8px)",
+              color: "oklch(0.58 0.01 240)",
+              fontFamily: "var(--font-sans, sans-serif)",
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0, opacity: 0.5 }}>
+              <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M11 11L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            <span>Search systems…</span>
+          </button>
+
+          <button
+            onClick={() => setMenuActive(true)}
+            aria-label="Search systems"
+            aria-haspopup="dialog"
+            aria-expanded={menuActive}
+            className="flex md:hidden shrink-0 transition-colors hover:text-white"
+            style={{ color: "oklch(0.58 0.01 240)", cursor: "pointer" }}
           >
             <svg width="20" height="20" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5" />

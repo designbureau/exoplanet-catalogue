@@ -36,6 +36,43 @@ function stripFrontMatter(md: string): string {
 }
 
 const components: Components = {
+  // Markdown images render as full-width figures with the alt text as caption.
+  img: ({ src, alt }) => (
+    <figure style={{ margin: "36px 0" }}>
+      <img
+        src={src}
+        alt={alt ?? ""}
+        loading="lazy"
+        style={{ width: "100%", height: "auto", display: "block", border: rule }}
+      />
+      {alt && (
+        <figcaption
+          style={{
+            fontFamily: mono,
+            fontSize: 12,
+            lineHeight: 1.6,
+            color: dim,
+            padding: "12px 2px 0",
+          }}
+        >
+          {alt}
+        </figcaption>
+      )}
+    </figure>
+  ),
+  // A paragraph whose sole content is an image unwraps to the figure itself
+  // (a <figure> may not sit inside <p>).
+  p: ({ node, children }) => {
+    const kids = (node as any)?.children?.filter(
+      (c: any) => !(c.type === "text" && !c.value.trim()),
+    );
+    if (kids?.length === 1 && kids[0].tagName === "img") return <>{children}</>;
+    return (
+      <p style={{ fontSize: 16.5, lineHeight: 1.75, color: body, margin: "0 0 20px" }}>
+        {children}
+      </p>
+    );
+  },
   h2: ({ children }) => (
     <h2
       className="font-normal"
@@ -58,8 +95,18 @@ const components: Components = {
       {children}
     </h3>
   ),
-  p: ({ children }) => (
-    <p style={{ fontSize: 16.5, lineHeight: 1.75, color: body, margin: "0 0 20px" }}>{children}</p>
+  h4: ({ children }) => (
+    <h4
+      style={{
+        fontSize: 16.5,
+        fontWeight: 600,
+        letterSpacing: "-0.005em",
+        color: bright,
+        margin: "34px 0 12px",
+      }}
+    >
+      {children}
+    </h4>
   ),
   strong: ({ children }) => <strong style={{ color: bright, fontWeight: 600 }}>{children}</strong>,
   a: ({ href, children }) => (
@@ -114,9 +161,11 @@ const components: Components = {
   ),
   table: ({ children }) => (
     // tabIndex + role make the horizontally scrollable region keyboard-reachable
+    // (role "group", not "region": two same-named region landmarks per page
+    // would fail axe's landmark-unique rule)
     <div
       tabIndex={0}
-      role="region"
+      role="group"
       aria-label="Table"
       style={{ overflowX: "auto", margin: "0 0 24px", border: rule }}
     >

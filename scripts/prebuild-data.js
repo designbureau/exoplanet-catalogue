@@ -1,8 +1,8 @@
 /**
  * Pre-parse all XML system files into JSON at build time.
  * Outputs:
- *   app/data/systems-index.json  — galaxy view positions array
- *   app/data/systems-json/       — per-system parsed JSON files
+ *   data-json/systems-index.json — galaxy view positions array
+ *   data-json/<name>.json        — per-system parsed JSON files
  *
  * Run: node scripts/prebuild-data.js
  */
@@ -44,6 +44,48 @@ function extractTag(xml, tag) {
 function countTag(xml, tag) {
   const matches = xml.match(new RegExp(`<${tag}[\\s>]`, "g"));
   return matches ? matches.length : 0;
+}
+
+// Fallback spectral-type → temperature (K) table, matching
+// app/utils/helperFunctions.tsx's spectralTypeTemperatures, for systems whose
+// primary star records a spectral type but no direct temperature.
+const SPECTRAL_TEMP = { O: 40000, B: 20000, A: 8000, F: 6500, G: 5500, K: 4500, M: 3000 };
+
+// The primary star's own XML content, with any nested <planet> blocks
+// stripped out. OEC records both a star's effective temperature and a
+// planet's equilibrium temperature under the same <temperature> tag name,
+// and a star's own scalar fields can appear *after* its nested planets in
+// the schema (e.g. HD 104067: the planet's 363 K equilibrium temperature
+// precedes the star's own 4969 K, textually, inside the same <star>...
+// </star> block). A whole-document first-match search for <temperature>
+// therefore silently returns the wrong value for any system whose planet
+// happens to record one before its star does — 329 of 4,081 systems in
+// this catalogue, including 51 Pegasi. Stripping nested <planet> blocks
+// before searching fixes this at the source.
+function extractPrimaryStarBlock(xml) {
+  const match = xml.match(/<star>([\s\S]*?)<\/star>/);
+  if (!match) return null;
+  return match[1].replace(/<planet>[\s\S]*?<\/planet>/g, "");
+}
+
+// Primary star's effective temperature (K), for colouring the star map by
+// stellar class. Scoped to the primary star's own block (see
+// extractPrimaryStarBlock) — the same first-match convention the rest of
+// this script uses for name/ra/dec picks out the primary star itself.
+function extractStarTemp(xml) {
+  const starBlock = extractPrimaryStarBlock(xml);
+  if (!starBlock) return null;
+  const direct = extractTag(starBlock, "temperature");
+  if (direct) {
+    const t = parseFloat(direct);
+    if (!isNaN(t) && t > 0) return t;
+  }
+  const spec = extractTag(starBlock, "spectraltype");
+  if (spec) {
+    const letter = spec.trim().toUpperCase()[0];
+    if (SPECTRAL_TEMP[letter]) return SPECTRAL_TEMP[letter];
+  }
+  return null;
 }
 
 async function main() {
@@ -102,6 +144,7 @@ async function main() {
     const z = distance * Math.sin(decRad);
 
     const planetCount = countTag(xml, "planet");
+    const starTemp = extractStarTemp(xml);
 
     index.push({
       name: name || basename,
@@ -109,6 +152,7 @@ async function main() {
       x, y, z,
       distance,
       planetCount,
+      ...(starTemp ? { starTemp } : {}),
     });
   }
 

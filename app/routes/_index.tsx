@@ -60,9 +60,9 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
         boxShadow: "0 30px 80px -20px rgba(0,0,0,.75), 0 8px 24px -8px rgba(0,0,0,.6)",
       }}
     >
-      {/* ── left: text ── */}
+      {/* ── left: text ── (order-2 on mobile: the planet art shows first) */}
       <div
-        className="relative z-10 flex flex-col gap-5 p-6 sm:p-10"
+        className="relative z-10 order-2 flex flex-col gap-5 p-6 sm:p-10 lg:order-none"
       >
         {/* eyebrow */}
         <div className="flex items-center gap-2.5" style={{ color: "oklch(0.58 0.01 240)" }}>
@@ -161,10 +161,12 @@ function FeaturedCard({ system }: { system: CatalogueSystem }) {
       </div>
 
       {/* ── right: planet art ──
-          On mobile the panel stacks below the text and needs its own height;
-          from lg up the grid row height governs it. */}
+          On mobile the panel stacks above the text (order-1) and needs its
+          own height; from lg up it's the second grid column and the row
+          height governs it (order-none restores natural DOM order: text
+          left, planet right). */}
       <div
-        className="relative flex items-center justify-center overflow-hidden min-h-[300px] sm:min-h-[380px] lg:min-h-0"
+        className="relative order-1 flex items-center justify-center overflow-hidden min-h-[300px] sm:min-h-[380px] lg:order-none lg:min-h-0"
         style={{
           background: "#000",
         }}
@@ -542,9 +544,8 @@ export default function Index() {
         {/* ── TOOLBAR ── */}
         <section
           aria-label="Filter and sort"
-          className="sticky flex flex-wrap items-center gap-3 px-5 sm:px-8 md:px-12 py-5"
+          className="sticky top-[57px] md:top-[73px] flex flex-wrap items-center gap-3 px-5 sm:px-8 md:px-12 py-5"
           style={{
-            top: 73,
             zIndex: 40,
             background: "oklch(0.1 0.01 260 / 0.3)",
             backdropFilter: "blur(10px)",
@@ -554,11 +555,9 @@ export default function Index() {
             boxShadow: "0 -40px 70px -10px rgba(0,0,0,0.85)",
           }}
         >
-          {/* chips — single scrollable row on mobile, wrapping from md up */}
-          <div
-            className="flex flex-1 gap-1 flex-nowrap overflow-x-auto md:flex-wrap md:overflow-visible"
-            style={{ scrollbarWidth: "none" }}
-          >
+          {/* chips — wrapping row from md up; collapsed to a "Filter"
+              dropdown below md, matching the Sort select beside it */}
+          <div className="hidden flex-1 flex-wrap gap-1 md:flex">
             {(["all", ...FILTER_TAGS.filter((t) => t !== "all")] as const).map((tag) => {
               const isActive = tag === "all" ? activeFilter === null : activeFilter === tag;
               return (
@@ -585,6 +584,26 @@ export default function Index() {
               );
             })}
           </div>
+
+          <select
+            value={activeFilter ?? "all"}
+            onChange={(e) => setActiveFilter(e.target.value === "all" ? null : e.target.value)}
+            aria-label="Filter systems"
+            className="flex-1 cursor-pointer bg-transparent md:hidden"
+            style={{
+              fontFamily: "var(--font-mono, monospace)",
+              fontSize: 11.5,
+              letterSpacing: "0.08em",
+              color: "oklch(0.58 0.01 240)",
+              textTransform: "uppercase",
+            }}
+          >
+            {(["all", ...FILTER_TAGS.filter((t) => t !== "all")] as const).map((tag) => (
+              <option key={tag} value={tag} style={{ background: "hsl(var(--card))" }}>
+                Filter: {tag === "all" ? "All" : tag}
+              </option>
+            ))}
+          </select>
 
           {/* sort */}
           <select

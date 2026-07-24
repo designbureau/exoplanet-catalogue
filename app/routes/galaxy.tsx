@@ -4,6 +4,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { CameraControls, Html } from "@react-three/drei";
 import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import * as THREE from "three";
+import chroma from "chroma-js";
 import {
   getSystemPositions,
   type SystemPosition,
@@ -31,15 +32,41 @@ export const loader = async () => {
 // Most systems are within ~2000 pc; we'll use 1 pc = 1 scene unit
 const SCALE = 1;
 
+// Fallback colour for the ~8% of systems with no resolvable primary-star
+// temperature (no direct value and no spectral type in the record).
+const UNKNOWN_TEMP_COLOR = { r: 0.55, g: 0.55, b: 0.6 };
+
+// Star-map point colour from the primary star's effective temperature, built
+// on the same chroma-js blackbody curve the star shader itself uses
+// (starShader.ts's tempToGlowColor). The raw blackbody RGB is true to
+// physics but, across the actual catalogue (57% of resolved stars are
+// 5200–7500K, i.e. near-white F/G types), reads as barely-distinguishable
+// off-white at a few pixels across. We boost chroma *multiplicatively* in
+// LCH space — scaling each colour's existing saturation rather than adding a
+// fixed amount — so a genuinely near-white star (chroma ≈ 0, ~6500K) stays
+// white rather than picking up an arbitrary hue from numerical noise (the
+// failure mode of a flat chroma.saturate(), which invents a random tint
+// exactly at the whitest point), while the cooler/hotter majority (M, K, and
+// A/B stars) separate into clearly warm or cool hues.
+function starTempColor(temp: number | undefined): { r: number; g: number; b: number } {
+  if (!temp) return UNKNOWN_TEMP_COLOR;
+  const [l, c, h] = chroma.temperature(temp).lch();
+  const boosted = chroma.lch(l, Math.min(c * 2.8, 70), h);
+  const [r, g, b] = boosted.gl();
+  return { r, g, b };
+}
+
 function StarField({
   systems,
   onSelect,
   onHover,
+  onHoverPos,
   onDoubleClick,
 }: {
   systems: SystemPosition[];
   onSelect: (system: SystemPosition | null) => void;
   onHover: (system: SystemPosition | null) => void;
+  onHoverPos: (pos: { x: number; y: number } | null) => void;
   onDoubleClick: (system: SystemPosition) => void;
 }) {
   const pointsRef = useRef<THREE.Points>(null);
@@ -55,20 +82,10 @@ function StarField({
       positions[i * 3 + 1] = systems[i].z * SCALE;
       positions[i * 3 + 2] = systems[i].y * SCALE;
 
-      const pc = systems[i].planetCount;
-      if (pc === 0) {
-        colorArray[i * 3] = 0.6;
-        colorArray[i * 3 + 1] = 0.6;
-        colorArray[i * 3 + 2] = 0.7;
-      } else if (pc <= 3) {
-        colorArray[i * 3] = 0.2;
-        colorArray[i * 3 + 1] = 0.8;
-        colorArray[i * 3 + 2] = 0.9;
-      } else {
-        colorArray[i * 3] = 1.0;
-        colorArray[i * 3 + 1] = 0.85;
-        colorArray[i * 3 + 2] = 0.2;
-      }
+      const { r, g, b } = starTempColor(systems[i].starTemp);
+      colorArray[i * 3] = r;
+      colorArray[i * 3 + 1] = g;
+      colorArray[i * 3 + 2] = b;
     }
 
     const geo = new THREE.BufferGeometry();
@@ -126,8 +143,9 @@ function StarField({
       const system = raycastNearest();
       document.body.style.cursor = system ? "pointer" : "default";
       onHover(system);
+      onHoverPos(system ? { x: e.clientX, y: e.clientY } : null);
     },
-    [raycastNearest, onHover]
+    [raycastNearest, onHover, onHoverPos]
   );
 
   return (
@@ -141,6 +159,7 @@ function StarField({
       onPointerLeave={() => {
         document.body.style.cursor = "default";
         onHover(null);
+        onHoverPos(null);
       }}
     >
       <shaderMaterial
@@ -171,7 +190,10 @@ function StarField({
             if (d > 1.0) discard;
             float alpha = 1.0 - d * d; // soft falloff
             float core = smoothstep(0.5, 0.0, d); // bright centre
-            vec3 col = vColor + vec3(0.3) * core; // whiter in centre
+            // Multiplicative brighten (not += white): scales each channel by
+            // its own colour, so a saturated point stays saturated at its
+            // brightest instead of washing toward grey/white at the centre.
+            vec3 col = vColor * (1.0 + core * 0.6);
             gl_FragColor = vec4(col, alpha * 0.85);
           }
         `}
@@ -191,11 +213,19 @@ function SelectionMarker({ system }: { system: SystemPosition }) {
   const glowRef = useRef<THREE.Sprite>(null);
   const scaleRef = useRef(0);
 
-  const temp = 5800;
+  // The rendered star's own temperature, not a fixed Sun-like stand-in — an
+  // M dwarf selection should render as the same warm sphere the system
+  // viewer would show it as. Falls back to a Sun-like 5778K for the ~8% of
+  // systems with no resolvable temperature (this component doesn't have a
+  // neutral-grey option the way a flat point colour does).
+  const temp = system.starTemp ?? 5778;
+  // SelectionMarker isn't remounted between selections (no key change), so
+  // the memo must depend on `temp` — otherwise the first-selected star's
+  // material is reused for every later selection regardless of its own class.
   const { starMat, glowMat } = useMemo(() => ({
     starMat: createStarMaterial({ temperature: temp }),
     glowMat: createStarGlowMaterial({ temperature: temp }),
-  }), []);
+  }), [temp]);
 
   // Reset scale on system change
   useEffect(() => {
@@ -490,8 +520,12 @@ function ConstellationLines({ visible }: { visible: boolean }) {
 function GalacticReference({ onSolClick }: { onSolClick: () => void }) {
   return (
     <group>
-      {/* Sol label — clicking selects Sol as a system */}
-      <Html position={[0, 3, 0]} center>
+      {/* Sol label — clicking selects Sol as a system.
+          zIndexRange pins this to z-index 0 (matches the constellation
+          labels above); without it drei's default range paints the label
+          over the fixed selected-system panel (z-10) and the header search
+          overlay regardless of DOM order. */}
+      <Html position={[0, 3, 0]} center zIndexRange={[0, 0]}>
         <div
           role="button"
           onClick={(e) => {
@@ -535,6 +569,7 @@ export default function GalaxyMap() {
   const { systems, xmlFiles } = useLoaderData<{ systems: SystemPosition[]; xmlFiles: string[] }>();
   const [selected, setSelected] = useState<SystemPosition | null>(null);
   const [hovered, setHovered] = useState<SystemPosition | null>(null);
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
   const [flyTarget, setFlyTarget] = useState<SystemPosition | null>(null);
   const [galaxyParams, setGalaxyParams] = useState<MilkyWayParams>(defaultParams);
   const [galaxyScale, setGalaxyScale] = useState(6);
@@ -594,19 +629,36 @@ export default function GalaxyMap() {
         </button>
       </div>
 
-      {/* Legend */}
+      {/* Legend — points are coloured by the primary star's blackbody
+          temperature (starTempColor), so the swatches below are drawn from
+          the same scale rather than fixed per-class hexes. */}
       <div className="fixed bottom-2 left-2 z-10 flex flex-col gap-1 rounded-md bg-black/60 px-3 py-2 text-[10px] text-muted-foreground backdrop-blur-sm">
-        <div className="flex items-center gap-2">
-          <span className="inline-block h-2 w-2 rounded-full" style={{ background: "rgb(153,153,179)" }} />
-          No known planets
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="inline-block h-2 w-2 rounded-full" style={{ background: "rgb(51,204,230)" }} />
-          1-3 planets
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="inline-block h-2 w-2 rounded-full" style={{ background: "rgb(255,217,51)" }} />
-          4+ planets
+        <div className="mb-0.5 text-muted-foreground/70">Star class</div>
+        {([
+          ["M", 3000],
+          ["K", 4500],
+          ["G", 5500],
+          ["F", 6500],
+          ["A", 8000],
+          ["B/O", 20000],
+        ] as const).map(([label, temp]) => {
+          const { r, g, b } = starTempColor(temp);
+          return (
+            <div key={label} className="flex items-center gap-2">
+              <span
+                className="inline-block h-2 w-2 rounded-full"
+                style={{ background: `rgb(${r * 255}, ${g * 255}, ${b * 255})` }}
+              />
+              {label}
+            </div>
+          );
+        })}
+        <div className="mt-1 flex items-center gap-2 border-t border-white/10 pt-1">
+          <span
+            className="inline-block h-2 w-2 rounded-full"
+            style={{ background: `rgb(${UNKNOWN_TEMP_COLOR.r * 255}, ${UNKNOWN_TEMP_COLOR.g * 255}, ${UNKNOWN_TEMP_COLOR.b * 255})` }}
+          />
+          Unknown
         </div>
       </div>
 
@@ -679,9 +731,13 @@ export default function GalaxyMap() {
         ))}
       </div>}
 
-      {/* Hover tooltip */}
-      {hovered && !selected && (
-        <div className="fixed top-20 right-2 z-10 rounded-md bg-black/60 px-3 py-2 backdrop-blur-sm pointer-events-none">
+      {/* Hover tooltip — follows the cursor so the name reads as attached to
+          the star under the pointer, rather than a detached corner panel. */}
+      {hovered && hoverPos && !selected && (
+        <div
+          className="fixed z-10 rounded-md bg-black/70 px-3 py-2 backdrop-blur-sm pointer-events-none"
+          style={{ left: hoverPos.x + 16, top: hoverPos.y + 16 }}
+        >
           <p className="text-xs font-medium text-foreground">{hovered.name}</p>
           <p className="text-[10px] text-muted-foreground">
             {hovered.distance.toFixed(1)} pc &middot; {hovered.planetCount} planet{hovered.planetCount !== 1 ? "s" : ""}
@@ -723,12 +779,13 @@ export default function GalaxyMap() {
           systems={systems}
           onSelect={handleSelect}
           onHover={setHovered}
+          onHoverPos={setHoverPos}
           onDoubleClick={handleDoubleClick}
         />
         <CameraFlyTo target={flyTarget} controlsRef={controlsRef} />
         <ConstellationLines visible={showZodiac} />
         <GalacticReference onSolClick={() => {
-          const sol = { name: "Solar System", filename: "Sun", x: 0, y: 0, z: 0, distance: 0, planetCount: 8 };
+          const sol = { name: "Solar System", filename: "Sun", x: 0, y: 0, z: 0, distance: 0, planetCount: 8, starTemp: 5778 };
           setSelected(sol);
           setFlyTarget(sol);
         }} />

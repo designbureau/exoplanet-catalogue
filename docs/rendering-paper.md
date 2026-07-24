@@ -91,7 +91,7 @@ and does not know.
    appearance is a pure, reproducible function of the record.
 3. **The speculation gradient**: a four-tier grading (measured, derived,
    theory-guided, fictive) applied to every class of visual decision the
-   system makes, offered as a reusable honesty framework for scientific
+   system makes, offered as a reusable disclosure framework for scientific
    visualisation beyond this project.
 4. **A statement of the ceiling**, plausibility rather than prediction,
    together with the audit design that would test whether the plausibility
@@ -172,6 +172,8 @@ substellar point, pack ice and floes toward the terminator, a solid cap on the
 far side) and its locked lava world (molten dayside pool, graduated to a dark
 frozen crust) are direct visual transcriptions of that literature.
 
+![Figure 1. TRAPPIST-1 f rendered as a tidally locked ice-ocean eyeball: dark open ocean on the star-facing hemisphere, Voronoi-cracked pack ice consolidating toward the night side. Classification from the recorded record (rocky size, habitable-zone cold edge, locked); every surface feature is seeded noise.](/paper-figures/eyeball-world.png)
+
 ### 2.3 Within-type positioning
 
 Classification is not the end of the data's influence. Temperate worlds are
@@ -214,16 +216,22 @@ approximate blackbody colour continuously from M-dwarf orange to O-star blue.
 
 Seven fragment programs cover the sixteen types.
 
-**Gas giants** advect their noise field with a latitude-dependent Coriolis
-rotation (fast equator, slow poles), lay banding as a sine of warped latitude
-whose frequency is a per-type uniform, seed a handful of anticyclonic storm
-vortices with compressed, cubic-falloff eyes, roughen band boundaries with
-edge turbulence, and darken poles and storm cores. Class V giants add thermal
+![Figure 2. Eight featured planets as the pipeline classifies and renders them from their catalogue records: an ice-ocean eyeball, two temperate worlds, Sudarsky Class IV and V hot Jupiters, a frozen pulsar planet, a Class II water-cloud giant, and a lava eyeball.](/paper-figures/planet-plate.png)
+
+#### Gas giants
+
+The giant program advects its noise field with a latitude-dependent Coriolis
+rotation (fast equator, slow poles), lays banding as a sine of warped latitude
+whose frequency is a per-type uniform, seeds a handful of anticyclonic storm
+vortices with compressed, cubic-falloff eyes, roughens band boundaries with
+edge turbulence, and darkens poles and storm cores. Class V giants add thermal
 emissive glow; ice giants swap to methane blues with faint banding, a
 Neptune-like dark-spot pair, and their own limb darkening.
 
-**Terrestrial worlds** build a continent function from three domain-warped fBm
-layers with an S-curve contrast push around a sea level set by
+#### Terrestrial worlds
+
+The terrestrial program builds a continent function from three domain-warped
+fBm layers with an S-curve contrast push around a sea level set by
 classification; ocean colour grades through deep, mid and shallow water with
 a coastal shelf; land is zoned by latitude and a moisture field into wet and
 arid lowlands, highlands, tundra, exposed rock and snow-capped peaks; four
@@ -232,16 +240,20 @@ micro-detail) light the relief; polar caps grow with domain-warped,
 noise-jittered edges. Ocean pixels receive a specular lobe (Blinn-style,
 exponent 32) gated by the terminator.
 
-**Locked eyeball worlds** replace latitude zoning with substellar-angle
-zoning: the ice-ocean case keeps open water under the star, then slush, then
+#### Locked eyeball worlds
+
+The locked regimes replace latitude zoning with substellar-angle zoning: the
+ice-ocean case keeps open water under the star, then slush, then
 pack ice with Voronoi crack networks (dark seawater in the cracks), then a
 solid cap on the night side; the lava case renders a molten pool graded
 through a seven-stop temperature ramp toward a dark basalt night side, with
 lava rivers along major Voronoi edges and residual-heat seams on the cold
 hemisphere.
 
-**Cloud layers** are a separate translucent sphere (radius 1.006, temperate
-and water worlds only) with four superposed systems, domain-warped cumulus
+#### Cloud layers
+
+Clouds are a separate translucent sphere (radius 1.006, temperate and water
+worlds only) with four superposed systems, domain-warped cumulus
 masses, stretched cirrus wisps, ridged frontal boundaries and fine convective
 texture, together with an ITCZ band at the equator and Hadley-like banding at
 a per-type frequency; on locked worlds the entire layer reorganises into a
@@ -249,6 +261,8 @@ logarithmic-spiral hurricane centred on the substellar point, with a cleared
 eye, feathered arms, and a convergence band at the terminator. Coverage is
 thresholded, so classification tunes cloudiness; edges are eroded by noise;
 and the layer fades out across the terminator.
+
+#### Hazy, airless and frozen worlds
 
 The remaining programs cover hazy worlds (sub-Neptunes and Venus analogues:
 thick domain-warped cloud tops, slow rotation) and airless or frozen rocky
@@ -278,22 +292,28 @@ the live viewer and in the baked thumbnails alike (companion paper, §3.7).
 
 ## 4. The speculation gradient
 
-The system's honesty claim rests on being able to say, for any visible
-feature, which kind of statement it is. We grade four tiers.
+The system's claim rests on being able to say, for any visible feature, which
+kind of statement it is. We grade four tiers.
 
-**Tier 1: measured.** Orbital period, semi-major axis, eccentricity, radius
+### Tier 1: measured
+
+Orbital period, semi-major axis, eccentricity, radius
 and/or minimum mass, stellar temperature, radius and mass, distance. These
 come from the catalogue with published uncertainties, which the renderer does
 not yet surface, a stated limitation. Visual consequences: orbital motion,
 relative sizes, star colour.
 
-**Tier 2: derived.** Bulk density, S_eff, T_eq, habitable-zone position.
+### Tier 2: derived
+
+Bulk density, S_eff, T_eq, habitable-zone position.
 Deterministic arithmetic on tier 1, inheriting its gaps: T_eq assumes zero
 albedo, and density inherits the mass–radius fallback where one input is
 missing. Visual consequences: which side of each classification threshold a
 planet falls.
 
-**Tier 3: theory-guided inference.** The planet *types* themselves. That a
+### Tier 3: theory-guided inference
+
+The planet *types* themselves. That a
 1.4 R⊕ planet at S_eff 0.9 is "temperate", that a ρ < 2 world is
 volatile-rich, that a close-in rocky planet is locked, that a 1600 K giant
 carries silicate clouds: each is a defensible reading of the literature
@@ -304,7 +324,9 @@ et al. 2016), guarantees a nonzero per-planet error rate that no threshold
 tree can remove. Visual consequences: everything categorical, ocean or lava,
 banded or blue.
 
-**Tier 4: fictive.** Continent shapes, shoreline fractality, cloud
+### Tier 4: fictive
+
+Continent shapes, shoreline fractality, cloud
 configurations, storm placements, crack networks, palette jitter. These are
 hash functions. They are *constrained* fiction, a temperate world's fiction
 drawn from Earth-like morphology, a locked world's from eyeball climate
@@ -313,8 +335,7 @@ is that tier 4 must never be adjusted per planet by hand: the moment a
 specific world's continents are art-directed, the pipeline's claim to be a
 function of the data is forfeit.
 
-Stated as a ceiling, in the terms the companion catalogue paper uses for its
-own scale compromises: the renderer offers plausibility, not prediction. It is
+Stated as a ceiling: the renderer offers plausibility, not prediction. It is
 a visual hypothesis generator whose hypotheses are typed, sourced and
 reproducible, closer to a climate-model schematic than to a photograph, and
 closer to a photograph than to a table. The appropriate reading of any
@@ -332,7 +353,9 @@ the third companion paper.
 
 ## 5. Related work
 
-**Planetary procedural generation.** The techniques are graphics-canonical:
+### Planetary procedural generation
+
+The techniques are graphics-canonical:
 gradient noise and its fBm assemblies (Perlin 1985, 2002; Musgrave et al.
 1989; Ebert et al. 2003), cellular bases (Worley 1996), GLSL noise
 implementations (McEwan et al. 2012), domain warping (Quílez). Whole-planet
@@ -346,7 +369,9 @@ use stock class imagery rather than per-record synthesis. The niche claimed
 here is narrow but real: per-record, literature-thresholded, tier-graded
 procedural appearance over a complete public catalogue.
 
-**Exoplanet characterisation.** The classification leans on the mass–radius
+### Exoplanet characterisation
+
+The classification leans on the mass–radius
 and demographics literature (Weiss & Marcy 2014; Rogers 2015; Fulton et al.
 2017; Chen & Kipping 2017; Zeng et al. 2019), the habitable-zone formulation
 of Kopparapu et al. (2013) after Kasting et al. (1993), giant-atmosphere
@@ -361,7 +386,9 @@ literature; it is a consumer with citations.
 
 Not yet run; specified for the record.
 
-**Classification audit.** Sample ~100 catalogue planets stratified across the
+### Classification audit
+
+Sample ~100 catalogue planets stratified across the
 tree's branches, including all with published characterisation (TRAPPIST-1
 b–h, GJ 1214 b, 55 Cnc e, HD 189733 b, the HR 8799 giants, known
 super-puffs); have two exoplanet researchers independently assign types from
@@ -370,14 +397,18 @@ and, the more interesting number, the cases where the *literature* contradicts
 the tree (GJ 1214 b's flat spectrum, for example, demands cloud or haze cover
 that density alone would not assign; Kreidberg et al. 2014).
 
-**Perceptual honesty.** Show readers rendered worlds with and without a
+### Perceptual honesty
+
+Show readers rendered worlds with and without a
 tier-graded legend ("measured / inferred / illustrative"); measure whether the
 legend shifts stated confidence about specific features ("does this planet
 have continents?" should move from majority-yes toward majority-unknown).
 This is the direct test of the paper's central claim, that graded speculation
 can be communicated and not merely documented.
 
-**Determinism regression.** A pixel-hash test across GPUs and drivers for a
+### Determinism regression
+
+A pixel-hash test across GPUs and drivers for a
 fixed record set, since the reproducibility claim ("same record, same world")
 is in practice bounded by floating-point and driver variance; the deviation
 should be measured, not assumed zero.
@@ -386,31 +417,43 @@ should be measured, not assumed zero.
 
 ## 7. Limitations
 
-**The tree is thresholds, not posteriors.** A planet at S_eff 1.05 renders
+### The tree is thresholds, not posteriors
+
+A planet at S_eff 1.05 renders
 Venus-like; at 1.03, temperate. Real inference would be probabilistic in the
 measurement uncertainties, which the catalogue provides and the classifier
 ignores. Rendering the *modal* world where the data straddle a boundary
 overstates confidence exactly there.
 
-**T_eq ignores albedo; the locking heuristic ignores time.** Both are
+### T_eq ignores albedo; the locking heuristic ignores time
+
+Both are
 acknowledged coarse proxies (§2.1); both gate categorical visual outcomes.
 
-**Earth-centrism of the fictive tier.** Cloud systems are Earth's (ITCZ,
+### Earth-centrism of the fictive tier
+
+Cloud systems are Earth's (ITCZ,
 Hadley bands, cyclonic spirals); temperate palettes are Earth biomes
 hue-shifted by stellar class. The fiction is drawn from a sample of one
 inhabited atmosphere, and the true morphological diversity of temperate
 exoplanets is unknowable from it.
 
-**No radiative transfer, no spectra.** Colours are palette assignments guided
+### No radiative transfer, no spectra
+
+Colours are palette assignments guided
 by the literature, not forward-modelled from atmospheres; the one planet with
 a measured colour (HD 189733 b) is matched by class, not computed.
 
-**Sparse records render with undiminished confidence.** The interface does not
+### Sparse records render with undiminished confidence
+
+The interface does not
 yet distinguish a fully characterised planet from an m sin i-only detection, a
 limitation shared with the companion paper; the "what is this picture based
 on?" affordance is the highest-priority roadmap item this analysis motivates.
 
-**The plausibility claim is untested.** Until the audit and perception studies
+### The plausibility claim is untested
+
+Until the audit and perception studies
 run (§6), "plausible" is the author's judgement with citations, not a
 measured property.
 
@@ -424,10 +467,9 @@ bridge is usually invisible. This paper has described a bridge built to be
 inspected: a classification function with stated thresholds and sources, an
 appearance function with stated machinery and seeds, and a grading that
 assigns every visible feature to measured, derived, theory-guided or fictive
-status. The construction is honest in exactly the sense the companion
-catalogue paper demands of its geometry, departures from knowledge documented
-rather than hidden, and bounded in the sense its ceiling names: plausibility,
-not prediction. No shader will tell us what TRAPPIST-1 e looks like. What a
+status. The construction is bounded in the sense its ceiling names:
+plausibility, not prediction. No shader will tell us what TRAPPIST-1 e looks
+like. What a
 shader can do, done this way, is show four thousand data points as the kinds
 of worlds the evidence permits, while keeping the receipt for every choice.
 The wider question, whether such bounded showing serves public understanding

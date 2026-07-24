@@ -10,6 +10,10 @@ export interface SystemPosition {
   z: number;
   distance: number; // parsecs
   planetCount: number;
+  /** Primary star's effective temperature (K), when resolvable at build time
+   *  (direct catalogue value, or a spectral-type fallback). Absent means the
+   *  record had neither. */
+  starTemp?: number;
 }
 
 let cachedPositions: SystemPosition[] | null = null;

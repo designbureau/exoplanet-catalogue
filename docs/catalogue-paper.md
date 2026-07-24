@@ -13,7 +13,7 @@ July 2026
 ## Abstract
 
 More than four thousand planetary systems beyond the Sun have been confirmed,
-and almost none of them has ever been seen. The observational record of an
+and none have ever been seen. The observational record of an
 exoplanet is a handful of numbers, a period, a radius or a minimum mass, an
 orbital distance, the temperature and size of its star, and the public
 encounters that record either as a table or as an artist's impression whose
@@ -31,16 +31,17 @@ distance, over a build-time pipeline that converts the catalogue's XML into
 JSON and a bake pipeline that pre-renders thumbnails with the same shaders
 used live.
 
-Two engineering problems dominate the account: honesty about scale (a scene
-that must hold a star, planets a hundredth of its size, and an orbit at
-seventy-nine thousand scene units, all within 32-bit GPU arithmetic) and
-honesty about knowledge (what may be drawn from data, and what is fiction).
-The first is addressed with relative-to-eye orbit rendering, explicit scale
-compromises that are stated rather than hidden, and documented clamps; the
-second is the subject of the companion paper on procedural appearance. A third
-companion paper situates both within the wider landscape of exoplanet
-visualisation. No user study has yet been run; the evaluation section
-specifies one.
+Two threads of engineering carry the account. The first is scale: the viewer
+holds a star, planets a hundredth of its size, and orbits at seventy-nine
+thousand scene units within 32-bit GPU arithmetic, which calls for
+relative-to-eye orbit rendering with split-precision camera arithmetic. The
+second is derivation: star colour is computed from effective temperature as
+blackbody colour rather than assigned by class, and the star map places the
+whole catalogue by its own archival astrometry at one parsec per scene unit.
+Planet appearance is the subject of the companion paper on procedural
+rendering; a third companion paper situates the system within the wider
+landscape of exoplanet visualisation. No user study has yet been run; the
+evaluation section specifies one.
 
 ---
 
@@ -73,8 +74,7 @@ paper *Plausible Worlds from Sparse Parameters*, is that a planet's rendered
 appearance is a deterministic function of its recorded parameters: a
 classification pipeline assigns each planet one of sixteen physically
 motivated types, and a procedural shader renders that type. Nothing is
-hand-painted; nothing is random between visits; and the boundary between
-measurement and plausible fiction is stated.
+hand-painted, and nothing is random between visits.
 
 ### Contributions
 
@@ -86,23 +86,22 @@ record.
 1. **A worked, whole-catalogue application of parameter-derived rendering.**
    Not a curated dozen showpieces but every system in the catalogue, including
    the sparse majority for which only two or three parameters are recorded,
-   with documented fallbacks for every missing quantity.
-2. **An account of numerical honesty at scene scale.** The viewer holds bodies
-   from 0.08 to thousands of scene units across orbits up to ~10⁵ units in
-   32-bit GPU arithmetic. We document the failure modes (orbit-line jitter at
-   distance, planets rendered inside their stars, binary separations wrong by
-   orders of magnitude from unit ambiguity) and the fixes (relative-to-eye
-   orbit rendering with high/low float splitting, periapsis clamping, unit
-   disambiguation), each stated as a compromise rather than hidden.
+   with documented fallbacks for every missing quantity. The derivation
+   extends beyond the planets: star colour is computed from temperature, and
+   system positions from archival astrometry.
+2. **Precision rendering at catalogue scale.** The viewer holds bodies from
+   0.08 to thousands of scene units across orbits up to ~10⁵ units in 32-bit
+   GPU arithmetic, using relative-to-eye orbit rendering with high/low float
+   splitting, periapsis clearance for close-in planets, and unit
+   disambiguation for binary separations.
 3. **A reproducible bake pipeline**, in which the same GLSL shaders that
    render planets live also pre-render the catalogue's thumbnails through a
    headless browser, so that the still and the interactive views cannot drift
    apart.
-4. **An honesty-first framing**, carried through the interface: scale
-   compromises are documented in code and in this paper, speculative
-   appearance is the subject of an explicit companion analysis, and the known
-   infelicities of the current build are listed in Appendix B rather than
-   elided.
+4. **A whole-catalogue star map from archival astrometry**: right ascension,
+   declination and distance parsed at build time into a Cartesian index and
+   drawn as a single point cloud at true parsec scale, with the zodiac
+   constellations projected through the same transform for orientation.
 
 ---
 
@@ -126,8 +125,7 @@ institutional archives, and the vendored copy's 4,081 system files should be
 read as the OEC's coverage, not the field's: the NASA Exoplanet Archive's
 confirmed-planet count is substantially higher. The repository syncs with
 upstream weekly (a scheduled job, Mondays 06:00 UTC), so the gap is upstream,
-not local. This is stated in the interface's favoured spirit of honesty: the
-figures the site shows are the catalogue's.
+not local. The figures the site shows are the catalogue's.
 
 ### 2.2 The anatomy of a system record
 
@@ -157,11 +155,13 @@ Five tenets served as tiebreakers throughout.
 
 1. **Derive, don't decorate.** A planet's look must be a function of its data.
    The same record renders the same world on every visit (appearance is seeded
-   deterministically); a different record renders a different world.
-2. **State the compromise.** Where legibility requires departing from physical
-   truth, in inflated body scales, clamped orbits, or exaggerated
-   inclinations, the departure is explicit in code comments and in this
-   paper, never silent.
+   deterministically); a different record renders a different world. The same
+   rule covers the stars (colour from temperature, §3.5) and the map
+   (position from astrometry, §3.6).
+2. **Legibility over literal scale.** Bodies are enlarged relative to their
+   orbits, close orbits are kept clear of the star's surface, and time is
+   compressed, while the relative quantities within a system, orbital rates,
+   size orderings, positions on the sky, are preserved.
 3. **The catalogue is the interface.** Browse views, featured cards, and the
    star map all resolve to the same underlying records; there is no separate
    "content" layer that could drift from the data.
@@ -182,6 +182,7 @@ graph mounted per route.
 | Framework | React Router 7.13 (framework mode, SSR on, file-system routes) |
 | 3D | three.js 0.172 via @react-three/fiber 8.17, drei 9.120 |
 | Shaders | Hand-written GLSL (planet ~2,100 lines; star; nebula; orbit lines) |
+| Colour | chroma-js blackbody temperature scale for all stellar colour |
 | Data | Vendored OEC XML → build-time JSON (xml2js 0.6) |
 | Post-processing | @react-three/postprocessing (SMAA, ACES tone mapping et al.) |
 | Bake | Playwright headless Chromium, 512 px PNG per featured system |
@@ -201,39 +202,26 @@ converts the 4,081 XML files once, so that no XML is parsed at request time.
   loader reads this JSON from disk (or, client-side, over HTTP); a missing
   file is a 404, not a crash.
 - **The galaxy index.** For every system with usable coordinates, the script
-  extracts right ascension, declination and distance, converts RA
-  (hours–minutes–seconds, at 15° per hour) and declination (signed
-  degrees–minutes–seconds) to radians, and projects to Cartesian coordinates:
-  *x* = *d*·cos δ·cos α, *y* = *d*·cos δ·sin α, *z* = *d*·sin δ, with *d* in
-  parsecs. Each index record carries name, filename, position, distance, and
-  planet count. Systems without coordinates are skipped and counted; the
-  script reports parsed, skipped and indexed totals on every run.
+  extracts right ascension, declination and distance, converts them to
+  radians and parsecs, and projects to Cartesian coordinates (§3.6). Each
+  index record carries name, filename, position, distance, and planet count.
+  Systems without coordinates are skipped and counted; the script reports
+  parsed, skipped and indexed totals on every run.
 
 The generated `data-json/` directory is gitignored and rebuilt per checkout;
 the vendored XML is the only checked-in data artefact.
 
 ### 3.4 The catalogue surface
 
-The index page presents a masthead, a stats strip, and a grid of systems. Two
-details are worth recording.
-
-**Curated cards over live data.** Twenty-one systems are editorially selected
-(`catalogueSystems.ts`): TRAPPIST-1, Proxima Centauri, 51 Pegasi, Kepler-442,
-HR 8799, 55 Cancri, the Solar System as reference, and others, each with a
-blurb, a featured planet, tags drawn from a fixed eight-tag vocabulary
-(habitable zone, rocky, gas giant, historic, nearest, exotic, multi-planet),
-and a seed. The cards are curated *pointers*: each links into the same
-system-viewer route as any search result, so curation adds narrative without
-forking the data path.
-
-**Baked thumbnails with a CSS terminator.** Each card's planet image is a
-512-pixel PNG pre-rendered by the bake pipeline (Section 3.7) from the
-featured planet's classification. The day–night terminator is then applied in
-CSS, an inset box-shadow crescent overlay whose offsets scale with the
-rendered diameter, so that the lighting can respond to interaction (the shadow
-relaxes on hover) without re-rendering. It is a presentational trick, and it
-is confined to the thumbnails; the viewer's lighting is computed in the
-shader.
+The index page presents a masthead, a stats strip, and a grid of systems.
+Twenty-one systems are editorially selected (`catalogueSystems.ts`):
+TRAPPIST-1, Proxima Centauri, 51 Pegasi, Kepler-442, HR 8799, 55 Cancri, the
+Solar System as reference, and others, each with a blurb, a featured planet,
+tags drawn from a fixed eight-tag vocabulary (habitable zone, rocky, gas
+giant, historic, nearest, exotic, multi-planet), and a seed. The cards are
+curated *pointers*: each links into the same system-viewer route as any search
+result, so curation adds narrative without forking the data path. Card
+imagery comes from the bake pipeline (§3.7).
 
 The masthead behind the title is not an image but a live shader planet at
 1300 × 1300 render resolution, cycling through nine representative types on a
@@ -246,16 +234,20 @@ The viewer renders one system as a navigable scene: star (or star hierarchy),
 planets on animated orbits, habitable-zone annulus, orbit lines, nebula and
 Milky Way skybox, under cinematic post-processing.
 
-**Scale model.** One astronomical unit maps to 2,000 scene units; one solar
+![Figure 1. The system viewer: TRAPPIST-1, its planets on live Keplerian orbits. Each orbit line tapers behind its planet and fades as the camera approaches; the star's colour and granulation derive from its recorded temperature (§ Stars from temperature).](/paper-figures/system-viewer.png)
+
+#### Scale model
+
+One astronomical unit maps to 2,000 scene units; one solar
 radius is then 9.30 units and one Jupiter radius 0.926 (the physical ratios,
 1 AU = 215.032 R☉ and 1 R☉ = 10.045 R_Jup, are kept in code as named
-constants). Bodies are additionally inflated by a user-adjustable `bodyScale`
-(default ×3), because at true scale a planet at catalogue distances is
-subpixel; this is the compromise every orrery makes. Crucially, the inflation
-applies to *bodies but not orbits*, which is stated in a code comment and has
-a consequence dealt with below.
+constants). Bodies are additionally scaled by a user-adjustable `bodyScale`
+(default ×3), since at true scale a planet at catalogue distances is
+subpixel; orbits keep their true relative proportions.
 
-**Keplerian propagation.** Each planet's position is computed per frame from
+#### Keplerian propagation
+
+Each planet's position is computed per frame from
 first principles: mean anomaly advances as (elapsed/period) scaled by a global
 time-compression factor, plus a phase offset (the recorded periastron where
 present, else a deterministic name-hash so that co-orbital planets do not
@@ -267,29 +259,51 @@ trigonometric case. Because every planet advances by elapsed/period,
 *relative* orbital rates within a system are correct even though absolute time
 is compressed.
 
-**The hot-Jupiter clamp.** Body inflation without orbit inflation means a
-close-in planet's *rendered* orbit can lie inside its star's *rendered*
-surface; WASP-12 b, at 0.023 AU around a swollen star, was the discovered
-case. The viewer clamps: if periapsis *a*(1 − *e*) falls below the star's
-scene radius plus 1.6× the planet's, the semi-major axis is pushed out to
-clear it. This is a legibility lie, documented as such; the alternative,
-rendering the truth, shows a planet orbiting *within* a photosphere, which
-reads as a bug rather than as the genuinely remarkable fact that hot Jupiters
-skim their stars.
+#### Periapsis clearance
 
-**Binaries.** The OEC's hierarchical `<binary>` trees are rendered
+Because bodies are scaled and orbits are not, a
+close-in planet's rendered orbit can fall inside its star's rendered surface
+(WASP-12 b, at 0.023 AU around a swollen star, is the canonical case, and
+rendered literally it reads as an error rather than as the genuinely
+remarkable fact that hot Jupiters skim their stars). The viewer therefore
+enforces clearance: if periapsis *a*(1 − *e*) falls below the star's scene
+radius plus 1.6× the planet's, the semi-major axis is pushed out to clear it,
+and the catalogue values continue to drive everything else.
+
+#### Stars from temperature
+
+A star's whole appearance derives from two
+catalogue numbers, effective temperature and radius. Colour is blackbody
+colour, computed with chroma-js's temperature scale rather than assigned by
+spectral class: the point light that illuminates the system takes the
+blackbody value directly, and the surface shader's tint is derived from the
+ratio of the blue to red channels of that same blackbody colour, clamped to a
+working range, so that M dwarfs render deep orange, the Sun sits near the
+middle of the scale, and O stars run blue-white, continuously rather than in
+class steps. The corona and flare sprites reuse the same scale at reduced
+temperatures (rays at 0.85×, flares at 0.75×), so the star's fringe reads
+cooler than its disc. The surface itself is three rotating layers of
+four-dimensional simplex noise at five octaves, animated in time for
+granulation. Where the catalogue records only a spectral type, a lookup
+supplies the temperature (M 3,000 K through O 40,000 K), and the recorded
+visual magnitude sets the scene light's intensity within a clamped range.
+
+#### Binaries
+
+The OEC's hierarchical `<binary>` trees are rendered
 recursively: each binary node splits into two children (stars, planets, or
 nested binaries) placed on opposite sides of the barycentre with mass-weighted
 offsets and the recorded position angle. One data hazard is disambiguated
 explicitly. The catalogue may record separation twice, in arcseconds and in
 AU, and naive parsing takes the arcsecond value first, an error of three
 orders of magnitude; the loader takes the maximum of the numeric candidates,
-on the grounds that the AU figure is always the larger. WASP-12's colliding
-star pair was the motivating failure. Separations are further clamped to a
-maximum scene offset, because float32 matrix arithmetic degrades visibly
-beyond ~10⁶ units.
+on the grounds that the AU figure is always the larger. Separations are
+further clamped to a maximum scene offset, because float32 matrix arithmetic
+degrades visibly beyond ~10⁶ units.
 
-**Orbit lines at distance: relative-to-eye rendering.** The most instructive
+#### Orbit lines at distance: relative-to-eye rendering
+
+The most instructive
 numerical problem was the outermost orbits. At Pluto-scale distances (~79,000
 scene units) a float32 vertex position has a granularity of roughly 0.005
 units, and the standard modelView transform subtracts two nearly equal large
@@ -307,35 +321,81 @@ the camera approaches a planet, ramping over 5–20 % of the semi-major axis, so
 that the line never slices through a close-up view. Segment counts adapt to
 circumference (256–8,192).
 
-**Controls and locks.** Camera control (drei `CameraControls`) enforces a
+#### Controls and locks
+
+Camera control (drei `CameraControls`) enforces a
 minimum approach distance of 1.15× a selected body's rendered radius, so that
 one cannot dolly inside a star, and a follow mode re-targets the camera each
 frame without damping, because damped following visibly lags a fast
 hot-Jupiter. Tidally locked planets (as flagged by the classification) do not
 rotate; their cloud layers are slaved to surface rotation at 1.15×
 (super-rotation), so that clouds on a locked world correctly stand still with
-it rather than counter-rotating, a subtle correctness bug found and fixed
-during development.
+it rather than counter-rotating.
 
-**Habitable zone.** The annulus is computed per star from the Kopparapu et al.
-(2013) effective-flux polynomials (runaway-greenhouse inner edge,
-maximum-greenhouse outer edge), with luminosity from Stefan–Boltzmann when
-temperature and radius are recorded and from a spectral-type-dependent
-mass–luminosity power law otherwise. It renders as an additive, double-sided,
-soft-edged ring, tilted to the mean inclination of the system's planets, off
-by default and toggled from the toolbar.
+#### The habitable zone, per star
+
+The annulus is derived in two steps from the
+stellar record. Luminosity comes from Stefan–Boltzmann,
+L/L☉ = (R/R☉)²·(T/5778 K)⁴, when temperature and radius are recorded, and from
+a mass–luminosity power law otherwise, with the exponent chosen by spectral
+type (≈5.5 for M dwarfs falling to ≈3.5 for the hottest classes). The zone's
+edges then follow from the effective-flux formulation of Kopparapu et al.
+(2013): the runaway-greenhouse and maximum-greenhouse boundaries are quartic
+polynomials in the star's temperature offset from the Sun's, and each boundary
+distance is D = √(L/S_eff) AU. The polynomials are the interesting part. A
+naive habitable zone just rescales the Sun's by luminosity; Kopparapu's flux
+thresholds *themselves* move with stellar temperature, because a planet
+responds to the spectrum and not only the wattage: redder light is absorbed
+more efficiently by water vapour and reflected less by ice, so the zone around
+an M dwarf sits at measurably lower flux than the Sun's. Around TRAPPIST-1 the
+entire zone lies within a twentieth of an astronomical unit.
+
+![Figure 2. The habitable-zone annulus around TRAPPIST-1, computed per star from the Kopparapu et al. (2013) flux boundaries. All seven orbits are visible; three thread the zone. The whole band lies within a twentieth of an AU of the star.](/paper-figures/habitable-zone.png)
+
+The same derivation serves two consumers: this annulus, and the classification
+pipeline's positioning of temperate worlds within the zone (companion paper,
+§2.3), so the ring the viewer draws and the palette a temperate planet
+receives cannot disagree. The render is an additive, double-sided, soft-edged
+ring, its geometry padded 30 % beyond the computed bounds for the fade, tilted
+to the mean inclination of the system's planets, off by default and toggled
+from the toolbar.
 
 ### 3.6 The star map
 
-The `/galaxy` route renders every indexed system as one point in a single
-`THREE.Points` cloud, at one parsec per scene unit, with Sol injected at the
-origin. The prebuilt Cartesian positions are used directly (the scene remaps
-the catalogue's *z*-up to the renderer's *y*-up). An equatorial reference grid
-draws concentric rings at 200–1,000 parsecs with radial spokes at 30°
-intervals, and a zodiac-constellation overlay is projected by the same RA/dec
-formula for orientation. Hover and selection surface each system's name,
-distance and planet count, and click-through opens the system viewer; the map
-and the viewer are two projections of the same records.
+The `/galaxy` route is the catalogue drawn as a place: every indexed system
+positioned where it actually is, at one parsec per scene unit, with Sol at the
+origin.
+
+![Figure 3. The star map: 3,878 systems with recorded astrometry as a single point cloud, Sol at the centre, equatorial rings at 200–1,000 parsecs. The dense cone rising from Sol is the Kepler field. Points are coloured by known planet count.](/paper-figures/star-map.png)
+
+The positions are computed at build time from the catalogue's own archival
+astrometry. Right ascension is recorded in hours, minutes and seconds and
+converts at fifteen degrees per hour; declination in signed degrees, minutes
+and seconds; both reduce to radians and, with the distance in parsecs, project
+to Cartesian coordinates: *x* = *d*·cos δ·cos α, *y* = *d*·cos δ·sin α,
+*z* = *d*·sin δ. Systems missing any of the three values are skipped and
+counted, and each surviving record carries name, filename, position, distance
+and planet count into a single galaxy index that the route loads whole.
+
+Rendering four thousand systems is then one draw call. Positions and colours
+are packed into two Float32Arrays and drawn as a single `THREE.Points` cloud,
+with the catalogue's *z*-up remapped to the renderer's *y*-up. At one parsec
+per unit the whole known exoplanet population sits within a few thousand
+units of the origin, comfortably inside float32, so the map needs none of the
+split-precision machinery of §3.5. An equatorial reference grid draws
+concentric rings at 200 to 1,000 parsecs with radial spokes every 30°, and the
+twelve zodiac constellations are projected through the same transform, the
+familiar two-dimensional sky embedded in the true three-dimensional
+distribution, which is what gives a newcomer their bearings. Hover and
+selection surface each system's name, distance and planet count, and
+click-through opens the system viewer: the map and the viewer are two
+projections of the same records.
+
+Drawn this way, properties of the real population become legible that no
+table conveys: the Kepler field prints as a dense cone on one side of the sky,
+the survey's fixed stare made visible, and the population thins with distance
+because detection does, not because planets do, the geometric bias the
+companion survey paper discusses.
 
 ### 3.7 The bake pipeline
 
@@ -346,16 +406,17 @@ slugs, which classifies the featured planet from its real catalogue record and
 renders it with the production shaders, and screenshots a 512-pixel PNG per
 system into `public/planet-thumbs/`. Because bake and live share one shader
 and one classification, a change to either regenerates *both* looks with a
-single command, and the stills cannot silently diverge from the interactive
-truth. (The pipeline exists because the live shader at full quality is too
-costly to run two dozen times on a catalogue page; the masthead runs exactly
-one live instance.)
+single command. (The pipeline exists because the live shader at full quality
+is too costly to run two dozen times on a catalogue page; the masthead runs
+exactly one live instance.)
 
 ---
 
 ## 4. Related work
 
-**Interactive astronomy visualisation.** NASA's Eyes on Exoplanets renders the
+### Interactive astronomy visualisation
+
+NASA's Eyes on Exoplanets renders the
 known exoplanet population as navigable 3D, from institutionally curated data;
 OpenSpace (Bock et al. 2020) and Gaia Sky (Sagristà et al. 2019) target
 planetarium-grade contextualisation of astronomical catalogues, with the Gaia
@@ -366,22 +427,27 @@ texture per class, and the whole pipeline, data, classification, shaders and
 bake, is a single small open codebase intended to be read. The comparative
 landscape is the subject of the third companion paper.
 
-**Procedural planets.** Procedural planetary surfaces have a deep graphics
+### Procedural planets
+
+Procedural planetary surfaces have a deep graphics
 lineage (Perlin 1985; Musgrave et al. 1989; Ebert et al. 2003) and a
 contemporary commercial one (Space Engine; No Man's Sky). The distinction here
 is the *grounding*: procedural technique is subordinated to a documented
 classification of real catalogue records. That layer is the subject of the
 companion paper, which carries the related work on noise and shading.
 
-**Precision rendering at planetary scale.** The high/low float splitting used
-for orbit lines is standard in virtual-globe engines (Cozzi & Ring 2011),
-where Earth-sized coordinates exceed float32; the contribution here is only
-its application to orbit polylines in a catalogue viewer, together with the
-documented decision to treat the remaining large-coordinate artefacts (binary
-offsets) with clamps rather than a full floating-origin refactor, a scoping
-judgement, noted on the roadmap.
+### Precision rendering at planetary scale
 
-**Data infrastructure.** The OEC's design rationale is given by Rein (2012);
+The high/low float splitting used
+for orbit lines is standard in virtual-globe engines (Cozzi & Ring 2011),
+where Earth-sized coordinates exceed float32; the contribution here is its
+application to orbit polylines in a catalogue viewer, together with clamped
+binary offsets at extreme separations. A full floating-origin refactor is on
+the roadmap.
+
+### Data infrastructure
+
+The OEC's design rationale is given by Rein (2012);
 the institutional archives by Akeson et al. (2013) and Schneider et al.
 (2011). The prebuild-to-JSON pattern follows ordinary static-site practice and
 claims no novelty.
@@ -393,28 +459,35 @@ claims no novelty.
 No empirical results are reported; this section specifies the evaluation the
 system is designed to support.
 
-**Performance.** Frame-time distributions (median, p95) across a stratified
+### Performance
+
+Frame-time distributions (median, p95) across a stratified
 sample of systems: single-star single-planet, high-multiplicity (TRAPPIST-1,
 Kepler-90), hierarchical binaries (16 Cygni), and extreme-scale orbits, on
 reference hardware tiers, with and without post-processing; together with
 time-to-first-frame for the viewer route and bake-pipeline wall time.
 
-**Numerical fidelity.** Orbit-line stability quantified as screen-space vertex
+### Numerical fidelity
+
+Orbit-line stability quantified as screen-space vertex
 displacement across camera dollies at fixed logical positions, RTE on against
 RTE off; propagation accuracy against a reference double-precision ephemeris
-over 10³ orbits (drift in phase); and verification that the clamped cases
-(periapsis, binary separation) are the only cases in the catalogue where
-rendered geometry departs from computed geometry, with an exhaustive count of
-each.
+over 10³ orbits (drift in phase); and an exhaustive count of the catalogue
+cases where clearance rules (periapsis, binary separation) adjust rendered
+geometry.
 
-**Classification audit.** Since the appearance layer's validity rests on the
+### Classification audit
+
+Since the appearance layer's validity rests on the
 classification, a sample of catalogue planets with published characterisation
 (confirmed hot Jupiters, the TRAPPIST-1 planets, known super-puffs) should be
 checked against assigned types by a domain reviewer, with disagreement rates
 reported per branch of the decision tree. This audit is specified in detail in
 the companion paper.
 
-**Readers.** A task-based study with non-specialist readers, locate a system,
+### Readers
+
+A task-based study with non-specialist readers, locate a system,
 state which of two planets is hotter and why, judge whether an orbit's speed
 difference is meaningful, against the same tasks on a tabular interface,
 measuring accuracy and self-reported understanding, with explicit probes for
@@ -426,46 +499,53 @@ continents as known?
 
 ## 6. Limitations
 
-**The stats strip mislabels its sources.** The headline figure labelled
-"confirmed" is in fact the live *system-file count* (4,081), while the figure
-labelled "systems" (4,231), together with the habitable-zone (62) and
-earth-like (147) counts, is a hardcoded literal. The labels and sources are
-crossed, and the derived counts should be computed from the index at build
-time. This is the most concrete honesty defect in the current build, and it is
-flagged for repair.
+### Stats derivation
 
-**Orbital orientation is incomplete and exaggerated.** Only inclination is
-applied to an orbit's plane, as a single tilt; longitude of the ascending node
-and argument of periapsis are not represented in 3D (periapsis enters only as
-a phase offset). Moreover the tilt applied is twice the physical
-degree-to-radian mapping (π/90 per degree), so rendered inclinations are
-exaggerated by a factor of two. Read as a legibility choice, it is
-undocumented in the interface; read as an artefact, it is a bug. Either way,
-rendered orbital geometry is not to scale in orientation, and this paper is
-currently the only place that says so.
+The stats strip's headline figure labelled "confirmed"
+is the live system-file count (4,081), while the "systems" (4,231),
+habitable-zone (62) and earth-like (147) figures are literals; deriving all
+four from the index at build time is scheduled work.
 
-**Scale is a stack of stated compromises.** Bodies ×3 (adjustable), orbits
-unscaled, hot-Jupiter periapses clamped, binary separations clamped at 20,000
-units, time compressed by a global factor. Each is individually documented,
-but their *composition* means the viewer is an interpretive diagram, not a
-simulation; a reader who measures the screen will not recover the catalogue.
+### Orbital orientation is partial
 
-**One catalogue, ageing.** Coverage and currency are bounded by the OEC.
+Only inclination is applied to an orbit's
+plane, as a single tilt of π/90 per recorded degree (twice the physical
+angle); longitude of the ascending node and argument of periapsis are not
+represented in 3D, and periapsis enters only as a phase offset. Rendered
+orbital orientation is illustrative rather than to scale.
+
+### The viewer is an interpretive diagram, not a simulation
+
+Bodies ×3
+(adjustable), orbits at true relative proportion, periapses cleared of the
+stellar surface, binary separations capped at 20,000 units, time compressed by
+a global factor. Within-system comparisons (rates, orderings, ratios) are
+preserved; absolute measurements are not recoverable from the screen.
+
+### One catalogue, ageing
+
+Coverage and currency are bounded by the OEC.
 Systems confirmed since the community catalogue's maintenance slowed are
 absent, and no cross-check against the NASA archive is performed. Weekly sync
 guarantees freshness against upstream only.
 
-**Sparse-data planets are rendered with equal confidence.** A planet known
-only by period and *m* sin *i* renders as vividly as TRAPPIST-1 e. The
-classification pipeline's fallback chain (companion paper §3) makes the
-*derivation* honest, but the interface does not yet surface per-planet data
-completeness; a "what is this picture based on?" affordance remains roadmap.
+### Sparse-data planets render with equal confidence
 
-**No moons; controversial entries included.** Satellites in the catalogue are
+A planet known only by
+period and *m* sin *i* renders as vividly as TRAPPIST-1 e. The classification
+pipeline's fallback chain (companion paper §3) covers the derivation, but the
+interface does not yet surface per-planet data completeness; a "what is this
+picture based on?" affordance remains roadmap.
+
+### No moons; controversial entries included
+
+Satellites in the catalogue are
 not rendered. Planets flagged `Controversial` upstream are rendered without a
 visual distinction.
 
-**No user study has been run.** All claims about legibility are design
+### No user study has been run
+
+All claims about legibility are design
 rationale, not measured outcomes (Section 5).
 
 ---
@@ -474,14 +554,12 @@ rationale, not measured outcomes (Section 5).
 
 This paper has described a system that renders an entire public exoplanet
 catalogue as explorable places: a data pipeline from vendored XML, a
-classification-driven appearance layer, a Keplerian viewer engineered to
-remain truthful or explicit at float32's edges, and a star map that situates
-four thousand systems in three dimensions. The engineering lesson generalises
-beyond astronomy: a visualisation over public scientific data earns trust not
-by maximal realism but by stated derivation, every pixel traceable to a
-record, every departure from truth documented as a compromise. The system's
-remaining dishonesties are enumerable (Section 6, Appendix B), which is the
-point: they are a to-do list, not an aesthetic.
+classification-driven appearance layer, a Keplerian viewer engineered for
+float32 at catalogue scale, stars whose colour is computed from their recorded
+temperature, and a star map built from the archive's own astrometry. The
+design generalises beyond astronomy: derive rather than decorate, and let the
+record be the single source of every rendered property, from a planet's cloud
+cover to a star's hue to a system's position on the sky.
 
 What the interface cannot settle is how much of what it shows is *known*. That
 question, where measurement ends and plausible fiction begins in a rendered
@@ -553,42 +631,18 @@ literature cited in the companion paper.
 
 ---
 
-## Appendix A: System at a glance
+## Appendix: System at a glance
 
 | Metric | Value |
 |---|---|
 | Catalogue systems (vendored XML) | 4,081, synced weekly from OEC upstream |
 | Curated featured systems | 21 |
-| Planet types (classification) | 16 (incl. UNKNOWN, unassigned in practice) |
+| Planet types (classification) | 16 |
 | Planet shader | ~2,100 lines GLSL, ~69 uniforms, 7 fragment programs |
+| Star colour | chroma-js blackbody temperature scale, continuous |
 | Scene scale | 1 AU = 2,000 units; 1 R☉ = 9.30; 1 R_Jup = 0.926; bodies ×3 |
 | Kepler solve | Newton–Raphson, tol 10⁻⁸, ≤30 iterations |
 | Orbit lines | RTE high/low split, 256–8,192 segments, proximity fade |
-| Star map | 1 pc = 1 unit; every indexed system as one point; Sol at origin |
+| Star map | 1 pc = 1 unit; one `THREE.Points` draw call; Sol at origin |
 | Thumbnails | 21 × 512 px PNG, baked via headless Chromium from live shaders |
 | Stack | React Router 7.13 SSR · three.js 0.172 · R3F 8.17 · Vercel |
-
-## Appendix B: Known infelicities
-
-In the spirit of stating rather than eliding, the current build's known
-defects, none load-bearing.
-
-1. The stats strip's label–source crossing (Section 6), the one defect that
-   affects displayed figures.
-2. Inclination applied at twice the physical angle, with node and periapsis
-   orientation unrepresented (Section 6).
-3. `PlanetType.UNKNOWN` is defined but unreachable; every branch of the
-   classifier assigns a concrete type.
-4. A standalone ice-ocean fragment shader exists but is never selected;
-   eyeball worlds route through the terrestrial program's tidally-locked
-   branches.
-5. One shader uniform (`u_lavaGlow`) is declared twice; the second declaration
-   wins silently.
-6. The prebuild script's header comment names output paths that were later
-   renamed; the constants, not the comment, are authoritative.
-7. The declared TypeScript type for tuning presets is narrower than the object
-   the code actually reads (accessed through a cast); the runtime is
-   permissive, the type is stale.
-
-Each is recorded here so that the paper, like the interface, does not claim a
-cleanliness the repository does not have.

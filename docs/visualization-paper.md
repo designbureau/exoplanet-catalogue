@@ -91,7 +91,9 @@ This paper is a synthesis; it reports no new system and no new measurements.
 
 Three distinctions recur and are worth fixing.
 
-**Index, illustration, simulation.** Borrowing the documentary vocabulary: an
+### Index, illustration, simulation
+
+Borrowing the documentary vocabulary: an
 *index* is causally produced by its object (a transit light curve, a
 direct-imaging point source, a phase-curve temperature map); an *illustration*
 is made by an agent to depict the object (every exoplanet surface view ever
@@ -103,7 +105,9 @@ Hubble deep fields, Apollo earthrises, were, however processed, indexical
 (Kessler 2012; Rector et al. 2007). Exoplanet imagery inherits that reading
 without the underlying causation, which is the genre's structural hazard.
 
-**The disclosure problem.** "Artist's impression" is a caption-level label on
+### The disclosure problem
+
+"Artist's impression" is a caption-level label on
 an image-level artefact. Captions detach; images circulate. Any labelling
 regime that lives outside the pixels loses to reposting, a dynamic documented
 across misinformation research generally and visible to anyone who has met
@@ -111,7 +115,9 @@ TRAPPIST-1 surface art without its caveat. Disclosure that survives
 circulation must be structural: either in the image itself, or carried by an
 interactive context the viewer cannot help but traverse.
 
-**The speculation gradient.** Companion paper 2 grades every feature of a
+### The speculation gradient
+
+Companion paper 2 grades every feature of a
 rendered planet as measured, derived, theory-guided, or fictive. The grading
 generalises to the whole genre and is used as this paper's comparative
 instrument: for each system surveyed, the question is not how good it looks
@@ -124,21 +130,27 @@ but which tiers it shows, and whether the viewer knows which is which.
 A compressed history, keyed to what existed as evidence against what was
 shown.
 
-**1992–1995: planets with no possible face.** The first confirmed exoplanets
+### 1992–1995: planets with no possible face
+
+The first confirmed exoplanets
 orbited a millisecond pulsar (Wolszczan & Frail 1992), lethal, lightless
 worlds announced essentially without imagery. 51 Peg b (Mayor & Queloz 1995)
 established the pattern that held for a decade: a wobble in a spectrum,
 communicated as a painterly gas giant. The evidence was one number-pair
 (period, m sin i); everything visible in the art was tier 4.
 
-**2000–2008: shape and colour arrive at the margins.** The first transits
+### 2000–2008: shape and colour arrive at the margins
+
+The first transits
 (Charbonneau et al. 2000) made planets geometrical: a disc's area, if never
 its face. Thermal phase mapping put one number-map on a hot Jupiter (Knutson
 et al. 2007); HR 8799 delivered the first multi-planet direct image, four
 moving points of light (Marois et al. 2008), and press imagery duly rendered
 four banded giants no instrument had resolved.
 
-**2009–2015: the statistical era.** Kepler (Borucki et al. 2010) transformed
+### 2009–2015: the statistical era
+
+Kepler (Borucki et al. 2010) transformed
 the field from specimens to demographics, thousands of candidates, the radius
 distribution, occurrence rates, and visualisation bifurcated: scatterplots for
 the population, ever-richer artist's impressions for the individuals. The
@@ -148,7 +160,9 @@ classification are products of this era; so is the Exoplanet Travel Bureau
 for knowing retro-futurist tourism, arguably the genre's most honest artefact,
 because no viewer mistakes a WPA-style poster for a photograph.
 
-**2016–2017: the nearest and the seven.** Proxima b (Anglada-Escudé et al.
+### 2016–2017: the nearest and the seven
+
+Proxima b (Anglada-Escudé et al.
 2016) and TRAPPIST-1 (Gillon et al. 2017) put temperate rocky worlds around
 the nearest stars, and produced the imagery discussed in §1, including, in
 TRAPPIST-1's case, coordinated art direction across agencies that fixed the
@@ -158,7 +172,9 @@ TRAPPIST-1 e renders as a tidally locked ice-ocean eyeball for stated,
 literature-cited reasons; companion paper 2's point stands, that this too is a
 tier-3 reading, one possible world among the permitted.
 
-**2018–present: molecules, maps, and JWST.** TESS (Ricker et al. 2015)
+### 2018–present: molecules, maps, and JWST
+
+TESS (Ricker et al. 2015)
 industrialised discovery; JWST moved characterisation from detection to
 inventory, carbon dioxide at WASP-39 b (JWST ERS Team 2023), spectra that
 distinguish clear from cloudy atmospheres (after Sing et al. 2016; Kreidberg
@@ -171,7 +187,9 @@ remains vast.
 
 ## 4. The landscape of systems
 
-**Press imagery (ESO, ESA, NASA centres).** The highest craft and the widest
+### Press imagery (ESO, ESA, NASA centres)
+
+The highest craft and the widest
 reach; scientifically advised, caption-labelled, structurally undisclosed
 (§2). Its reception is the best-studied: the aesthetics-and-astronomy line of
 research finds that imagery drives engagement, and that the public's
@@ -181,14 +199,18 @@ Rector et al. 2007 for the production ethics of observatory imagery). The
 finding transfers: what the audience needs attached to an exoplanet image is
 not more realism but more *status information*.
 
-**Institutional interactives.** NASA's Eyes on Exoplanets renders the
+### Institutional interactives
+
+NASA's Eyes on Exoplanets renders the
 confirmed population as a navigable 3D catalogue tied to the NASA Exoplanet
 Archive (Akeson et al. 2013): authoritative data, stock appearance classes,
 implicit disclosure (a viewer may infer the planets are generic; nothing says
 so). Its virtue is the tie between position in the interface and record in
 the archive, the interactive equivalent of a citation.
 
-**Open planetarium platforms.** Celestia (2001–) and Stellarium established
+### Open planetarium platforms
+
+Celestia (2001–) and Stellarium established
 open, extensible sky rendering; OpenSpace (Bock et al. 2020) and Gaia Sky
 (Sagristà et al. 2019) brought research-grade catalogue navigation,
 positional data at Gaia scale with presentation-quality contextualisation.
@@ -196,7 +218,9 @@ Their centre of gravity is *where things are*, which is also where their data
 are strongest; planetary surfaces are textures, out of scope and mostly
 treated as such.
 
-**Procedural universes.** Space Engine renders a seamless universe,
+### Procedural universes
+
+Space Engine renders a seamless universe,
 procedurally extending real catalogues into the unmeasured; No Man's Sky
 (2016) generates worlds without any observational referent. Both demonstrate
 the aesthetic power of the technique the companion project borrows, and both,
@@ -205,9 +229,11 @@ real catalogued star and a procedural filler star present identically. As
 science communication they are cautionary in precisely the dimension in which
 they are triumphant as experiences.
 
-**Parameter-derived rendering (the companion project).** Every planet's
-appearance a documented function of its record; every scale compromise
-stated; the speculation gradient articulated. Its weaknesses are the mirror
+### Parameter-derived rendering (the companion project)
+
+Every planet's
+appearance a documented function of its record, with the speculation gradient
+articulated feature by feature. Its weaknesses are the mirror
 of its commitments: no artist rescues an ugly or misleading procedural
 outcome, the disclosure currently lives in papers rather than in the
 interface, and its catalogue (the OEC) is community-maintained and ageing
@@ -233,7 +259,9 @@ The comparison, compressed:
 Read against the reception research and the landscape, four capabilities are
 real and distinguishable.
 
-**Orientation.** Interactive 3D genuinely communicates configuration: that
+### Orientation
+
+Interactive 3D genuinely communicates configuration: that
 TRAPPIST-1's system would fit inside Mercury's orbit; that hot Jupiters skim
 their stars; what a resonant chain looks like in motion. These are tier 1–2
 facts, measured periods and derived geometry, the medium's home ground, and
@@ -241,20 +269,26 @@ no static image or table communicates them as directly. The companion
 viewer's engineering (Keplerian propagation, true relative rates) spends its
 effort exactly here, deliberately.
 
-**Instantiation.** A rendered world makes a category graspable: "tidally
+### Instantiation
+
+A rendered world makes a category graspable: "tidally
 locked ice-ocean eyeball" is a phrase until one orbits it. The risk, that
 instantiation is read as portrait, and the mitigation, graded disclosure, are
 the subject of companion paper 2; the capability itself is genuine, and it is
 why the genre exists.
 
-**Scaffolded engagement.** The reception literature's consistent finding:
+### Scaffolded engagement
+
+The reception literature's consistent finding:
 imagery recruits attention and interest across expertise levels, and
 understanding follows when explanation is attached (Smith et al. 2011). An
 interface that makes the explanation load-bearing, click the planet, see the
 record, the picture as the door to the data, converts the genre's hazard into
 its pedagogy.
 
-**Honest fiction, reproducibly.** A deterministic procedural pipeline makes
+### Honest fiction, reproducibly
+
+A deterministic procedural pipeline makes
 illustration criticisable in a way one-off art is not: the same record
 renders the same world for every viewer, the mapping is versioned code, and a
 domain expert can audit the function rather than debate a painting. This is a
@@ -263,19 +297,25 @@ companion project's central offer to the genre.
 
 ## 6. What visualisation cannot do
 
-**It cannot close the appearance gap.** Nothing renderable today is a
+### It cannot close the appearance gap
+
+Nothing renderable today is a
 prediction of any specific planet's face, and, outside a future of resolved
 imaging that no funded instrument promises, nothing will make it one. The
 ceiling of companion paper 2, plausibility rather than prediction, is the
 genre's ceiling, not one project's.
 
-**It cannot label itself into viewers' memories.** Structural disclosure
+### It cannot label itself into viewers' memories
+
+Structural disclosure
 improves on captions, but the reception research gives no licence for the
 belief that any regime makes speculation-status *stick* once images leave the
 interface. Screenshots strip context as surely as reposts strip captions. The
 honest statement is harm reduction, not solution.
 
-**It cannot substitute for the evidence's own form.** The deepest
+### It cannot substitute for the evidence's own form
+
+The deepest
 understanding of the field's epistemics is understanding what a light curve
 and a spectrum *are*: that we know these worlds as shadows and wobbles. A
 visualisation that only shows worlds, however scrupulously graded, teaches
@@ -287,7 +327,9 @@ the plausible world and the real measurement are one click apart. The
 companion project does not yet do this either; it is the roadmap item this
 paper exists to motivate.
 
-**It cannot outrun its catalogue.** Every honest visualisation inherits its
+### It cannot outrun its catalogue
+
+Every honest visualisation inherits its
 database's coverage, currency and biases; the transit surveys' geometric bias
 toward close-in planets skews any rendered population toward the very worlds,
 hot, locked, extreme, that look least like home. Companion paper 1's
@@ -308,10 +350,10 @@ compresses to four transferable disciplines.
 3. **Prefer deterministic, versioned invention** where invention is
    necessary: reproducible fiction can be audited, diffed and corrected;
    inspired fiction can only be replaced.
-4. **State the compromises where they happen.** Scale lies, clamps and
-   exaggerations belong in code comments, in the interface, and in papers
-   like these, because a documented distortion is a teaching moment and an
-   undocumented one is a small fraud.
+4. **Record the projection.** Scale factors, clamps and exaggerations are part
+   of any legible model of astronomical space; keeping them explicit, in code
+   and in the interface, makes the model reproducible and the distortion
+   teachable.
 
 And one deflationary through-line, the analogue of every honest survey's
 conclusion: the decisive factor is not the rendering technology. It is
@@ -327,9 +369,9 @@ remain among the most pictured objects in science. That combination is not a
 problem to be solved but a condition to be managed, and the survey's finding
 is that it is managed well or badly along one axis above all: disclosure. The
 companion project's wager, a whole public catalogue rendered as worlds, every
-world a documented function of its record, every distortion stated, at the
-cost of an interface that must eventually carry its own epistemics, is one
-way to manage it honestly. The genre's history suggests the images will
+world a documented function of its record, with an interface that must
+eventually carry its own epistemics, is one way to manage it. The genre's
+history suggests the images will
 travel either way. What a builder controls is whether, when an image is
 traced back to its source, the source can show its receipts. The two
 companion papers are this project's receipts.
