@@ -18,6 +18,16 @@ const ARM_START_RADIUS = BAR_HALF_LENGTH; // arms start at bar ends
 const ARM_STRENGTHS = [1.0, 0.7, 1.0, 0.7];
 const SECONDARY_START_RADIUS = 4800;
 
+// Shared GLSL chunks: fade each decorative particle out as the camera nears
+// it, so zooming in on a real catalogued system clears the Milky Way
+// backdrop out of the immediate view rather than leaving it to occlude the
+// data. `cameraPosition` is three.js's built-in per-frame world-space camera
+// uniform (auto-injected into every ShaderMaterial) — no manual useFrame
+// wiring needed. The group these points render in has no transform, so the
+// raw `position` attribute is already world space.
+const CAM_FADE_VARYING = `varying float vCamFade;`;
+const CAM_FADE_ASSIGN = `vCamFade = smoothstep(15.0, 140.0, distance(position, cameraPosition));`;
+
 const PARTICLES_PER_ARM = 30000;
 const BULGE_PARTICLES = 12000;
 const BAR_PARTICLES = 8000;
@@ -273,22 +283,25 @@ export default function MilkyWay({ sunPosition, scale = 1, params = defaultParam
       vertexShader: `
         attribute float size;
         varying vec3 vColor;
+        ${CAM_FADE_VARYING}
         void main() {
           vColor = color;
           vec4 mvp = modelViewMatrix * vec4(position, 1.0);
           gl_PointSize = size * 300.0 / -mvp.z;
           gl_PointSize = clamp(gl_PointSize, 1.0, 8.0);
+          ${CAM_FADE_ASSIGN}
           gl_Position = projectionMatrix * mvp;
         }
       `,
       fragmentShader: `
         varying vec3 vColor;
+        ${CAM_FADE_VARYING}
         void main() {
           float d = length(gl_PointCoord - vec2(0.5)) * 2.0;
           if (d > 1.0) discard;
           // Bright core with soft halo
           float core = smoothstep(1.0, 0.15, d);
-          gl_FragColor = vec4(vColor, core * 0.75);
+          gl_FragColor = vec4(vColor, core * 0.75 * vCamFade);
         }
       `,
       transparent: true,
@@ -510,19 +523,22 @@ export default function MilkyWay({ sunPosition, scale = 1, params = defaultParam
             vertexShader={`
               attribute float size;
               varying vec3 vColor;
+              ${CAM_FADE_VARYING}
               void main() {
                 vColor = color;
                 vec4 mvp = modelViewMatrix * vec4(position, 1.0);
                 gl_PointSize = clamp(size * 300.0 / -mvp.z, 1.0, 128.0);
+                ${CAM_FADE_ASSIGN}
                 gl_Position = projectionMatrix * mvp;
               }
             `}
             fragmentShader={`
               varying vec3 vColor;
+              ${CAM_FADE_VARYING}
               void main() {
                 float d = length(gl_PointCoord - vec2(0.5)) * 2.0;
                 if (d > 1.0) discard;
-                float alpha = pow(1.0 - d, 2.5) * 0.2;
+                float alpha = pow(1.0 - d, 2.5) * 0.2 * vCamFade;
                 gl_FragColor = vec4(vColor, alpha);
               }
             `}
@@ -546,19 +562,22 @@ export default function MilkyWay({ sunPosition, scale = 1, params = defaultParam
             vertexShader={`
               attribute float size;
               varying vec3 vColor;
+              ${CAM_FADE_VARYING}
               void main() {
                 vColor = color;
                 vec4 mvp = modelViewMatrix * vec4(position, 1.0);
                 gl_PointSize = clamp(size * 300.0 / -mvp.z, 1.0, 256.0);
+                ${CAM_FADE_ASSIGN}
                 gl_Position = projectionMatrix * mvp;
               }
             `}
             fragmentShader={`
               varying vec3 vColor;
+              ${CAM_FADE_VARYING}
               void main() {
                 float d = length(gl_PointCoord - vec2(0.5)) * 2.0;
                 if (d > 1.0) discard;
-                float alpha = exp(-d * d * 2.0) * 0.12;
+                float alpha = exp(-d * d * 2.0) * 0.12 * vCamFade;
                 gl_FragColor = vec4(vColor, alpha);
               }
             `}
@@ -581,18 +600,21 @@ export default function MilkyWay({ sunPosition, scale = 1, params = defaultParam
             uniforms={{ uOpacity: { value: params.dustOpacity } }}
             vertexShader={`
               attribute float size;
+              ${CAM_FADE_VARYING}
               void main() {
                 vec4 mvp = modelViewMatrix * vec4(position, 1.0);
                 gl_PointSize = clamp(size * 300.0 / -mvp.z, 1.0, 128.0);
+                ${CAM_FADE_ASSIGN}
                 gl_Position = projectionMatrix * mvp;
               }
             `}
             fragmentShader={`
               uniform float uOpacity;
+              ${CAM_FADE_VARYING}
               void main() {
                 float d = length(gl_PointCoord - vec2(0.5)) * 2.0;
                 if (d > 1.0) discard;
-                float alpha = pow(1.0 - d, 1.5) * 0.4 * uOpacity;
+                float alpha = pow(1.0 - d, 1.5) * 0.4 * uOpacity * vCamFade;
                 gl_FragColor = vec4(0.0, 0.0, 0.0, alpha);
               }
             `}
