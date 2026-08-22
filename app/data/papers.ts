@@ -23,7 +23,7 @@ export const papers: Paper[] = [
   {
     slug: "catalogue",
     number: "01",
-    title: "A Catalogue of Alien Worlds",
+    title: "A catalogue of alien worlds",
     subtitle:
       "A procedural-visualisation interface to the Open Exoplanet Catalogue",
     register: "System description",
@@ -35,7 +35,7 @@ export const papers: Paper[] = [
   {
     slug: "rendering",
     number: "02",
-    title: "Plausible Worlds from Sparse Parameters",
+    title: "Plausible worlds from sparse parameters",
     subtitle:
       "Procedural appearance synthesis for planets no one has seen, and where measurement ends and fiction begins",
     register: "Method description and epistemic bounds",
@@ -47,7 +47,7 @@ export const papers: Paper[] = [
   {
     slug: "visualization",
     number: "03",
-    title: "From Data Point to Destination",
+    title: "From data point to destination",
     subtitle:
       "What visualisation can and cannot do for the public understanding of exoplanets",
     register: "Survey and synthesis",

@@ -1,4 +1,4 @@
-# Plausible Worlds from Sparse Parameters
+# Plausible worlds from sparse parameters
 
 ### Procedural appearance synthesis for planets no one has seen, and where measurement ends and fiction begins
 
@@ -12,34 +12,26 @@ July 2026
 
 ## Abstract
 
-No exoplanet has ever been resolved as more than a point of light. What is
-known about any of them is a short vector of numbers: orbital period,
-semi-major axis, eccentricity, radius and/or minimum mass, and the host star's
-temperature, radius and mass. Yet the public image of the field is one of
-*worlds*, oceans, cloudscapes, lava plains. Someone paints those pictures, and
-the relationship between the paint and the numbers is usually undisclosed.
+No exoplanet has ever been resolved as more than a point of light. For most of
+them, we have a short vector of numbers: orbital period, semi-major axis,
+eccentricity, radius or minimum mass, and some properties of the host star. The
+public still meets them as *worlds* with oceans, clouds and lava plains. The
+connection between those pictures and the measurements is rarely clear.
 
-This paper describes, and then deliberately bounds, a system that makes that
-relationship explicit. A classification pipeline maps each catalogue record to
-one of sixteen physically motivated planet types through a documented decision
-tree grounded in the characterisation literature: the Fulton radius gap
-separates rocky worlds from sub-Neptunes, bulk density separates water worlds
-from rock, the Kopparapu habitable-zone flux polynomials position temperate
-worlds between Mars-like and Venus-like end states, Sudarsky's classes colour
-the giants, and a spectral-type-dependent heuristic flags tidal locking,
-yielding the distinctive "eyeball" regimes of locked ice-ocean and lava
-worlds. A procedural shader layer (~2,100 lines of GLSL, ~69 uniforms) then
-renders each type from seeded noise: Perlin fractional Brownian motion, ridged
-and cellular variants, and domain warping, under a wrap-diffuse lighting model
-with a fresnel-mixed atmosphere approximation.
+I built that connection as an explicit function. A documented decision tree
+maps each catalogue record to one of sixteen physically motivated planet types.
+It uses the Fulton radius gap, bulk density, the Kopparapu habitable-zone flux
+polynomials, Sudarsky's giant classes and a spectral-type-dependent tidal
+locking heuristic. About 2,100 lines of GLSL, using roughly 69 uniforms, render
+the resulting type from seeded procedural noise under a simplified lighting
+and atmosphere model.
 
-The paper's second half grades every visual decision on a four-tier
-*speculation gradient*, measured, derived, theory-guided, fictive, and states
-the ceiling plainly: the output is plausibility, not prediction. A rendered
-continent is fiction constrained by physics; its shoreline is a hash function.
-We argue that this parameterised, deterministic, auditable fiction is an
-honest middle path between data-blind illustration and data-only tables, and
-we specify the audit that would test it.
+Every visual decision then receives one of four grades: measured, derived,
+theory-guided or fictive. The ceiling is plausibility. This is not a prediction
+of what any planet looks like. A rendered continent may be constrained by
+physics, but its shoreline is a hash function. The value of the method is that
+its fiction is deterministic, parameterised and open to audit. I also set out
+the audit that would test whether the word "plausible" is deserved.
 
 ---
 
@@ -47,8 +39,7 @@ we specify the audit that would test it.
 
 ### 1.1 The epistemic situation
 
-It is worth being precise about how little seeing has occurred in exoplanet
-science, because the whole design follows from it. The overwhelming majority
+Very little direct seeing has happened in exoplanet science. The overwhelming majority
 of confirmed planets were detected by transit photometry (a periodic
 fractional dimming of the host star, yielding a radius ratio) or radial
 velocity (a periodic Doppler shift, yielding a minimum mass); in both cases
@@ -71,33 +62,29 @@ sparse: a colour for one planet, a one-dimensional temperature map for a few
 dozen, molecular inventories for perhaps a hundred, and for the thousands that
 remain, nothing but the orbital and bulk parameters.
 
-The field's public imagery has responded with the artist's impression:
+The field has filled that gap with artist's impressions:
 skilled, often scientifically advised, and, as a genre, unlabelled at the
 pixel level. A viewer cannot tell which features of a given rendering are
-constrained and which are composition. This paper describes the alternative
-taken by the exoplanet-catalogue project (the system is described in the
-companion paper): replace the artist with an explicit function from catalogue
-record to rendered world, and then document exactly what that function does
-and does not know.
+constrained and which are composition. In the catalogue project, an explicit
+function maps each record to a rendered world. The job here is to document
+exactly what that function knows and where it starts inventing.
 
-### 1.2 Contributions
+### 1.2 What the method adds
 
-1. **A documented classification function** from sparse, partially missing
+1. A documented classification function maps sparse, partially missing
    catalogue records to sixteen renderable planet types, with every threshold
    stated and sourced to the characterisation literature, and every
    missing-data fallback explicit.
-2. **A parameterised appearance layer** in which each type is rendered by
+2. A parameterised appearance layer renders each type with
    seeded procedural shading, no textures, no per-planet art, such that
    appearance is a pure, reproducible function of the record.
-3. **The speculation gradient**: a four-tier grading (measured, derived,
+3. The speculation gradient applies four grades (measured, derived,
    theory-guided, fictive) applied to every class of visual decision the
    system makes, offered as a reusable disclosure framework for scientific
    visualisation beyond this project.
-4. **A statement of the ceiling**, plausibility rather than prediction,
+4. The ceiling is plausibility, not prediction,
    together with the audit design that would test whether the plausibility
    claim itself holds.
-
----
 
 ## 2. The classification layer
 
@@ -397,13 +384,13 @@ and, the more interesting number, the cases where the *literature* contradicts
 the tree (GJ 1214 b's flat spectrum, for example, demands cloud or haze cover
 that density alone would not assign; Kreidberg et al. 2014).
 
-### Perceptual honesty
+### Can readers tell what is invented?
 
 Show readers rendered worlds with and without a
 tier-graded legend ("measured / inferred / illustrative"); measure whether the
 legend shifts stated confidence about specific features ("does this planet
 have continents?" should move from majority-yes toward majority-unknown).
-This is the direct test of the paper's central claim, that graded speculation
+This directly tests whether graded speculation
 can be communicated and not merely documented.
 
 ### Determinism regression
@@ -461,21 +448,16 @@ measured property.
 
 ## 8. Conclusion
 
-A planet in a catalogue is a vector of numbers; a planet in the imagination is
-a place. Every exoplanet visualisation bridges that gap somehow, and the
-bridge is usually invisible. This paper has described a bridge built to be
-inspected: a classification function with stated thresholds and sources, an
-appearance function with stated machinery and seeds, and a grading that
-assigns every visible feature to measured, derived, theory-guided or fictive
-status. The construction is bounded in the sense its ceiling names:
-plausibility, not prediction. No shader will tell us what TRAPPIST-1 e looks
-like. What a
-shader can do, done this way, is show four thousand data points as the kinds
-of worlds the evidence permits, while keeping the receipt for every choice.
-The wider question, whether such bounded showing serves public understanding
-better than the alternatives, is taken up in the companion survey.
+A catalogue holds planets as vectors of numbers; readers imagine them as
+places. This method makes the conversion inspectable. The classification has
+published thresholds and sources. The appearance function has named machinery
+and stable seeds. Each visible choice is marked as measured, derived,
+theory-guided or fictive.
 
----
+No shader can tell us what TRAPPIST-1 e looks like. It can show four thousand
+data points as worlds permitted by the evidence, with a record of every choice
+made along the way. Whether that helps public understanding more than the
+alternatives is the question for the companion survey.
 
 ## Acknowledgements
 
@@ -586,7 +568,7 @@ author's.
 | Sub-Neptune | 1.75–3.5 R⊕, ρ unknown/mid | blue-grey haze |
 | Temperate | rocky, 0.35 < S_eff ≤ 1.04 | Mars↔Earth↔hot-humid lerp by HZ position |
 | Frozen | rocky, S_eff ≤ 0.35 | pale ice, ridged |
-| Unknown | (defined, unreachable) | — |
+| Unknown | (defined, unreachable) | n/a |
 
 ## Appendix B: Sourcing notes
 
@@ -601,5 +583,5 @@ author's.
    1997; Pierrehumbert 2011); the renderer's iconography follows the popular
    term knowingly.
 4. Wrap-lighting values (w = 0.65, p = 4) and all palette hexes are aesthetic
-   tuning, tier 4 in this paper's own grading, and are recorded in
+   tuning, tier 4 in the grading used here, and are recorded in
    version-controlled defaults rather than claimed from any source.

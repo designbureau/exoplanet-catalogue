@@ -1,4 +1,4 @@
-# From Data Point to Destination
+# From data point to destination
 
 ### What visualisation can and cannot do for the public understanding of exoplanets
 
@@ -12,32 +12,24 @@ July 2026
 
 ## Abstract
 
-The two companion papers describe a single system: a catalogue interface that
-renders every system in the Open Exoplanet Catalogue as an explorable
-three-dimensional scene, and the classification-driven procedural pipeline
-that gives each planet a parameter-derived appearance. This paper steps back
-from the one case to ask what it is an instance of. Exoplanets are the most
-pictured objects in modern science that have never been seen: three decades of
-discoveries have reached the public almost entirely through imagery invented
-on their behalf, from press-release artist's impressions to planetarium
-software to procedural games. We survey that landscape, the institutional
-visualisers (NASA's Eyes on Exoplanets and the Exoplanet Travel Bureau; ESO
-and ESA press imagery), the open planetarium platforms (Celestia, Stellarium,
-OpenSpace, Gaia Sky), and the procedural universes (Space Engine, No Man's
-Sky), against what is actually measured, and against the research on how
-astronomical imagery is received.
+The companion pieces describe an interface that renders the Open Exoplanet
+Catalogue as explorable 3D systems, with planet appearances derived from their
+recorded parameters. This one steps back to ask where that approach sits.
+Exoplanets may be the most pictured objects in modern science that have never
+been seen. For three decades, discoveries have reached the public through
+invented imagery: press art, planetarium software and procedural games. I
+looked at NASA's Eyes on Exoplanets and Exoplanet Travel Bureau, ESO and ESA
+press imagery, Celestia, Stellarium, OpenSpace, Gaia Sky, Space Engine and No
+Man's Sky, then compared them with what is measured and with research on how
+people read astronomical images.
 
-Two findings organise the synthesis. First, the axis that matters is not
-realism but *disclosure*: the systems that serve understanding best are those
-in which a viewer can discover which features are measured and which are
-invented, and the genre's recurring failure is the unlabelled blend. Second,
-interactivity changes the epistemics: a static image asserts, while an
-explorable model can expose its own parameters, and this, more than fidelity,
-is the medium's genuine advantage. We close with what generalises: a
-speculation-labelling discipline for scientific visualisation, the case for
-deterministic procedural imagery as reproducible and therefore criticisable
-illustration, and the limits of any picture as a substitute for understanding
-what a light curve is.
+Disclosure matters more than realism. The better systems let viewers discover
+which features come from measurements and which have been invented. An
+interactive model has an advantage over a still image because it can expose
+its own parameters, although it does not always bother. Deterministic
+procedural imagery also makes an illustration reproducible and open to
+criticism. None of this replaces understanding the light curve or spectrum
+that produced the data in the first place.
 
 ---
 
@@ -54,38 +46,35 @@ exert on one another. No property of any TRAPPIST-1 planet's surface has ever
 been observed. The imagery was labelled as artist's concept in the caption, as
 the genre's conventions require; the label did not travel with the image.
 
-This episode is not a scandal; it is the normal condition of exoplanet
+This is not a scandal. It is the normal condition of exoplanet
 communication, and it has been since 51 Pegasi b arrived in 1995 with no
 possible photograph (Mayor & Queloz 1995). The field's public existence is
-almost entirely visual, and almost entirely invented. What varies, and what
-this paper surveys, is *how* the invention is done, how it is disclosed, and
-what different choices cost and buy.
+almost entirely visual, and almost entirely invented. What varies is *how* the
+invention is done, how it is disclosed, and what different choices cost and
+buy.
 
-The companion papers describe one set of choices: a whole-catalogue interface
+The companion pieces describe one response: a whole-catalogue interface
 whose planet imagery is derived from recorded parameters through a documented
 classification (companion paper 1, the system; companion paper 2, the
-appearance pipeline and its speculation gradient). This paper situates those
-choices in the landscape and asks the general questions: what can
-visualisation actually do for the public understanding of objects that cannot
-be seen, and where are the limits that no rendering choice removes?
+appearance pipeline and its speculation gradient). Here I ask what
+visualisation can do for public understanding of objects that cannot be seen,
+and which limits survive every rendering choice.
 
-### Contributions
+### What the survey covers
 
-This paper is a synthesis; it reports no new system and no new measurements.
+This is a synthesis. It reports no new system or measurement.
 
-1. **A map of the exoplanet-visualisation landscape** across five families,
+1. A map of exoplanet visualisation across five families:
    press imagery, institutional interactives, open planetarium platforms,
    procedural universes, and parameter-derived rendering, compared on data
    fidelity, disclosure, interactivity and reproducibility.
-2. **An argument that disclosure, not realism, is the load-bearing axis**,
+2. The case for disclosure as the important design choice,
    assembled from the imagery-reception literature and the survey.
-3. **A statement of what interactivity changes**: an explorable model can
+3. What interactivity changes: an explorable model can
    surface its own evidential status in a way a static image cannot.
-4. **A statement of the limits**: what no visualisation, however honest, can
+4. The limits: what no visualisation, however careful, can
    do, with the companion project located inside those limits rather than
    above them.
-
----
 
 ## 2. A vocabulary
 
@@ -119,7 +108,7 @@ interactive context the viewer cannot help but traverse.
 
 Companion paper 2 grades every feature of a
 rendered planet as measured, derived, theory-guided, or fictive. The grading
-generalises to the whole genre and is used as this paper's comparative
+generalises to the whole genre and is used below as the comparative
 instrument: for each system surveyed, the question is not how good it looks
 but which tiers it shows, and whether the viewer knows which is which.
 
@@ -157,7 +146,7 @@ the population, ever-richer artist's impressions for the individuals. The
 Fulton gap and the mass–radius relations on which companion paper 2 builds its
 classification are products of this era; so is the Exoplanet Travel Bureau
 (JPL's *Visions of the Future* poster series, 2015–), which abandoned realism
-for knowing retro-futurist tourism, arguably the genre's most honest artefact,
+for knowing retro-futurist tourism, arguably the genre's most candid artefact,
 because no viewer mistakes a WPA-style poster for a photograph.
 
 ### 2016–2017: the nearest and the seven
@@ -185,7 +174,7 @@ remains vast.
 
 ---
 
-## 4. The landscape of systems
+## 4. The systems
 
 ### Press imagery (ESO, ESA, NASA centres)
 
@@ -238,7 +227,7 @@ of its commitments: no artist rescues an ugly or misleading procedural
 outcome, the disclosure currently lives in papers rather than in the
 interface, and its catalogue (the OEC) is community-maintained and ageing
 (companion paper 1, §6). It is presented here not as the genre's solution but
-as one point in the design space that the rest of the landscape leaves
+as one point in the design space that the rest of the field leaves
 unoccupied: *auditable* invention.
 
 The comparison, compressed:
@@ -252,19 +241,16 @@ The comparison, compressed:
 | No Man's Sky | none | procedural | n/a (fiction) | yes (seeded) |
 | Companion project | OEC, vendored | procedural from record | papers; interface pending | yes (seeded) |
 
----
-
 ## 5. What visualisation can do
 
-Read against the reception research and the landscape, four capabilities are
-real and distinguishable.
+The research supports four useful capabilities.
 
 ### Orientation
 
-Interactive 3D genuinely communicates configuration: that
+Interactive 3D communicates configuration: that
 TRAPPIST-1's system would fit inside Mercury's orbit; that hot Jupiters skim
 their stars; what a resonant chain looks like in motion. These are tier 1–2
-facts, measured periods and derived geometry, the medium's home ground, and
+facts, measured periods and derived geometry. This is the medium's home ground;
 no static image or table communicates them as directly. The companion
 viewer's engineering (Keplerian propagation, true relative rates) spends its
 effort exactly here, deliberately.
@@ -279,21 +265,18 @@ why the genre exists.
 
 ### Scaffolded engagement
 
-The reception literature's consistent finding:
-imagery recruits attention and interest across expertise levels, and
-understanding follows when explanation is attached (Smith et al. 2011). An
-interface that makes the explanation load-bearing, click the planet, see the
-record, the picture as the door to the data, converts the genre's hazard into
-its pedagogy.
+Research consistently finds that imagery draws attention across levels of
+expertise, while understanding improves when explanation is attached (Smith et
+al. 2011). An interface can make that explanation part of the interaction:
+click the planet and see the record behind the picture.
 
-### Honest fiction, reproducibly
+### Reproducible invention
 
 A deterministic procedural pipeline makes
 illustration criticisable in a way one-off art is not: the same record
 renders the same world for every viewer, the mapping is versioned code, and a
-domain expert can audit the function rather than debate a painting. This is a
-small, real epistemic upgrade, peer-reviewable illustration, and it is the
-companion project's central offer to the genre.
+domain expert can audit the function instead of debating a painting. It makes
+the illustration open to review and correction.
 
 ## 6. What visualisation cannot do
 
@@ -311,16 +294,15 @@ Structural disclosure
 improves on captions, but the reception research gives no licence for the
 belief that any regime makes speculation-status *stick* once images leave the
 interface. Screenshots strip context as surely as reposts strip captions. The
-honest statement is harm reduction, not solution.
+best claim available is harm reduction, not a solution.
 
 ### It cannot substitute for the evidence's own form
 
-The deepest
-understanding of the field's epistemics is understanding what a light curve
+Understanding the evidence means knowing what a light curve
 and a spectrum *are*: that we know these worlds as shadows and wobbles. A
 visualisation that only shows worlds, however scrupulously graded, teaches
-the conclusions while hiding the reasoning. The genre's unclaimed territory,
-and this survey's most concrete recommendation, is the interface that renders
+the conclusions while hiding the reasoning. The useful next step is an
+interface that renders
 the *evidence* alongside the invention: the actual transit depth behind this
 planet's radius, the actual radial-velocity curve behind its mass, so that
 the plausible world and the real measurement are one click apart. The
@@ -329,61 +311,49 @@ paper exists to motivate.
 
 ### It cannot outrun its catalogue
 
-Every honest visualisation inherits its
+Every visualisation inherits its
 database's coverage, currency and biases; the transit surveys' geometric bias
 toward close-in planets skews any rendered population toward the very worlds,
 hot, locked, extreme, that look least like home. Companion paper 1's
-limitations section is one instance of a general law.
-
----
+limitations section shows the same problem in this project.
 
 ## 7. What generalises
 
-For builders of scientific visualisation beyond this field, the survey
-compresses to four transferable disciplines.
+For scientific visualisation beyond exoplanets, four practices carry over.
 
-1. **Grade the speculation** (measured, derived, theory-guided, fictive) as a
-   design artefact, not a caveat, and put the grading in the interface, not
-   the paper.
-2. **Make the picture the door to the data.** Every rendered object should
-   resolve, in one interaction, to the record that licensed it.
-3. **Prefer deterministic, versioned invention** where invention is
+1. Grade speculation as measured, derived, theory-guided or fictive. Put the
+   grading in the interface, not the paper.
+2. Make every rendered object link to the record that licensed it in one
+   interaction.
+3. Prefer deterministic, versioned invention where invention is
    necessary: reproducible fiction can be audited, diffed and corrected;
    inspired fiction can only be replaced.
-4. **Record the projection.** Scale factors, clamps and exaggerations are part
+4. Record the projection. Scale factors, clamps and exaggerations are part
    of any legible model of astronomical space; keeping them explicit, in code
    and in the interface, makes the model reproducible and the distortion
    teachable.
 
-And one deflationary through-line, the analogue of every honest survey's
-conclusion: the decisive factor is not the rendering technology. It is
-whether the maker treats the viewer as someone entitled to know what kind of
-statement each pixel is.
-
----
+The rendering technology is secondary. The maker's real choice is whether the
+viewer gets to know what kind of claim each pixel is making.
 
 ## 8. Conclusion
 
-Exoplanets will remain invisible for the foreseeable future, and they will
-remain among the most pictured objects in science. That combination is not a
-problem to be solved but a condition to be managed, and the survey's finding
-is that it is managed well or badly along one axis above all: disclosure. The
-companion project's wager, a whole public catalogue rendered as worlds, every
-world a documented function of its record, with an interface that must
-eventually carry its own epistemics, is one way to manage it. The genre's
-history suggests the images will
-travel either way. What a builder controls is whether, when an image is
-traced back to its source, the source can show its receipts. The two
-companion papers are this project's receipts.
+Exoplanets will remain invisible for the foreseeable future and among the most
+pictured objects in science. We will keep inventing images for them. The useful
+question is whether those images explain which parts come from evidence.
 
----
+The companion project renders a whole public catalogue as worlds, with each
+world generated by a documented function of its record. Its interface still
+needs to expose that logic more directly. Images will travel outside their
+original captions whatever the builder does. At least when somebody traces one
+back, the source should have the receipts.
 
 ## Acknowledgements
 
-This paper synthesises the work of the observers, archivists, artists and
-engineers it surveys, above all the maintainers of the open catalogues (Rein
+I have drawn on the work of the observers, archivists, artists and engineers
+surveyed here, above all the maintainers of the open catalogues (Rein
 2012; Akeson et al. 2013; Schneider et al. 2011) on which the companion
-project and much of the landscape stand.
+project and much of the field stand.
 
 ---
 
@@ -462,7 +432,7 @@ project and much of the landscape stand.
    (Smith et al. 2011 and successor studies) and from the image-production
    literature (Rector et al. 2007; Kessler 2012); the application of their
    findings, developed on indexical observatory imagery, to non-indexical
-   exoplanet art is this paper's extrapolation, flagged as such.
+   exoplanet art is my extrapolation, flagged as such.
 2. Descriptions of proprietary systems (Space Engine, No Man's Sky, Eyes on
    Exoplanets) are from public documentation and direct use, not source
    audit; their internal data handling may differ from the observed behaviour

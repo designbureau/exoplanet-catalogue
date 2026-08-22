@@ -1,4 +1,4 @@
-# A Catalogue of Alien Worlds
+# A catalogue of alien worlds
 
 ### A procedural-visualisation interface to the Open Exoplanet Catalogue
 
@@ -13,44 +13,37 @@ July 2026
 ## Abstract
 
 More than four thousand planetary systems beyond the Sun have been confirmed,
-and none have ever been seen. The observational record of an
-exoplanet is a handful of numbers, a period, a radius or a minimum mass, an
-orbital distance, the temperature and size of its star, and the public
-encounters that record either as a table or as an artist's impression whose
-relationship to the data is undisclosed.
+yet we know each exoplanet through a small set of numbers: period, radius or
+minimum mass, orbital distance, and a few properties of its star. The public
+usually meets that record as either a table or an artist's impression, with
+little indication of how the picture relates to the measurements.
 
-This paper describes a web interface to the Open Exoplanet Catalogue that
-takes a third route: every one of the catalogue's 4,081 systems is rendered as
-an explorable three-dimensional scene, with each planet's appearance *derived*
-from its recorded physical parameters through an explicit classification
-pipeline and a procedural shader, rather than painted by hand. The system
-comprises three surfaces, a curated catalogue of featured systems, a
-per-system orbital viewer with Keplerian propagation, and a galactic star map
-of every catalogued system positioned by right ascension, declination and
-distance, over a build-time pipeline that converts the catalogue's XML into
-JSON and a bake pipeline that pre-renders thumbnails with the same shaders
-used live.
+I took a third route. This interface renders all 4,081 systems in the Open
+Exoplanet Catalogue as explorable 3D scenes. A documented classifier and
+procedural shader derive each planet's appearance from its recorded physical
+parameters. The site has a curated catalogue, an orbital viewer with Keplerian
+propagation and a galactic map that positions every system by right ascension,
+declination and distance. At build time, one pipeline turns the catalogue XML
+into JSON and another uses the live shaders to bake the thumbnails.
 
-Two threads of engineering carry the account. The first is scale: the viewer
-holds a star, planets a hundredth of its size, and orbits at seventy-nine
-thousand scene units within 32-bit GPU arithmetic, which calls for
-relative-to-eye orbit rendering with split-precision camera arithmetic. The
-second is derivation: star colour is computed from effective temperature as
-blackbody colour rather than assigned by class, and the star map places the
-whole catalogue by its own archival astrometry at one parsec per scene unit.
-Planet appearance is the subject of the companion paper on procedural
-rendering; a third companion paper situates the system within the wider
-landscape of exoplanet visualisation. No user study has yet been run; the
-evaluation section specifies one.
+The awkward engineering problem is scale. A scene may contain a star, planets
+a hundredth of its size and orbits reaching seventy-nine thousand scene units,
+all inside 32-bit GPU arithmetic. The viewer uses relative-to-eye orbit
+rendering and split-precision camera arithmetic to hold it together. Star
+colour comes from effective temperature as blackbody colour, while the map
+places systems from their archival astrometry at one parsec per scene unit.
+The companion pieces cover planet rendering and the wider history of exoplanet
+visualisation. I have not yet run a user study; the evaluation section sets out
+what one should test.
 
 ---
 
 ## 1. Introduction
 
 The first planet found orbiting a Sun-like star was announced in 1995 (Mayor &
-Queloz 1995); three decades later the confirmed count is in the thousands, and
-grows weekly. Yet the exoplanet is a peculiar object of public fascination: it
-is almost always invisible. Nearly every known exoplanet was detected
+Queloz 1995). Three decades later the confirmed count is in the thousands and
+grows weekly. Exoplanets are objects of intense public fascination that remain
+almost entirely invisible. Nearly every known exoplanet was detected
 indirectly, as a periodic dimming of its star's light or a periodic wobble in
 its star's spectrum, and even the few dozen imaged directly appear as
 unresolved points of light (Marois et al. 2008). There is no photograph of an
@@ -62,48 +55,44 @@ inferred quantities, with uncertainties, maintained in public databases
 machine-readable, and hard to *see*. A table of periods and radii does not
 communicate that TRAPPIST-1's seven worlds huddle closer to their star than
 Mercury does to the Sun, or that a hot Jupiter's year lasts four days, or what
-it means for a planet to be tidally locked. The gap this project addresses is
-between the availability of the data and its legibility as a set of *places*.
+it means for a planet to be tidally locked. I wanted to make that data legible
+as a set of *places* without disguising how little we know about their
+appearance.
 
-The system described here renders the entire Open Exoplanet Catalogue, 4,081
+The site renders the entire Open Exoplanet Catalogue, 4,081
 system records vendored as XML and synchronised weekly with the upstream
 repository, as an interactive site: a catalogue page of featured systems, a
 three-dimensional viewer for any system, and a star map of the whole
-catalogue. Its central design commitment, developed at length in the companion
+catalogue. The main design rule, developed at length in the companion
 paper *Plausible Worlds from Sparse Parameters*, is that a planet's rendered
 appearance is a deterministic function of its recorded parameters: a
 classification pipeline assigns each planet one of sixteen physically
 motivated types, and a procedural shader renders that type. Nothing is
 hand-painted, and nothing is random between visits.
 
-### Contributions
+### What the work adds
 
-The underlying technologies, a React application, a WebGL scene graph,
-procedural noise shaders, are established practice and are not claimed as
-contributions. The contributions are the application and the engineering
-record.
+React, WebGL scene graphs and procedural noise shaders are all established
+practice. The useful work is in applying them to the whole catalogue and
+recording what that required.
 
-1. **A worked, whole-catalogue application of parameter-derived rendering.**
-   Not a curated dozen showpieces but every system in the catalogue, including
+1. Parameter-derived rendering covers every system in the catalogue, including
    the sparse majority for which only two or three parameters are recorded,
    with documented fallbacks for every missing quantity. The derivation
    extends beyond the planets: star colour is computed from temperature, and
    system positions from archival astrometry.
-2. **Precision rendering at catalogue scale.** The viewer holds bodies from
+2. Precision rendering lets the viewer hold bodies from
    0.08 to thousands of scene units across orbits up to ~10⁵ units in 32-bit
    GPU arithmetic, using relative-to-eye orbit rendering with high/low float
    splitting, periapsis clearance for close-in planets, and unit
    disambiguation for binary separations.
-3. **A reproducible bake pipeline**, in which the same GLSL shaders that
-   render planets live also pre-render the catalogue's thumbnails through a
-   headless browser, so that the still and the interactive views cannot drift
-   apart.
-4. **A whole-catalogue star map from archival astrometry**: right ascension,
-   declination and distance parsed at build time into a Cartesian index and
-   drawn as a single point cloud at true parsec scale, with the zodiac
+3. The bake pipeline uses the live GLSL shaders to pre-render the catalogue's
+   thumbnails through a headless browser, so the still and interactive views
+   cannot drift apart.
+4. The star map parses right ascension, declination and distance at build time
+   into a Cartesian index, then draws a single point cloud at true parsec scale.
+   The zodiac
    constellations projected through the same transform for orientation.
-
----
 
 ## 2. Background: what the catalogue contains
 
@@ -425,7 +414,7 @@ long-standing open-source ancestors. This project differs in two commitments:
 the appearance layer is parameter-derived per planet, rather than a stock
 texture per class, and the whole pipeline, data, classification, shaders and
 bake, is a single small open codebase intended to be read. The comparative
-landscape is the subject of the third companion paper.
+field is the subject of the third companion paper.
 
 ### Procedural planets
 
@@ -491,7 +480,7 @@ A task-based study with non-specialist readers, locate a system,
 state which of two planets is hotter and why, judge whether an orbit's speed
 difference is meaningful, against the same tasks on a tabular interface,
 measuring accuracy and self-reported understanding, with explicit probes for
-the misconception risks the companion papers identify as the central hazard of
+the misconception risks the companion papers identify as the main hazard of
 the genre: do participants believe they saw photographs? do they report the
 continents as known?
 
@@ -552,23 +541,18 @@ rationale, not measured outcomes (Section 5).
 
 ## 7. Conclusion
 
-This paper has described a system that renders an entire public exoplanet
-catalogue as explorable places: a data pipeline from vendored XML, a
-classification-driven appearance layer, a Keplerian viewer engineered for
-float32 at catalogue scale, stars whose colour is computed from their recorded
-temperature, and a star map built from the archive's own astrometry. The
-design generalises beyond astronomy: derive rather than decorate, and let the
-record be the single source of every rendered property, from a planet's cloud
-cover to a star's hue to a system's position on the sky.
+The result turns a public exoplanet catalogue into explorable scenes. Vendored
+XML feeds a classification-driven appearance layer, a Keplerian viewer built
+to cope with float32 at catalogue scale, temperature-derived star colours and
+a map based on the archive's own astrometry. The approach is useful beyond
+astronomy: derive visible properties from the record wherever possible, and
+keep that record close enough to inspect.
 
-What the interface cannot settle is how much of what it shows is *known*. That
-question, where measurement ends and plausible fiction begins in a rendered
-exoplanet, is the subject of the companion paper *Plausible Worlds from Sparse
-Parameters*; and what such interfaces can achieve for public understanding,
-against the wider landscape from artist's impressions to planetarium software,
-is the subject of the third, *From Data Point to Destination*.
-
----
+The interface still cannot tell a reader how much of each planet is known.
+*Plausible Worlds from Sparse Parameters* deals with the line between
+measurement and plausible fiction. *From Data Point to Destination* asks what
+this kind of interface can do for public understanding. Those are harder
+questions than rendering four thousand planets, which is faintly annoying.
 
 ## Acknowledgements
 
