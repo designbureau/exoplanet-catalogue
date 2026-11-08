@@ -13,7 +13,6 @@ import {
   vec3,
   vec4,
   vec2,
-  dot,
   sin,
   cos,
 } from "~/shaders/tsl/nodes";

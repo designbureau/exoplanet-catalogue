@@ -68,7 +68,7 @@ function flatVaryings() {
  * for material.positionNode plus the varyings.
  */
 function terrestrialVertex(uniforms: Any, lib: Any) {
-  const { Fn, If, float, vec3, mat3, select, abs, cross, length, normalize, positionGeometry, normalGeometry } = TSL as Any;
+  const { Fn, If, vec3, mat3, select, abs, cross, length, normalize, positionGeometry, normalGeometry } = TSL as Any;
   const vtx = buildTerrestrialVertex(GENERATED_TSL, uniforms, {}, lib);
   const { u_displace, computeHeight } = vtx;
 

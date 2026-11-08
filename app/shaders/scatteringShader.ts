@@ -1,6 +1,7 @@
 import * as THREE from "three/webgpu";
 import * as TSL from "three/tsl";
-import { toUniformNodes, type UniformMaterial } from "~/shaders/planetShader";
+import { varying, positionWorld, modelNormalMatrix, normalGeometry } from "~/shaders/tsl/nodes";
+import { GENERATED_TSL, toUniformNodes, type UniformMaterial } from "~/shaders/planetShader";
 import buildScatteringFragment from "~/shaders/generated/scatteringFragment";
 import { PlanetType } from "~/utils/planetClassification";
 
@@ -165,13 +166,12 @@ export function createScatteringMaterial(
   // 0 = fallback, 8 = reduced, 16 = full ray-march (set per frame by the LOD logic) — an int loop bound
   uniforms.uSteps = TSL.uniform(0, "int");
 
-  const { varying, positionWorld, modelNormalMatrix, normalGeometry } = TSL as any;
   const varyings = {
     vNormal: varying(modelNormalMatrix.mul(normalGeometry).normalize(), "vNormal"),
     vWorldPosition: varying(positionWorld, "vWorldPosition"),
   };
 
-  const frag = buildScatteringFragment({ ...TSL, reference: (_p: string, _t: string, n: unknown) => n }, uniforms, varyings, {});
+  const frag = buildScatteringFragment(GENERATED_TSL, uniforms, varyings, {});
   const mat = new THREE.NodeMaterial() as UniformMaterial;
   mat.transparent = true;
   mat.depthWrite = false;

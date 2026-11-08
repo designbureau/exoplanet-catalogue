@@ -1,13 +1,13 @@
 /**
  * Off-screen planet renderer for catalogue thumbnails.
  *
- * Creates a single temporary WebGLRenderer per call, renders one frame of the
- * real GLSL planet shader, captures a PNG data URL, then disposes everything.
+ * Renders one frame of the real planet shader (TSL, WebGPU) into an offscreen
+ * render target, reads the pixels back and returns a PNG data URL.
  * Results are module-level cached so each (type, seed, size) triple is only
  * rendered once per page load.
  */
 
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 import { createPlanetMaterial } from "~/shaders/planetShader";
 import { PlanetType, type ShaderParams } from "~/utils/planetClassification";
 import type { PlanetType as CatType } from "~/components/PlanetCanvas";
@@ -17,28 +17,18 @@ const CACHE = new Map<string, string>(); // key → data URL
 const PENDING = new Map<string, Promise<string>>();
 
 // ─── shared offscreen renderer ───────────────────────────────────────────────
-// We reuse a single WebGLRenderer for all thumbnail renders so we never hold
-// more than one offscreen WebGL context at a time.  Creating a new renderer per
-// render() call was consuming all 16 browser slots and killing the live Canvas.
-let _sharedRenderer: THREE.WebGLRenderer | null = null;
-let _sharedCanvas: HTMLCanvasElement | null = null;
+// One WebGPURenderer is reused for every thumbnail (never more than one GPU
+// context). It renders into a render target, so no canvas is attached.
+let _sharedInit: Promise<THREE.WebGPURenderer> | null = null;
 
-function getSharedRenderer(size: number): THREE.WebGLRenderer {
-  if (!_sharedRenderer) {
-    _sharedCanvas = document.createElement("canvas");
-    _sharedRenderer = new THREE.WebGLRenderer({
-      canvas: _sharedCanvas,
-      antialias: true,
-      alpha: true,
-      preserveDrawingBuffer: true,
-    });
-    _sharedRenderer.setPixelRatio(1);
-    _sharedRenderer.setClearColor(0x000000, 0);
+function getSharedRenderer(): Promise<THREE.WebGPURenderer> {
+  if (!_sharedInit) {
+    const r = new THREE.WebGPURenderer({ antialias: false, alpha: true });
+    r.setPixelRatio(1);
+    r.setClearColor(0x000000, 0);
+    _sharedInit = r.init().then(() => r);
   }
-  if (_sharedCanvas!.width !== size || _sharedCanvas!.height !== size) {
-    _sharedRenderer.setSize(size, size, false);
-  }
-  return _sharedRenderer;
+  return _sharedInit;
 }
 
 // ─── seed conversion ──────────────────────────────────────────────────────────
@@ -300,13 +290,12 @@ export function buildShaderParams(catType: CatType, seed: THREE.Vector3): Shader
 
 // ─── renderer ────────────────────────────────────────────────────────────────
 /** Exported for use by the bake route — renders arbitrary ShaderParams. */
-export function renderOffscreenFromParams(params: ShaderParams, size: number): string {
+export function renderOffscreenFromParams(params: ShaderParams, size: number): Promise<string> {
   return renderOffscreen(params, size);
 }
 
-function renderOffscreen(params: ShaderParams, size: number): string {
-  const renderer = getSharedRenderer(size);
-  const canvas = _sharedCanvas!;
+async function renderOffscreen(params: ShaderParams, size: number): Promise<string> {
+  const renderer = await getSharedRenderer();
 
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(-1.15, 1.15, 1.15, -1.15, 0.1, 10);
@@ -348,7 +337,19 @@ function renderOffscreen(params: ShaderParams, size: number): string {
   const mesh = new THREE.Mesh(geo, mat);
   scene.add(mesh);
 
-  renderer.render(scene, camera);
+  // Raw (un-tone-mapped, linear) RGBA8 target = exactly what the shader writes
+  const target = new THREE.RenderTarget(size, size, {
+    type: THREE.UnsignedByteType,
+    format: THREE.RGBAFormat,
+    depthBuffer: true,
+    samples: 4,
+  });
+  renderer.setRenderTarget(target);
+  renderer.setClearColor(0x000000, 0);
+  await renderer.renderAsync(scene, camera);
+  renderer.setRenderTarget(null);
+  const raw = (await renderer.readRenderTargetPixelsAsync(target, 0, 0, size, size)) as Uint8Array;
+  target.dispose();
 
   // ── Gamma lift for thumbnail legibility ─────────────────────────────────
   // The shader is tuned for a live star-lit scene; in a static thumbnail the
@@ -358,14 +359,20 @@ function renderOffscreen(params: ShaderParams, size: number): string {
   lift.width = size;
   lift.height = size;
   const ctx2d = lift.getContext("2d")!;
-  ctx2d.drawImage(canvas, 0, 0);
-  const id = ctx2d.getImageData(0, 0, size, size);
+  const id = ctx2d.createImageData(size, size);
   const px = id.data;
-  for (let i = 0; i < px.length; i += 4) {
-    if (px[i + 3] === 0) continue; // skip transparent (background)
-    px[i]     = Math.round(Math.pow(px[i]     / 255, 0.58) * 255);
-    px[i + 1] = Math.round(Math.pow(px[i + 1] / 255, 0.58) * 255);
-    px[i + 2] = Math.round(Math.pow(px[i + 2] / 255, 0.58) * 255);
+  const rowBytes = size * 4;
+  for (let y = 0; y < size; y++) {
+    // WebGPU read-back is top-down already; copy row by row
+    const src = y * rowBytes;
+    for (let x = 0; x < rowBytes; x += 4) {
+      const i = src + x;
+      if (raw[i + 3] === 0) continue; // skip transparent (background)
+      px[i]     = Math.round(Math.pow(raw[i]     / 255, 0.58) * 255);
+      px[i + 1] = Math.round(Math.pow(raw[i + 1] / 255, 0.58) * 255);
+      px[i + 2] = Math.round(Math.pow(raw[i + 2] / 255, 0.58) * 255);
+      px[i + 3] = raw[i + 3];
+    }
   }
   ctx2d.putImageData(id, 0, 0);
 
@@ -400,9 +407,17 @@ export function renderPlanetSnapshot(
         // downsampling instead of rendering at native pixel size and looking
         // blocky. Result is cached, so the cost is paid once per unique dot.
         const renderSize = Math.max(size * 4, 256);
-        const url = renderOffscreen(params, renderSize);
-        CACHE.set(key, url);
-        resolve(url);
+        renderOffscreen(params, renderSize)
+          .then((url) => {
+            CACHE.set(key, url);
+            resolve(url);
+          })
+          .catch((err) => {
+            console.warn("planetSnapshot render failed", catType, err);
+            resolve(""); // graceful fallback
+          })
+          .finally(() => PENDING.delete(key));
+        return;
       } catch (err) {
         console.warn("planetSnapshot render failed", catType, err);
         resolve(""); // graceful fallback

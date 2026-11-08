@@ -1,6 +1,6 @@
 import * as THREE from "three/webgpu";
-import * as TSL from "three/tsl";
-import { toUniformNodes, type UniformMaterial } from "~/shaders/planetShader";
+import { varying, uv, positionGeometry, positionWorld, modelNormalMatrix, normalGeometry, length } from "~/shaders/tsl/nodes";
+import { GENERATED_TSL, toUniformNodes, type UniformMaterial } from "~/shaders/planetShader";
 import buildRingFragment from "~/shaders/generated/ringFragment";
 import { PlanetType } from "~/utils/planetClassification";
 
@@ -202,7 +202,6 @@ export function createRingMaterial(params: RingParams, seed: number): UniformMat
   });
 
   // Vertex stage (ring lies in the XY plane of its geometry before rotation)
-  const { varying, uv, positionGeometry, positionWorld, modelNormalMatrix, normalGeometry, length } = TSL as any;
   const varyings = {
     vUv: varying(uv(), "vUv"),
     vNormal: varying(modelNormalMatrix.mul(normalGeometry).normalize(), "vNormal"),
@@ -214,7 +213,7 @@ export function createRingMaterial(params: RingParams, seed: number): UniformMat
     ),
   };
 
-  const frag = buildRingFragment({ ...TSL, reference: (_p: string, _t: string, n: unknown) => n }, uniforms, varyings, {});
+  const frag = buildRingFragment(GENERATED_TSL, uniforms, varyings, {});
   const mat = new THREE.NodeMaterial() as UniformMaterial;
   mat.transparent = true;
   mat.side = THREE.DoubleSide;
