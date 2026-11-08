@@ -3,7 +3,7 @@
 An editorial, real-time 3D catalogue of nearby exoplanet systems. Browse a
 galaxy map of 4,000+ real systems, drop into any one to see its star(s) and
 planets rendered live, and read a curated catalogue of featured worlds — every
-planet drawn with procedural GLSL shaders driven by its real physical
+planet drawn with procedural TSL (WebGPU) shaders driven by its real physical
 parameters.
 
 ## Stack
@@ -11,10 +11,12 @@ parameters.
 - **[React Router v7](https://reactrouter.com)** — framework mode, SSR enabled
   (`react-router.config.ts`), file-system routes via `@react-router/fs-routes`.
 - **[React Three Fiber](https://r3f.docs.pmnd.rs)** + **three.js** — the 3D
-  scene graph, with `@react-three/drei`, `@react-three/postprocessing`, and
-  `postprocessing`.
-- **Custom GLSL shaders** — planets, stars, atmospheres, rings and nebulae are
-  all procedural (`app/shaders/`).
+  scene graph, rendered with `WebGPURenderer` (WebGL2 fallback) and
+  `@react-three/drei`.
+- **TSL shaders** — planets, stars, atmospheres, rings and nebulae are all
+  procedural, written in three's Shading Language (`app/shaders/`, see
+  [its README](app/shaders/README.md)); post-processing is a TSL
+  `RenderPipeline` (`app/gpu/PostFX.tsx`).
 - **[Tailwind CSS](https://tailwindcss.com)** + **[shadcn/ui](https://ui.shadcn.com)** (Radix) — dark editorial UI.
 - **[chroma-js](https://gka.github.io/chroma.js/)** — blackbody star colours.
 - **Vite** — bundler/dev server. **TypeScript** throughout.
@@ -67,8 +69,9 @@ app/
   routes/            React Router file routes (see table above)
   components/         R3F scene components — Planet, Star, Binary, Nebula,
                       MilkyWay, PlanetCanvas, LivePlanet, menus, ui/ (shadcn)
-  shaders/           GLSL: planetShader, starShader, atmosphereShader,
-                      ringShader, scatteringShader, gasGiant, terrainTexture…
+  shaders/           TSL: planetShader, starShader, planetEffects,
+                      ringShader, scatteringShader, generated/ …
+  gpu/               GPUCanvas (WebGPU), PostFX, point-sprite helpers
   utils/             kepler.ts (orbital mechanics), planetClassification.ts,
                       getHabitableZone, parseSystemPositions, snapshot helpers
   data/              featuredSystems, catalogueSystems, zodiacConstellations,

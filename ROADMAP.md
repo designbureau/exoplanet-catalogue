@@ -62,7 +62,7 @@ priorities shift and details get stale.
 
 - **Animated clouds** — re-enable `u_time` on cloud sphere in
   `Planet.jsx` `useFrame` (frozen for perf; one-line toggle).
-- **GPU render-to-texture terrain bake** — run the real GLSL
+- **GPU render-to-texture terrain bake** — run the real TSL
   `computeContinent` to a texture for pixel-identical baked heightfield /
   normals. Would replace ~170 noise evals/fragment with one texture lookup.
 - **Gas giant volumetric depth** — normal mapping on banded noise for 3D
