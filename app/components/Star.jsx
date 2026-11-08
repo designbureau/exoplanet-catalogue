@@ -6,8 +6,9 @@ import {
   calculateHZ,
 } from "../utils/getHabitableZone";
 import Planet from "./Planet";
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 import { createStarMaterial } from "../shaders/starShader";
+import { createHabitableZoneMaterial } from "../shaders/planetEffects";
 import StarEffects from "./StarEffects";
 
 import {
@@ -86,6 +87,19 @@ const Star = ({ data, position, distance }) => {
 
   const spectraltype = data.spectraltype?.[0]?.[0] || "M";
   const habitableZone = calculateHZ({ mass, spectraltype, temperature, radius, Constants });
+  const hzInner = habitableZone?.innerRadiusAU;
+  const hzOuter = habitableZone?.outerRadiusAU;
+  const hzMaterial = useMemo(() => {
+    if (hzInner === undefined || hzOuter === undefined) return null;
+    // Extend geometry slightly beyond HZ bounds for soft fade
+    const padding = (hzOuter - hzInner) * 0.3;
+    return createHabitableZoneMaterial({
+      inner: hzInner,
+      outer: hzOuter,
+      geoInner: Math.max(0, hzInner - padding),
+      geoOuter: hzOuter + padding,
+    });
+  }, [hzInner, hzOuter]);
 
   // Average orbital inclination from planets for HZ ring tilt
   const avgInclination = useMemo(() => {
@@ -110,46 +124,7 @@ const Star = ({ data, position, distance }) => {
         return (
           <mesh rotation-x={(avgInclination * Math.PI) / 90}>
             <ringGeometry args={[geoInner, geoOuter, 128]} />
-            <shaderMaterial
-              transparent={true}
-              side={THREE.DoubleSide}
-              depthWrite={false}
-              blending={THREE.AdditiveBlending}
-              uniforms={{
-                uColor: { value: new THREE.Color(0x00aaaa) },
-                uOpacity: { value: 0.2 },
-                uInnerEdge: { value: inner },
-                uOuterEdge: { value: outer },
-                uGeoInner: { value: geoInner },
-                uGeoOuter: { value: geoOuter },
-              }}
-              vertexShader={`
-                varying float vRadius;
-                void main() {
-                  vRadius = length(position.xy);
-                  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-              `}
-              fragmentShader={`
-                uniform vec3 uColor;
-                uniform float uOpacity;
-                uniform float uInnerEdge;
-                uniform float uOuterEdge;
-                uniform float uGeoInner;
-                uniform float uGeoOuter;
-                varying float vRadius;
-                void main() {
-                  // Soft fade at inner edge
-                  float innerFade = smoothstep(uGeoInner, uInnerEdge, vRadius);
-                  // Full opacity in habitable zone
-                  float core = 1.0;
-                  // Soft fade at outer edge
-                  float outerFade = 1.0 - smoothstep(uOuterEdge, uGeoOuter, vRadius);
-                  float alpha = innerFade * outerFade * uOpacity;
-                  gl_FragColor = vec4(uColor, alpha);
-                }
-              `}
-            />
+            <primitive object={hzMaterial} attach="material" />
           </mesh>
         );
       })()}

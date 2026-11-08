@@ -1,3 +1,5 @@
+// NOTE: parked and not mounted (see ROADMAP.md). This still uses a GLSL ShaderMaterial, which
+// the WebGPURenderer cannot run — port it to TSL (see app/shaders/README.md) before re-enabling.
 /**
  * LavaFlares — a handful of arched prominence ribbons rising off a lava
  * eyeball's molten sub-stellar face. Adapted from the star-flare shader

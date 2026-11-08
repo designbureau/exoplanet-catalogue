@@ -1,189 +1,38 @@
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
+import {
+  Fn,
+  float,
+  normalView,
+  positionLocal,
+  pow,
+  max,
+  mix,
+  clamp,
+  uniform,
+  varying,
+  vec3,
+  vec4,
+  vec2,
+  sin,
+  cos,
+} from "~/shaders/tsl/nodes";
 import chroma from "chroma-js";
+import type { N } from "~/shaders/tsl/nodes";
+import { snoise4 } from "~/shaders/tsl/simplex4d";
 
 // Ported from sun/js/shader/ — single-pass version combining the perlin cubemap
 // bake + sun sphere sampling into one fragment shader for R3F compatibility.
 // Uses the original Ashima Arts 4D simplex noise + FBM with three rotating
-// noise layers and brightnessToColor stellar emission.
+// noise layers and brightnessToColor stellar emission. (TSL / WebGPU port.)
 
-const vertexShader = `
-  varying vec3 vPosition;
-  varying vec3 vNormalView;
-  varying vec3 vLayer0;
-  varying vec3 vLayer1;
-  varying vec3 vLayer2;
+type Num = N;
 
-  uniform float u_time;
-
-  mat2 rot(float a) {
-    float s = sin(a), c = cos(a);
-    return mat2(c, -s, s, c);
-  }
-
-  void main() {
-    vPosition = normalize(position);
-    vNormalView = normalize(normalMatrix * normal);
-
-    // Three rotating noise layers (from sunSphereVS.glsl)
-    float t = u_time;
-    vec3 p = normalize(position);
-
-    vec3 p0 = p;
-    p0.yz = rot(t) * p0.yz;
-    vLayer0 = p0;
-
-    vec3 p1 = p;
-    p1.zx = rot(t + 2.094) * p1.zx;
-    vLayer1 = p1;
-
-    vec3 p2 = p;
-    p2.xy = rot(t - 4.188) * p2.xy;
-    vLayer2 = p2;
-
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-// Full 4D simplex noise from sun/js/shader/includes/simplex4d.glsl (Ashima Arts, MIT)
-const simplex4dGLSL = `
-  vec4 mod289(vec4 x){ return x - floor(x * (1.0/289.0)) * 289.0; }
-  float mod289(float x){ return x - floor(x * (1.0/289.0)) * 289.0; }
-  vec4 permute(vec4 x){ return mod289(((x * 34.0) + 1.0) * x); }
-  float permute(float x){ return mod289(((x * 34.0) + 1.0) * x); }
-  vec4 taylorInvSqrt(vec4 r){ return 1.79284291400159 - 0.85373472095314 * r; }
-  float taylorInvSqrt(float r){ return 1.79284291400159 - 0.85373472095314 * r; }
-
-  vec4 grad4(float j, vec4 ip) {
-    const vec4 ones = vec4(1.0, 1.0, 1.0, -1.0);
-    vec4 p, s;
-    p.xyz = floor(fract(vec3(j) * ip.xyz) * 7.0) * ip.z - 1.0;
-    p.w = 1.5 - dot(abs(p.xyz), ones.xyz);
-    s = vec4(lessThan(p, vec4(0.0)));
-    p.xyz = p.xyz + (s.xyz * 2.0 - 1.0) * s.www;
-    return p;
-  }
-
-  #define F4 0.309016994374947451
-
-  float snoise(vec4 v) {
-    const vec4 C = vec4(0.138196601125011, 0.276393202250021, 0.414589803375032, -0.447213595499958);
-    vec4 i = floor(v + dot(v, vec4(F4)));
-    vec4 x0 = v - i + dot(i, C.xxxx);
-    vec4 i0;
-    vec3 isX = step(x0.yzw, x0.xxx);
-    vec3 isYZ = step(x0.zww, x0.yyz);
-    i0.x = isX.x + isX.y + isX.z;
-    i0.yzw = 1.0 - isX;
-    i0.y += isYZ.x + isYZ.y;
-    i0.zw += 1.0 - isYZ.xy;
-    i0.z += isYZ.z;
-    i0.w += 1.0 - isYZ.z;
-    vec4 i3 = clamp(i0, 0.0, 1.0);
-    vec4 i2 = clamp(i0-1.0, 0.0, 1.0);
-    vec4 i1 = clamp(i0-2.0, 0.0, 1.0);
-    vec4 x1 = x0 - i1 + C.xxxx;
-    vec4 x2 = x0 - i2 + C.yyyy;
-    vec4 x3 = x0 - i3 + C.zzzz;
-    vec4 x4 = x0 + C.wwww;
-    i = mod289(i);
-    float j0 = permute(permute(permute(permute(i.w) + i.z) + i.y) + i.x);
-    vec4 j1 = permute(permute(permute(permute(
-      i.w + vec4(i1.w, i2.w, i3.w, 1.0)) + i.z + vec4(i1.z, i2.z, i3.z, 1.0))
-      + i.y + vec4(i1.y, i2.y, i3.y, 1.0))
-      + i.x + vec4(i1.x, i2.x, i3.x, 1.0));
-    vec4 ip = vec4(1.0/294.0, 1.0/49.0, 1.0/7.0, 0.0);
-    vec4 p0a = grad4(j0, ip);
-    vec4 p1a = grad4(j1.x, ip);
-    vec4 p2a = grad4(j1.y, ip);
-    vec4 p3a = grad4(j1.z, ip);
-    vec4 p4a = grad4(j1.w, ip);
-    vec4 norm = taylorInvSqrt(vec4(dot(p0a,p0a), dot(p1a,p1a), dot(p2a,p2a), dot(p3a,p3a)));
-    p0a *= norm.x; p1a *= norm.y; p2a *= norm.z; p3a *= norm.w;
-    p4a *= taylorInvSqrt(dot(p4a, p4a));
-    vec3 m0 = max(0.6 - vec3(dot(x0,x0), dot(x1,x1), dot(x2,x2)), 0.0);
-    vec2 m1 = max(0.6 - vec2(dot(x3,x3), dot(x4,x4)), 0.0);
-    m0 = m0 * m0; m1 = m1 * m1;
-    return 49.0 * (dot(m0*m0, vec3(dot(p0a,x0), dot(p1a,x1), dot(p2a,x2)))
-                 + dot(m1*m1, vec2(dot(p3a,x3), dot(p4a,x4))));
-  }
-`;
-
-const fragmentShader = `
-  precision highp float;
-
-  uniform float u_time;
-  uniform float u_tint;
-  uniform float u_brightness;
-  uniform float u_base;
-  uniform float u_brightnessOffset;
-  uniform float u_fresnelPower;
-  uniform float u_fresnelInfluence;
-  uniform float u_spatialFreq;
-  uniform float u_temporalFreq;
-  uniform float u_contrast;
-  uniform float u_hParam;
-  uniform float u_flatten;
-
-  varying vec3 vPosition;
-  varying vec3 vNormalView;
-  varying vec3 vLayer0;
-  varying vec3 vLayer1;
-  varying vec3 vLayer2;
-
-  ${simplex4dGLSL}
-
-  // FBM using 4D simplex (from perlinFS.glsl)
-  vec2 fbm4d(vec4 p) {
-    float a = 1.0, f = 1.0;
-    vec2 sum = vec2(0.0);
-    for (int i = 0; i < 5; i++) {
-      sum.x += snoise(p * f) * a;
-      p.w += 100.0;
-      sum.y += snoise(p * f) * a;
-      a *= u_hParam;
-      f *= 2.0;
-    }
-    return sum;
-  }
-
-  // Inline perlin layer (replaces cubemap lookup from perlinFS)
-  float perlinLayer(vec3 layerPos) {
-    vec3 world = layerPos + 12.45;
-    vec4 p = vec4(world * u_spatialFreq, u_time * u_temporalFreq);
-    vec2 f = fbm4d(p) * u_contrast + 0.5;
-
-    // Low-frequency modulation (from perlinFS uFlatten)
-    vec4 p2 = vec4(world * 2.0, u_time * u_temporalFreq);
-    float modulate = max(snoise(p2), 0.0);
-    return mix(f.x, f.x * modulate, u_flatten);
-  }
-
-  // brightnessToColor from sunSphereFS — produces blackbody-like emission
-  // vec3(b, b², b⁴) naturally maps brightness to stellar colour
-  vec3 brightnessToColor(float b) {
-    b *= u_tint;
-    return (vec3(b, b*b, b*b*b*b) / u_tint) * u_brightness;
-  }
-
-  void main() {
-    // Sample noise across three rotating layers (from sunSphereFS ocean())
-    float s = 0.0;
-    s += perlinLayer(vLayer0);
-    s += perlinLayer(vLayer1);
-    s += perlinLayer(vLayer2);
-    s *= 0.3333;
-
-    // Fresnel (limb darkening at edges)
-    vec3 Vview = vec3(0.0, 0.0, 1.0);
-    float nDotV = dot(vNormalView, Vview);
-    float fresnel = pow(1.0 - max(nDotV, 0.0), u_fresnelPower) * u_fresnelInfluence;
-
-    float brightness = s * u_base + u_brightnessOffset + fresnel;
-    vec3 col = clamp(brightnessToColor(brightness), 0.0, 1.0);
-
-    gl_FragColor = vec4(col, 1.0);
-  }
-`;
+// GLSL mat2(c, -s, s, c) * v  (column-major)  →  (c·x + s·y, −s·x + c·y)
+function rot2(a: Num, x: Num, y: Num) {
+  const s = sin(a);
+  const c = cos(a);
+  return vec2(c.mul(x).add(s.mul(y)), s.negate().mul(x).add(c.mul(y)));
+}
 
 // Star temperature → tint parameter for the `brightnessToColor` curve in
 // the fragment shader. Lower = redder, higher = whiter/bluer.
@@ -195,7 +44,7 @@ const fragmentShader = `
 // hot O-type → ~1.8, deep red L/T → ~0.15).
 function tempToTint(temp: number): number {
   const [r, , b] = chroma.temperature(temp).rgb();
-  const ratio = b / Math.max(1, r);              // 0 at cool red end, ~1.8 at O-type
+  const ratio = b / Math.max(1, r); // 0 at cool red end, ~1.8 at O-type
   return Math.max(0.15, Math.min(1.8, 0.15 + ratio));
 }
 
@@ -212,34 +61,114 @@ export interface StarShaderParams {
   glowFalloff?: number;
 }
 
-export function createStarMaterial(params: StarShaderParams): THREE.ShaderMaterial {
+export type StarUniforms = Record<
+  | "u_time"
+  | "u_tint"
+  | "u_brightness"
+  | "u_base"
+  | "u_brightnessOffset"
+  | "u_fresnelPower"
+  | "u_fresnelInfluence"
+  | "u_spatialFreq"
+  | "u_temporalFreq"
+  | "u_contrast"
+  | "u_hParam"
+  | "u_flatten",
+  { value: number }
+>;
+
+export type StarMaterial = THREE.NodeMaterial & { uniforms: StarUniforms };
+
+export function createStarMaterial(params: StarShaderParams): StarMaterial {
   const tint = tempToTint(params.temperature);
 
-  return new THREE.ShaderMaterial({
-    uniforms: {
-      // Original values from FWDDSImageManager.addSun() / addPerlinCube()
-      u_time: { value: 0.0 },
-      u_tint: { value: tint },
-      u_brightness: { value: 0.6 },           // from sunMaterial
-      u_base: { value: 4.0 },                  // from sunMaterial
-      u_brightnessOffset: { value: 1.0 },       // from sunMaterial
-      u_fresnelPower: { value: 1.0 },           // from sunMaterial
-      u_fresnelInfluence: { value: 0.8 },        // from sunMaterial
-      u_spatialFreq: { value: 6.0 },            // from perlinMat
-      u_temporalFreq: { value: 0.1 },           // from perlinMat
-      u_contrast: { value: 0.25 },              // from perlinMat
-      u_hParam: { value: 1.0 },                 // from perlinMat (uH)
-      u_flatten: { value: 0.72 },               // from perlinMat
-    },
-    vertexShader,
-    fragmentShader,
-    polygonOffset: true,
-    polygonOffsetFactor: 1,
-    polygonOffsetUnits: 1,
-  });
+  // Original values from FWDDSImageManager.addSun() / addPerlinCube()
+  const u = {
+    u_time: uniform(0.0),
+    u_tint: uniform(tint),
+    u_brightness: uniform(0.6), // from sunMaterial
+    u_base: uniform(4.0), // from sunMaterial
+    u_brightnessOffset: uniform(1.0), // from sunMaterial
+    u_fresnelPower: uniform(1.0), // from sunMaterial
+    u_fresnelInfluence: uniform(0.8), // from sunMaterial
+    u_spatialFreq: uniform(6.0), // from perlinMat
+    u_temporalFreq: uniform(0.1), // from perlinMat
+    u_contrast: uniform(0.25), // from perlinMat
+    u_hParam: uniform(1.0), // from perlinMat (uH)
+    u_flatten: uniform(0.72), // from perlinMat
+  };
+
+  const mat = new THREE.NodeMaterial() as StarMaterial;
+
+  // ── vertex: three rotating noise layers (from sunSphereVS.glsl) ──────────
+  const p = positionLocal.normalize().toVar();
+  const t = u.u_time;
+  const l0yz = rot2(t, p.y, p.z);
+  const l1zx = rot2(t.add(2.094), p.z, p.x);
+  const l2xy = rot2(t.sub(4.188), p.x, p.y);
+  const vLayer0 = varying(vec3(p.x, l0yz.x, l0yz.y));
+  const vLayer1 = varying(vec3(l1zx.y, p.y, l1zx.x));
+  const vLayer2 = varying(vec3(l2xy.x, l2xy.y, p.z));
+
+  // ── fragment ─────────────────────────────────────────────────────────────
+  // FBM using 4D simplex (from perlinFS.glsl)
+  const fbm4d = (p0: N) => {
+    let pp = p0;
+    let a: Num = float(1);
+    let f: Num = float(1);
+    let sx: Num = float(0);
+    let sy: Num = float(0);
+    for (let i = 0; i < 5; i++) {
+      sx = sx.add(snoise4(pp.mul(f)).mul(a));
+      pp = vec4(pp.xyz, pp.w.add(100));
+      sy = sy.add(snoise4(pp.mul(f)).mul(a));
+      a = a.mul(u.u_hParam);
+      f = f.mul(2);
+    }
+    return vec2(sx, sy);
+  };
+
+  // Inline perlin layer (replaces cubemap lookup from perlinFS)
+  const perlinLayer = (layerPos: N) => {
+    const world = layerPos.add(12.45);
+    const pp = vec4(world.mul(u.u_spatialFreq), u.u_time.mul(u.u_temporalFreq));
+    const f = fbm4d(pp).mul(u.u_contrast).add(0.5);
+
+    // Low-frequency modulation (from perlinFS uFlatten)
+    const p2 = vec4(world.mul(2), u.u_time.mul(u.u_temporalFreq));
+    const modulate = max(snoise4(p2), 0);
+    return mix(f.x, f.x.mul(modulate), u.u_flatten);
+  };
+
+  // brightnessToColor from sunSphereFS — produces blackbody-like emission
+  // vec3(b, b², b⁴) naturally maps brightness to stellar colour
+  const brightnessToColor = (b0: Num) => {
+    const b = b0.mul(u.u_tint);
+    return vec3(b, b.mul(b), b.mul(b).mul(b).mul(b)).div(u.u_tint).mul(u.u_brightness);
+  };
+
+  mat.fragmentNode = Fn(() => {
+    // Sample noise across three rotating layers (from sunSphereFS ocean())
+    const s = perlinLayer(vLayer0).add(perlinLayer(vLayer1)).add(perlinLayer(vLayer2)).mul(0.3333);
+
+    // Fresnel (limb darkening at edges)
+    const nDotV = normalView.normalize().z;
+    const fresnel = pow(float(1).sub(max(nDotV, 0)), u.u_fresnelPower).mul(u.u_fresnelInfluence);
+
+    const brightness = s.mul(u.u_base).add(u.u_brightnessOffset).add(fresnel);
+    const col = clamp(brightnessToColor(brightness), 0, 1);
+    return vec4(col, 1);
+  })();
+
+  mat.polygonOffset = true;
+  mat.polygonOffsetFactor = 1;
+  mat.polygonOffsetUnits = 1;
+
+  mat.uniforms = u as unknown as StarUniforms;
+  return mat;
 }
 
-export function createStarGlowMaterial(params: StarShaderParams): THREE.SpriteMaterial {
+export function createStarGlowMaterial(params: StarShaderParams): THREE.SpriteNodeMaterial {
   const color = tempToGlowColor(params.temperature);
 
   const size = 256;
@@ -264,7 +193,7 @@ export function createStarGlowMaterial(params: StarShaderParams): THREE.SpriteMa
   const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
   texture.needsUpdate = true;
 
-  return new THREE.SpriteMaterial({
+  return new THREE.SpriteNodeMaterial({
     map: texture,
     color,
     transparent: true,

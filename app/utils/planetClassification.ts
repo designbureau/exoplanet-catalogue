@@ -37,6 +37,13 @@ export enum PlanetType {
 
 export interface ShaderParams {
   type: PlanetType;
+  // Eyeball / ice-ocean tuning (set by the classifier for tidally-locked types)
+  eyeAridEdge?: number;
+  eyeIceEdge?: number;
+  eyeIceBergDensity?: number;
+  iceOceanPolarFade?: number;
+  iceOceanEdgeNoise?: number;
+  iceOceanCrackDepth?: number;
   color1: THREE.Color;
   color2: THREE.Color;
   color3: THREE.Color;
@@ -258,6 +265,10 @@ export interface HzRanges {
   seaLevel?: [number, number];
   iceCap?: [number, number];
   continentFreq?: [number, number];
+  // Terrestrial HZ-gradient anchor presets (Mars / Earth / Warm), keyed by shader param
+  mars?: Record<string, number>;
+  earth?: Record<string, number>;
+  warm?: Record<string, number>;
 }
 
 function getShaderParams(type: PlanetType, tEq: number, name: string, starTemp: number, massJup: number = 0, radiusJup: number = 0, hzRanges?: HzRanges, sEff: number = 1.0, tidallyLocked: boolean = false): ShaderParams {

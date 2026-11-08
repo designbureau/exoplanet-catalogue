@@ -14,10 +14,11 @@
  * sphere diameter vs 650, with the system viewer's detail level.
  */
 
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
+import { GPUCanvas } from "~/gpu/GPUCanvas";
 import { useRef, useMemo, useEffect, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 import { createPlanetMaterial, createCloudMaterial } from "~/shaders/planetShader";
 import { buildShaderParams, numericSeedToVec3 } from "~/utils/planetSnapshot";
 import type { PlanetType as CatType } from "~/components/PlanetCanvas";
@@ -69,7 +70,10 @@ function OrthoFit() {
 
 function CompileHelper() {
   const { gl, scene, camera } = useThree();
-  useEffect(() => { gl.compile(scene, camera); }, [gl, scene, camera]);
+  useEffect(() => {
+    // WebGPURenderer compiles pipelines asynchronously
+    (gl as unknown as THREE.WebGPURenderer).compileAsync(scene, camera).catch(() => {});
+  }, [gl, scene, camera]);
   return null;
 }
 
@@ -377,10 +381,10 @@ export function LivePlanet({ type, seed, className, style, offsetX = 0 }: LivePl
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        <Canvas
+        <GPUCanvas
           orthographic
           camera={{ position: [0, 0, 3], near: 0.1, far: 10 }}
-          gl={{ alpha: true, antialias: false }}
+          gpu={{ alpha: true, antialias: false, output: "raw" }}
           dpr={1}
         >
           <OrthoFit />
@@ -394,7 +398,7 @@ export function LivePlanet({ type, seed, className, style, offsetX = 0 }: LivePl
             vel={vel}
             lightRef={lightRef}
           />
-        </Canvas>
+        </GPUCanvas>
       </div>
       {/* Temporary light-tuning GUI — hidden. Re-enable by uncommenting.
       <LightGuiPanel

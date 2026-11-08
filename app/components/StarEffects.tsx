@@ -1,213 +1,245 @@
 import { useRef, useMemo } from "react";
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
+import {
+  Fn,
+  abs,
+  attribute,
+  cameraProjectionMatrix,
+  cameraViewMatrix,
+  cross,
+  distance,
+  float,
+  fract,
+  length,
+  max,
+  mix,
+  modelScale,
+  modelViewMatrix,
+  modelWorldMatrix,
+  normalize,
+  select,
+  sin,
+  smoothstep,
+  uniform,
+  varying,
+  vec3,
+  vec4,
+  type N,
+} from "~/shaders/tsl/nodes";
 import { useFrame, useThree } from "@react-three/fiber";
 import chroma from "chroma-js";
 
-// ---- Shared visibility GLSL (from sun/js/shader/includes/visibility.glsl) ----
-const visibilityGLSL = `
-  float getAlpha(vec3 n) {
-    // Full visibility — no directional culling in our system view
-    return 1.0;
+// ---- TSL shader building blocks (ported from sun/js/shader/*.glsl) ----
+
+type V3 = N;
+type V4 = N;
+
+// GLSL mat4(...) is column-major: these are the four columns of m4.
+const M4_COLS = [
+  vec4(0.0, 0.8, 0.6, -0.4),
+  vec4(-0.8, 0.36, -0.48, -0.5),
+  vec4(-0.6, -0.48, 0.64, 0.2),
+  vec4(0.4, 0.3, 0.2, 0.4),
+];
+const m4mul = (q: V4) =>
+  M4_COLS[0].mul(q.x).add(M4_COLS[1].mul(q.y)).add(M4_COLS[2].mul(q.z)).add(M4_COLS[3].mul(q.w));
+
+function twistedSineNoise(q0: V4, falloff: number): V4 {
+  let q = q0;
+  let a = 1.0;
+  let f = 1.0;
+  let sum: V4 = vec4(0, 0, 0, 0);
+  for (let i = 0; i < 4; i++) {
+    q = m4mul(q).toVar();
+    const s = sin(q.ywxz.mul(f)).mul(a).toVar();
+    q = q.add(s);
+    sum = sum.add(s);
+    a *= falloff;
+    f /= falloff;
   }
-`;
+  return sum;
+}
+
+// Camera-facing ribbon side vector, with a stable fallback when the ribbon
+// points straight at the camera.
+function ribbonSide(pW: V3, p1W: V3, camPos: V3): V3 {
+  const dirW = normalize(p1W.sub(pW));
+  const vW = normalize(pW.sub(camPos));
+  const c = cross(vW, dirW).toVar();
+  const len = length(c);
+  const up = select(abs(dirW.y).lessThan(0.99), vec3(0, 1, 0), vec3(1, 0, 0));
+  return select(len.lessThan(1e-6), normalize(cross(up, dirW)), c.div(max(len, 1e-12)));
+}
+
+const aWireRandom = () => attribute("aWireRandom", "vec4");
+
+// Full visibility — no directional culling in our system view (getAlpha == 1).
 
 // ---- Sun Rays: noise-displaced ribbons emanating from surface ----
-const sunRaysVS = `
-  attribute vec3 aPos;
-  attribute vec3 aPos0;
-  attribute vec4 aWireRandom;
+function createRaysMaterial(init: {
+  width: number;
+  length: number;
+  opacity: number;
+  hue: number;
+  baseColor: THREE.Color;
+}) {
+  const u = {
+    uTime: uniform(0),
+    uCamPos: uniform(new THREE.Vector3()),
+    uWidth: uniform(init.width),
+    uLength: uniform(init.length),
+    uOpacity: uniform(init.opacity),
+    uNoiseFrequency: uniform(8.0),
+    uNoiseAmplitude: uniform(0.4),
+    uHueSpread: uniform(0.15),
+    uHue: uniform(init.hue),
+    uBaseColor: uniform(init.baseColor),
+  };
+  const aPos = attribute("aPos", "vec3");
+  const aPos0 = attribute("aPos0", "vec3");
+  const rnd = aWireRandom();
 
-  varying float vUVY;
-  varying float vOpacity;
-  varying vec3 vColor;
-  varying vec3 vNormal;
+  const getPos = (phase: N) => {
+    const size = rnd.z.add(0.2);
+    const d = phase.mul(u.uLength).mul(size).toVar();
+    const p = aPos0.add(aPos0.mul(d)).toVar();
+    return p.add(twistedSineNoise(vec4(p.mul(u.uNoiseFrequency), u.uTime), 0.707).xyz.mul(d.mul(u.uNoiseAmplitude)));
+  };
 
-  uniform float uHueSpread;
-  uniform float uHue;
-  uniform float uLength;
-  uniform float uWidth;
-  uniform float uTime;
-  uniform float uNoiseFrequency;
-  uniform float uNoiseAmplitude;
-  uniform vec3 uCamPos;
-  uniform float uOpacity;
+  const p = getPos(aPos.x).toVar();
+  const p1 = getPos(aPos.x.add(0.01)).toVar();
+  const pW = modelWorldMatrix.mul(vec4(p, 1)).xyz.toVar();
+  const p1W = modelWorldMatrix.mul(vec4(p1, 1)).xyz;
+  const sideW = ribbonSide(pW, p1W, u.uCamPos);
+  const width = u.uWidth.mul(aPos.z).mul(float(1).sub(aPos.x));
+  const pFinal = pW.add(sideW.mul(width));
 
-  #define m4 mat4(0.00,0.80,0.60,-0.4,-0.80,0.36,-0.48,-0.5,-0.60,-0.48,0.64,0.2,0.40,0.30,0.20,0.4)
+  const vOpacity = varying(u.uOpacity.mul(rnd.w.add(0.5)));
+  // Temperature-matched colour with per-ray brightness variation
+  const variation = rnd.w.mul(u.uHueSpread);
+  const vColor = varying(u.uBaseColor.mul(variation.mul(0.6).add(0.7)));
 
-  vec4 twistedSineNoise(vec4 q, float falloff) {
-    float a = 1.0, f = 1.0;
-    vec4 sum = vec4(0);
-    for (int i = 0; i < 4; i++) {
-      q = m4 * q;
-      vec4 s = sin(q.ywxz * f) * a;
-      q += s; sum += s;
-      a *= falloff; f /= falloff;
-    }
-    return sum;
-  }
-
-  vec3 getPos(float phase, float animPhase) {
-    float size = aWireRandom.z + 0.2;
-    float d = phase * uLength * size;
-    vec3 p = aPos0 + aPos0 * d;
-    p += twistedSineNoise(vec4(p * uNoiseFrequency, uTime), 0.707).xyz * (d * uNoiseAmplitude);
-    return p;
-  }
-
-  uniform vec3 uBaseColor;
-
-  void main() {
-    vUVY = aPos.z;
-    float animPhase = fract(uTime * 0.3 * (aWireRandom.y * 0.5) + aWireRandom.x);
-
-    vec3 p = getPos(aPos.x, animPhase);
-    vec3 p1 = getPos(aPos.x + 0.01, animPhase);
-
-    // Transform to world space
-    vec3 pW = (modelMatrix * vec4(p, 1.0)).xyz;
-    vec3 p1W = (modelMatrix * vec4(p1, 1.0)).xyz;
-
-    vec3 dirW = normalize(p1W - pW);
-    vec3 vW = normalize(pW - uCamPos);
-    vec3 sideW = normalize(cross(vW, dirW));
-
-    if (length(sideW) < 1e-6) {
-      vec3 up = (abs(dirW.y) < 0.99) ? vec3(0.0,1.0,0.0) : vec3(1.0,0.0,0.0);
-      sideW = normalize(cross(up, dirW));
-    }
-
-    float width = uWidth * aPos.z * (1.0 - aPos.x);
-    pW += sideW * width;
-
-    vNormal = normalize(pW);
-    vOpacity = uOpacity * (0.5 + aWireRandom.w);
-    // Temperature-matched colour with per-ray brightness variation
-    float variation = aWireRandom.w * uHueSpread;
-    vColor = uBaseColor * (0.7 + variation * 0.6);
-
-    gl_Position = projectionMatrix * viewMatrix * vec4(pW, 1.0);
-  }
-`;
-
-const sunRaysFS = `
-  precision highp float;
-
-  ${visibilityGLSL}
-
-  varying float vUVY;
-  varying float vOpacity;
-  varying vec3 vColor;
-  varying vec3 vNormal;
-
-  void main() {
-    float alpha = 1.0 - smoothstep(0.0, 1.0, abs(vUVY));
-    alpha *= alpha;
-    alpha *= vOpacity;
-    alpha *= getAlpha(vNormal);
-    gl_FragColor = vec4(vColor * alpha, alpha);
-  }
-`;
+  const mat = new THREE.NodeMaterial();
+  mat.transparent = true;
+  mat.depthWrite = false;
+  mat.depthTest = true;
+  mat.blending = THREE.AdditiveBlending;
+  mat.side = THREE.DoubleSide;
+  mat.vertexNode = cameraProjectionMatrix.mul(cameraViewMatrix).mul(vec4(pFinal, 1));
+  mat.fragmentNode = Fn(() => {
+    const a0 = float(1).sub(smoothstep(0, 1, abs(aPos.z)));
+    const alpha = a0.mul(a0).mul(vOpacity);
+    return vec4(vColor.mul(alpha), alpha);
+  })();
+  return Object.assign(mat, { uniforms: u });
+}
 
 // ---- Sun Flares: arcing ribbons between two surface points ----
-const sunFlaresVS = `
-  attribute vec3 aPos;
-  attribute vec3 aPos0;
-  attribute vec3 aPos1;
-  attribute vec4 aWireRandom;
+function createFlaresMaterial(init: {
+  width: number;
+  amp: number;
+  opacity: number;
+  flareColor: THREE.Color;
+}) {
+  const u = {
+    uTime: uniform(0),
+    uCamPos: uniform(new THREE.Vector3()),
+    uWidth: uniform(init.width),
+    uAmp: uniform(init.amp),
+    uOpacity: uniform(init.opacity),
+    uAlphaBlended: uniform(0.65),
+    uHueSpread: uniform(0.16),
+    uFlareColor: uniform(init.flareColor),
+    uNoiseFrequency: uniform(4.0),
+    uNoiseAmplitude: uniform(0.2),
+  };
+  const aPos = attribute("aPos", "vec3");
+  const aPos0 = attribute("aPos0", "vec3");
+  const aPos1 = attribute("aPos1", "vec3");
+  const rnd = aWireRandom();
 
-  varying float vUVY;
-  varying float vOpacity;
-  varying vec3 vColor;
-  varying vec3 vNormal;
+  const animPhase = fract(u.uTime.mul(0.3).mul(rnd.y.mul(0.5)).add(rnd.x)).toVar();
 
-  uniform float uWidth;
-  uniform float uAmp;
-  uniform float uTime;
-  uniform float uNoiseFrequency;
-  uniform float uNoiseAmplitude;
-  uniform vec3 uCamPos;
-  uniform float uOpacity;
-  uniform float uHueSpread;
-  uniform float uHue;
+  const getPosOBJ = (phase: N) => {
+    const size = distance(aPos0, aPos1);
+    const n = normalize(aPos0.add(aPos1).mul(0.5));
+    const p = mix(aPos0, aPos1, phase).toVar();
+    const amp = sin(phase.mul(3.14159265)).mul(size).mul(u.uAmp).mul(animPhase).toVar();
+    const p2 = p.add(n.mul(amp)).toVar();
+    return p2.add(twistedSineNoise(vec4(p2.mul(u.uNoiseFrequency), u.uTime), 0.707).xyz.mul(amp.mul(u.uNoiseAmplitude)));
+  };
 
-  #define m4 mat4(0.00,0.80,0.60,-0.4,-0.80,0.36,-0.48,-0.5,-0.60,-0.48,0.64,0.2,0.40,0.30,0.20,0.4)
+  const pOBJ = getPosOBJ(aPos.x).toVar();
+  const p1OBJ = getPosOBJ(aPos.x.add(0.01)).toVar();
+  const pW = modelWorldMatrix.mul(vec4(pOBJ, 1)).xyz.toVar();
+  const p1W = modelWorldMatrix.mul(vec4(p1OBJ, 1)).xyz;
+  const sideW = normalize(cross(normalize(pW.sub(u.uCamPos)), normalize(p1W.sub(pW))));
 
-  vec4 twistedSineNoise(vec4 q, float falloff) {
-    float a = 1.0, f = 1.0;
-    vec4 sum = vec4(0.0);
-    for (int i = 0; i < 4; i++) {
-      q = m4 * q;
-      vec4 s = sin(q.ywxz * f) * a;
-      q += s; sum += s;
-      a *= falloff; f /= falloff;
-    }
-    return sum;
-  }
+  const R = length(aPos0);
+  const width = u.uWidth.mul(aPos.z).mul(animPhase.add(1)).mul(R);
+  const pFinal = pW.add(sideW.mul(width)).toVar();
 
-  vec3 getPosOBJ(float phase, float animPhase) {
-    float size = distance(aPos0, aPos1);
-    vec3 n = normalize((aPos0 + aPos1) * 0.5);
-    vec3 p = mix(aPos0, aPos1, phase);
-    float amp = sin(phase * 3.14159265) * size * uAmp;
-    amp *= animPhase;
-    p += n * amp;
-    p += twistedSineNoise(vec4(p * uNoiseFrequency, uTime), 0.707).xyz * (amp * uNoiseAmplitude);
-    return p;
-  }
+  const lenW = length(pFinal);
+  const vOpacity = varying(smoothstep(R, R.mul(1.03), lenW).mul(float(1).sub(animPhase)).mul(u.uOpacity));
+  // Temperature-matched colour with subtle per-wire variation
+  const variation = rnd.w.mul(u.uHueSpread);
+  const vColor = varying(u.uFlareColor.mul(variation.mul(0.3).add(0.85)));
 
-  uniform vec3 uFlareColor;
+  const mat = new THREE.NodeMaterial();
+  mat.transparent = true;
+  mat.depthWrite = false;
+  mat.depthTest = true;
+  mat.side = THREE.DoubleSide;
+  // Premultiplied "over": the shader already multiplies colour by alpha, so use
+  // an explicit (ONE, ONE_MINUS_SRC_ALPHA) blend rather than NodeMaterial's
+  // premultipliedAlpha flag (which would premultiply a second time).
+  mat.blending = THREE.CustomBlending;
+  mat.blendEquation = THREE.AddEquation;
+  mat.blendSrc = THREE.OneFactor;
+  mat.blendDst = THREE.OneMinusSrcAlphaFactor;
+  mat.blendSrcAlpha = THREE.OneFactor;
+  mat.blendDstAlpha = THREE.OneMinusSrcAlphaFactor;
+  mat.vertexNode = cameraProjectionMatrix.mul(cameraViewMatrix).mul(vec4(pFinal, 1));
+  mat.fragmentNode = Fn(() => {
+    const a0 = float(1).sub(smoothstep(0, 1, abs(aPos.z)));
+    const alpha = a0.mul(a0).mul(vOpacity);
+    return vec4(vColor.mul(alpha), alpha.mul(u.uAlphaBlended));
+  })();
+  return Object.assign(mat, { uniforms: u });
+}
 
-  void main() {
-    vUVY = aPos.z;
-    float animPhase = fract(uTime * 0.3 * (aWireRandom.y * 0.5) + aWireRandom.x);
+// ---- Glow ring (annular billboard from glowVS/glowFS) ----
+function createGlowMaterial(init: { radius: number; color: THREE.Color; brightness: number; falloff: number }) {
+  const u = {
+    uRadius: uniform(init.radius),
+    uColor: uniform(init.color),
+    uBrightness: uniform(init.brightness),
+    uFalloff: uniform(init.falloff),
+    uFalloffColor: uniform(0.7),
+  };
+  const aPos = attribute("aPos", "vec3");
+  const vRadial = aPos.z;
 
-    vec3 pOBJ = getPosOBJ(aPos.x, animPhase);
-    vec3 p1OBJ = getPosOBJ(aPos.x + 0.01, animPhase);
+  // Billboard via modelViewMatrix — always aligned, no lag
+  const mvCenter = modelViewMatrix.mul(vec4(0, 0, 0, 1));
+  const r = float(1).add(aPos.z.mul(u.uRadius)).mul(modelScale.x);
+  const viewPos = mvCenter.xyz.add(vec3(aPos.x.mul(r), aPos.y.mul(r), 0));
 
-    vec3 pW = (modelMatrix * vec4(pOBJ, 1.0)).xyz;
-    vec3 p1W = (modelMatrix * vec4(p1OBJ, 1.0)).xyz;
-
-    vec3 dirW = normalize(p1W - pW);
-    vec3 vW = normalize(pW - uCamPos);
-    vec3 sideW = normalize(cross(vW, dirW));
-
-    float R = length(aPos0);
-    float width = uWidth * aPos.z * (1.0 + animPhase) * R;
-    pW += sideW * width;
-
-    vNormal = normalize(pW);
-    float lenW = length(pW);
-    vOpacity = smoothstep(R, R * 1.03, lenW);
-    vOpacity *= (1.0 - animPhase);
-    vOpacity *= uOpacity;
-    // Temperature-matched colour with subtle per-wire variation
-    float variation = aWireRandom.w * uHueSpread;
-    vColor = uFlareColor * (0.85 + variation * 0.3);
-
-    gl_Position = projectionMatrix * viewMatrix * vec4(pW, 1.0);
-  }
-`;
-
-const sunFlaresFS = `
-  precision highp float;
-
-  ${visibilityGLSL}
-
-  varying float vUVY;
-  varying float vOpacity;
-  varying vec3 vColor;
-  varying vec3 vNormal;
-
-  uniform float uAlphaBlended;
-
-  void main() {
-    float alpha = smoothstep(1.0, 0.0, abs(vUVY));
-    alpha *= alpha;
-    alpha *= vOpacity;
-    alpha *= getAlpha(vNormal);
-    gl_FragColor = vec4(vColor * alpha, alpha * uAlphaBlended);
-  }
-`;
+  const mat = new THREE.NodeMaterial();
+  mat.transparent = true;
+  mat.depthWrite = false;
+  mat.depthTest = true;
+  mat.blending = THREE.AdditiveBlending;
+  mat.side = THREE.DoubleSide;
+  mat.vertexNode = cameraProjectionMatrix.mul(vec4(viewPos, 1));
+  mat.fragmentNode = Fn(() => {
+    const a0 = float(1).sub(vRadial);
+    const alpha = a0.mul(a0); // squared falloff — softer inner edge
+    const brightness = alpha.mul(u.uFalloffColor).add(1);
+    return vec4(u.uColor.mul(brightness).mul(u.uBrightness).mul(alpha), alpha);
+  })();
+  return Object.assign(mat, { uniforms: u });
+}
 
 // ---- Geometry builders ----
 
@@ -401,50 +433,14 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
     const flareOpacity = 0.2;      // original: 0.2
 
     const rGeo = buildRaysGeometry(starRadius, 10000);
-    const rMat = new THREE.ShaderMaterial({
-      vertexShader: sunRaysVS,
-      fragmentShader: sunRaysFS,
-      transparent: true,
-      depthWrite: false,
-      depthTest: true,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-      uniforms: {
-        uTime: { value: 0 },
-        uCamPos: { value: new THREE.Vector3() },
-        uWidth: { value: rayWidth },
-        uLength: { value: rayLength },
-        uOpacity: { value: rayOpacity },
-        uNoiseFrequency: { value: 8.0 },
-        uNoiseAmplitude: { value: 0.4 },
-        uHueSpread: { value: 0.15 },
-        uHue: { value: hue },
-        uBaseColor: { value: baseColor },
-      },
-    });
+    const rMat = createRaysMaterial({ width: rayWidth, length: rayLength, opacity: rayOpacity, hue, baseColor });
 
     const fGeo = buildFlaresGeometry(starRadius);
-    const fMat = new THREE.ShaderMaterial({
-      vertexShader: sunFlaresVS,
-      fragmentShader: sunFlaresFS,
-      transparent: true,
-      premultipliedAlpha: true,
-      depthWrite: false,
-      depthTest: true,
-      blending: THREE.NormalBlending,
-      side: THREE.DoubleSide,
-      uniforms: {
-        uTime: { value: 0 },
-        uCamPos: { value: new THREE.Vector3() },
-        uWidth: { value: flareWidth },
-        uAmp: { value: flareAmp },
-        uOpacity: { value: flareOpacity },
-        uAlphaBlended: { value: 0.65 },
-        uHueSpread: { value: 0.16 },
-        uFlareColor: { value: new THREE.Color(flareColor) },
-        uNoiseFrequency: { value: 4.0 },
-        uNoiseAmplitude: { value: 0.2 },
-      },
+    const fMat = createFlaresMaterial({
+      width: flareWidth,
+      amp: flareAmp,
+      opacity: flareOpacity,
+      flareColor: new THREE.Color(flareColor),
     });
 
     // --- Glow ring (annular billboard from glowVS/glowFS) ---
@@ -470,48 +466,11 @@ export default function StarEffects({ starRadius, temperature = 5500, focused = 
     gGeo.setAttribute("aPos", new THREE.Float32BufferAttribute(glowPositions, 3));
     gGeo.setIndex(new THREE.BufferAttribute(glowIndices, 1));
 
-    const gMat = new THREE.ShaderMaterial({
-      vertexShader: `
-        attribute vec3 aPos;
-        varying float vRadial;
-        uniform float uRadius;
-        void main() {
-          vRadial = aPos.z;
-          // Billboard via modelViewMatrix — always aligned, no lag
-          vec4 mvCenter = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-          float s = length(vec3(modelMatrix[0][0], modelMatrix[1][0], modelMatrix[2][0]));
-          float r = (1.0 + aPos.z * uRadius) * s;
-          vec3 viewPos = mvCenter.xyz + vec3(aPos.x * r, aPos.y * r, 0.0);
-          gl_Position = projectionMatrix * vec4(viewPos, 1.0);
-        }
-      `,
-      fragmentShader: `
-        precision highp float;
-        varying float vRadial;
-        uniform vec3 uColor;
-        uniform float uBrightness;
-        uniform float uFalloff;
-        uniform float uFalloffColor;
-        void main() {
-          float alpha = (1.0 - vRadial);
-          alpha *= alpha; // squared falloff — softer inner edge
-          float brightness = 1.0 + alpha * uFalloffColor;
-          vec3 col = uColor * brightness * uBrightness * alpha;
-          gl_FragColor = vec4(col, alpha);
-        }
-      `,
-      transparent: true,
-      depthWrite: false,
-      depthTest: true,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-      uniforms: {
-        uRadius: { value: 0.4 },
-        uColor: { value: new THREE.Color(glowColor) },
-        uBrightness: { value: glowBrightness },
-        uFalloff: { value: glowFalloff },
-        uFalloffColor: { value: 0.7 },
-      },
+    const gMat = createGlowMaterial({
+      radius: 0.4,
+      color: new THREE.Color(glowColor),
+      brightness: glowBrightness,
+      falloff: glowFalloff,
     });
 
     return { raysGeo: rGeo, raysMat: rMat, flaresGeo: fGeo, flaresMat: fMat, glowGeo: gGeo, glowMat: gMat };

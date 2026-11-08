@@ -6,7 +6,7 @@ originSessionId: b497df1c-e498-45a9-830d-52fe0fe92e70
 ---
 Exoplanet data visualization app. Renders 4,081 real exoplanet systems from the Open Exoplanet Catalogue (XML files in `app/data/`).
 
-**Stack**: React Router v7, React Three Fiber, Three.js, Tailwind CSS v3, shadcn/ui, chroma.js.
+**Stack**: React Router v7, React Three Fiber 9 + three r187 on `WebGPURenderer` (WebGL2 fallback), shaders in TSL (`app/shaders/README.md` has the porting/editing rules), Tailwind CSS v3, shadcn/ui, chroma.js.
 
 ## Roadmap
 

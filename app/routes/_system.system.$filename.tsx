@@ -5,13 +5,12 @@ import { EnvContext, EnvProvider } from "~/components/EnvContext";
 import Binary from "~/components/Binary";
 import Menu from "~/components/Menu";
 import Nebula, { nebulaColors as getNebulaColors, hashSeedString } from "~/components/Nebula";
-import { Canvas, useThree } from "@react-three/fiber";
-import * as THREE from "three";
+import { GPUCanvas } from "~/gpu/GPUCanvas";
+import { PostFX, TONE_MAP_OPTIONS, type FxConfig } from "~/gpu/PostFX";
+import * as THREE from "three/webgpu";
+import { Fn, clamp, cubeTexture, normalize, positionWorld, uniform, vec3, vec4 } from "~/shaders/tsl/nodes";
 import Controls from "~/components/Controls";
 import { getTemperature } from "~/utils/helperFunctions";
-import { EffectComposer, Vignette, Noise, ChromaticAberration, HueSaturation, BrightnessContrast, ToneMapping, DepthOfField, SMAA } from "@react-three/postprocessing";
-import { BlendFunction, ToneMappingMode, SMAAPreset, EdgeDetectionMode } from "postprocessing";
-import { Cinematic } from "~/shaders/CinematicEffectComponent";
 
 // Collect all star temperatures in a system (traverses binaries)
 function getAllStarTemps(data: any): number[] {
@@ -58,16 +57,6 @@ function starTempToAmbientHex(temp: number): string {
   if (temp > 3700) return "#ffa64d";  // K-type: orange
   if (temp > 2400) return "#ff6626";  // M-type: red-orange
   return "#e64019";                    // L/T-type: deep red
-}
-
-// Sync renderer tone mapping with React state
-function RendererSync({ toneMapping, exposure }: { toneMapping: number; exposure: number }) {
-  const { gl } = useThree();
-  useEffect(() => {
-    gl.toneMapping = toneMapping;
-    gl.toneMappingExposure = exposure;
-  }, [gl, toneMapping, exposure]);
-  return null;
 }
 
 // Extract primary star temperature from system data (traverses binaries)
@@ -163,51 +152,32 @@ function Accordion({ title, defaultOpen = false, children }: { title: string; de
   );
 }
 
-// Milky Way starfield skybox with brightness/contrast — uses equirectangular on a sphere
-// so we can apply a custom shader with uniform controls
-const skyboxVertShader = `
-  varying vec3 vWorldDirection;
-  void main() {
-    vec4 worldPos = modelMatrix * vec4(position, 1.0);
-    vWorldDirection = normalize(worldPos.xyz);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-const skyboxFragShader = `
-  uniform samplerCube u_envMap;
-  uniform float u_brightness;
-  uniform float u_contrast;
-  varying vec3 vWorldDirection;
-  void main() {
-    vec3 color = textureCube(u_envMap, vWorldDirection).rgb;
-    // Brightness
-    color *= u_brightness;
-    // Contrast (pivot around 0.5 grey)
-    color = (color - 0.5) * u_contrast + 0.5;
-    color = clamp(color, 0.0, 1.0);
-    gl_FragColor = vec4(color, 1.0);
-  }
-`;
-
+// Milky Way starfield skybox with brightness/contrast — a cubemap on a big
+// BackSide sphere so we can apply a custom shader with uniform controls
 function MilkyWaySkybox({ brightness, contrast }: { brightness: number; contrast: number }) {
-  const material = useState(() => {
-    return new THREE.ShaderMaterial({
-      uniforms: {
-        u_envMap: { value: null },
-        u_brightness: { value: brightness },
-        u_contrast: { value: contrast },
-      },
-      vertexShader: skyboxVertShader,
-      fragmentShader: skyboxFragShader,
-      side: THREE.BackSide,
-      depthWrite: false,
-    });
+  const { material, uniforms, env } = useState(() => {
+    const uniforms = { u_brightness: uniform(brightness), u_contrast: uniform(contrast) };
+    // Placeholder until the faces load (swapped in below)
+    const env = cubeTexture(new THREE.CubeTexture());
+    const mat = new THREE.NodeMaterial();
+    mat.side = THREE.BackSide;
+    mat.depthWrite = false;
+    // The old raw sampler had no env-map flip; cubeTexture() applies one for plain
+    // cube textures, so pre-flip x to keep the sky in the same orientation.
+    const dir = normalize(positionWorld);
+    mat.fragmentNode = Fn(() => {
+      let color = env.sample(vec3(dir.x.negate(), dir.y, dir.z)).rgb;
+      color = color.mul(uniforms.u_brightness); // brightness
+      color = color.sub(0.5).mul(uniforms.u_contrast).add(0.5); // contrast (pivot around 0.5 grey)
+      return vec4(clamp(color, 0, 1), 1);
+    })();
+    return { material: mat, uniforms, env };
   })[0];
 
   useEffect(() => {
-    material.uniforms.u_brightness.value = brightness;
-    material.uniforms.u_contrast.value = contrast;
-  }, [brightness, contrast, material]);
+    uniforms.u_brightness.value = brightness;
+    uniforms.u_contrast.value = contrast;
+  }, [brightness, contrast, uniforms]);
 
   useEffect(() => {
     const faces = ["px", "nx", "py", "ny", "pz", "nz"];
@@ -215,10 +185,10 @@ function MilkyWaySkybox({ brightness, contrast }: { brightness: number; contrast
     loader.setPath("/textures/cubemaps/nasa/8k/compressed/");
     loader.load(faces.map(f => f + ".jpg"), (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
-      material.uniforms.u_envMap.value = tex;
+      env.value = tex;
       material.needsUpdate = true;
     });
-  }, [material]);
+  }, [material, env]);
 
   return (
     <mesh renderOrder={-2}>
@@ -401,17 +371,14 @@ const App = ({ data }: any) => {
   const [ambientIntensity, setAmbientIntensity] = useState(0.05);
   const [ambientColor, setAmbientColor] = useState(() => starTempToAmbientHex(getPrimaryStarTemp(data)));
 
-  // Force EffectComposer rebuild
+  // Bump to force a post-processing pipeline rebuild
   const [fxKey, setFxKey] = useState(0);
 
-  // Stable Vector2 for ChromaticAberration (mutated in place)
-  const [chromaOffset] = useState(() => new THREE.Vector2(0, 0));
-
   // Post-processing — single config object, all neutral defaults
-  const [fx, setFx] = useState({
+  const [fx, setFx] = useState<FxConfig>({
     smaa:          { on: false },
     dof:           { on: false, focusDistance: 0.01, focalLength: 0.05, bokehScale: 3 },
-    toneMap:       { on: true, mode: ToneMappingMode.ACES_FILMIC },
+    toneMap:       { on: true, mode: THREE.ACESFilmicToneMapping },
     colorGrade:    { on: false, temperature: 0, tint: 0, shadows: 0, highlights: 0 },
     hueSat:        { on: false, saturation: -0.09 },
     brightContrast:{ on: false, brightness: 0, contrast: 0 },
@@ -419,7 +386,7 @@ const App = ({ data }: any) => {
     vignette:      { on: false, offset: 0.3, darkness: 0.6 },
     noise:         { on: false, opacity: 0.1 },
   });
-  const updateFx = (key: string, values: any) => setFx(prev => ({ ...prev, [key]: { ...prev[key as keyof typeof prev], ...values } }));
+  const updateFx = (key: keyof FxConfig, values: Partial<FxConfig[keyof FxConfig]>) => setFx(prev => ({ ...prev, [key]: { ...prev[key], ...values } }));
 
   return (
     <>
@@ -530,13 +497,7 @@ const App = ({ data }: any) => {
           {fx.toneMap.on && <div className="flex items-center gap-1">
             <label className="w-14 shrink-0">Mode</label>
             <select value={fx.toneMap.mode} onChange={(e) => updateFx('toneMap', {mode: Number(e.target.value)})} className="flex-1 bg-black/50 text-[9px] rounded px-1 py-0.5 border border-white/10">
-              <option value={ToneMappingMode.ACES_FILMIC}>ACES Filmic</option>
-              <option value={ToneMappingMode.AGX}>AgX</option>
-              <option value={ToneMappingMode.REINHARD}>Reinhard</option>
-              <option value={ToneMappingMode.REINHARD2}>Reinhard 2</option>
-              <option value={ToneMappingMode.UNCHARTED2}>Uncharted 2</option>
-              <option value={ToneMappingMode.NEUTRAL}>Neutral</option>
-              <option value={ToneMappingMode.LINEAR}>Linear</option>
+              {TONE_MAP_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>}
 
@@ -857,37 +818,14 @@ const App = ({ data }: any) => {
         </Accordion>
       </div>}
       <div id="canvas-container">
-        <Canvas dpr={[1, 2]} camera={{ far: 10000000, near: 0.01, fov: 50 }} gl={{ alpha: false }}>
-          <RendererSync toneMapping={THREE.ACESFilmicToneMapping} exposure={1.0} />
+        <GPUCanvas flat dpr={[1, 2]} camera={{ far: 10000000, near: 0.01, fov: 50 }} gpu={{ alpha: false, antialias: false }}>
           {showSkybox && <MilkyWaySkybox brightness={skyBrightness} contrast={skyContrast} />}
           <ambientLight intensity={ambientIntensity} color={ambientColor} />
           {showNebula && <Nebula seed={data?.name?.[0] ?? "system"} density={nebulaDensity} brightness={nebulaBrightness} scale={nebulaScale} warp={nebulaWarp} contrast={nebulaContrast} mix={nebulaMix} cutoff={nebulaCutoff} colors={nebulaColorOverride} starTemp={getPrimaryStarTemp(data)} />}
           <Binary data={data} />
           <Controls follow={follow} autoRotate={autoRotate} viewAzimuth={viewAzimuth} viewPolar={viewPolar} />
-          <EffectComposer key={fxKey} multisampling={0}>
-            {fx.smaa.on && <SMAA preset={SMAAPreset.MEDIUM} edgeDetectionMode={EdgeDetectionMode.LUMA} />}
-            {fx.dof.on && <DepthOfField
-              focusDistance={fx.dof.focusDistance}
-              focalLength={fx.dof.focalLength}
-              bokehScale={fx.dof.bokehScale}
-            />}
-            <ToneMapping mode={fx.toneMap.on ? fx.toneMap.mode : ToneMappingMode.ACES_FILMIC} />
-            {fx.colorGrade.on && <Cinematic
-              temperature={fx.colorGrade.temperature}
-              tint={fx.colorGrade.tint}
-              shadows={fx.colorGrade.shadows}
-              highlights={fx.colorGrade.highlights}
-            />}
-            {fx.hueSat.on && <HueSaturation saturation={fx.hueSat.saturation} />}
-            {fx.brightContrast.on && <BrightnessContrast
-              brightness={fx.brightContrast.brightness}
-              contrast={fx.brightContrast.contrast}
-            />}
-            {fx.chroma.on && <ChromaticAberration offset={chromaOffset.set(fx.chroma.offset, fx.chroma.offset)} />}
-            {fx.vignette.on && <Vignette offset={fx.vignette.offset} darkness={fx.vignette.darkness} />}
-            {fx.noise.on && <Noise opacity={fx.noise.opacity} blendFunction={BlendFunction.SOFT_LIGHT} />}
-          </EffectComposer>
-        </Canvas>
+          <PostFX key={fxKey} fx={fx} />
+        </GPUCanvas>
       </div>
     </>
   );

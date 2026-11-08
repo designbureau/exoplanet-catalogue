@@ -156,15 +156,16 @@ export default function PlanetBake() {
       eccentricity,
     });
 
-    try {
-      const url = renderOffscreenFromParams(params, size);
-      setDataURL(url);
-      setStatus(`done — ${params.type}`);
-    } catch (e) {
-      setStatus(`render error: ${e}`);
-    }
-
-    document.documentElement.dataset.ready = "1";
+    // Rendering is async now (WebGPU read-back) — signal "ready" only once it settles
+    renderOffscreenFromParams(params, size)
+      .then((url) => {
+        setDataURL(url);
+        setStatus(`done — ${params.type}`);
+      })
+      .catch((e) => setStatus(`render error: ${e}`))
+      .finally(() => {
+        document.documentElement.dataset.ready = "1";
+      });
   }, []);
 
   return (

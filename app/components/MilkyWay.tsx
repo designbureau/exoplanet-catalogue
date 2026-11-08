@@ -1,5 +1,7 @@
-import { useMemo } from "react";
-import * as THREE from "three";
+import { useEffect, useMemo } from "react";
+import * as THREE from "three/webgpu";
+import { exp, pow, smoothstep, vec4 } from "~/shaders/tsl/nodes";
+import { createPointCloud } from "~/gpu/pointSprites";
 
 // Milky Way parameters (in parsecs) based on observational data
 // Pitch angle ~13°, arm start ~2.2 kpc, Sun at ~8.2 kpc from centre
@@ -18,15 +20,12 @@ const ARM_START_RADIUS = BAR_HALF_LENGTH; // arms start at bar ends
 const ARM_STRENGTHS = [1.0, 0.7, 1.0, 0.7];
 const SECONDARY_START_RADIUS = 4800;
 
-// Shared GLSL chunks: fade each decorative particle out as the camera nears
-// it, so zooming in on a real catalogued system clears the Milky Way
-// backdrop out of the immediate view rather than leaving it to occlude the
-// data. `cameraPosition` is three.js's built-in per-frame world-space camera
-// uniform (auto-injected into every ShaderMaterial) — no manual useFrame
-// wiring needed. The group these points render in has no transform, so the
-// raw `position` attribute is already world space.
-const CAM_FADE_VARYING = `varying float vCamFade;`;
-const CAM_FADE_ASSIGN = `vCamFade = smoothstep(15.0, 140.0, distance(position, cameraPosition));`;
+// Every decorative particle fades out as the camera nears it (camFade below),
+// so zooming in on a real catalogued system clears the Milky Way backdrop out of
+// the immediate view rather than leaving it to occlude the data. The group
+// these clouds render in has no transform, so the raw per-point position is
+// already world space.
+const CAM_FADE: [number, number] = [15, 140];
 
 const PARTICLES_PER_ARM = 30000;
 const BULGE_PARTICLES = 12000;
@@ -270,46 +269,24 @@ export default function MilkyWay({ sunPosition, scale = 1, params = defaultParam
     return { positions, colors: colorArray, sizes, count: positions.length / 3 };
   }, [sunPosition, scale, params]);
 
-  // Build points geometry with custom shader for soft glow
-  const { starGeo, starMaterial } = useMemo(() => {
-    const { positions, colors, sizes, count } = starData;
-
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
-    geo.setAttribute("size", new THREE.Float32BufferAttribute(sizes, 1));
-
-    const mat = new THREE.ShaderMaterial({
-      vertexShader: `
-        attribute float size;
-        varying vec3 vColor;
-        ${CAM_FADE_VARYING}
-        void main() {
-          vColor = color;
-          vec4 mvp = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = size * 300.0 / -mvp.z;
-          gl_PointSize = clamp(gl_PointSize, 1.0, 8.0);
-          ${CAM_FADE_ASSIGN}
-          gl_Position = projectionMatrix * mvp;
-        }
-      `,
-      fragmentShader: `
-        varying vec3 vColor;
-        ${CAM_FADE_VARYING}
-        void main() {
-          float d = length(gl_PointCoord - vec2(0.5)) * 2.0;
-          if (d > 1.0) discard;
-          // Bright core with soft halo
-          float core = smoothstep(1.0, 0.15, d);
-          gl_FragColor = vec4(vColor, core * 0.75 * vCamFade);
-        }
-      `,
-      transparent: true,
-      depthWrite: false,
-      vertexColors: true,
-    });
-
-    return { starGeo: geo, starMaterial: mat };
+  // Star particles: bright core with soft halo
+  const starCloud = useMemo(() => {
+    const { positions, colors, sizes } = starData;
+    const cloud = createPointCloud(
+      { positions, colors, sizes },
+      {
+        sizeScale: 300,
+        minPx: 1,
+        maxPx: 8,
+        camFade: CAM_FADE,
+        fragment: ({ d, color, camFade }) => {
+          const core = smoothstep(0.15, 1.0, d).oneMinus();
+          return vec4(color, core.mul(0.75).mul(camFade));
+        },
+      },
+    );
+    cloud.renderOrder = 0;
+    return cloud;
   }, [starData]);
 
   // H-II nebulae (pink/red emission) placed along spiral arms
@@ -471,158 +448,76 @@ export default function MilkyWay({ sunPosition, scale = 1, params = defaultParam
     return { positions, colors, sizes };
   }, [sunPosition, scale, params]);
 
-  // Create sprite textures using canvas (client-side only)
-  const { hiiTexture, dustTexture } = useMemo(() => {
-    if (typeof document === 'undefined') return { hiiTexture: null, dustTexture: null };
+  // H-II emission nebulae — additive soft circles
+  const hiiCloud = useMemo(() => {
+    if (hiiData.positions.length === 0) return null;
+    const cloud = createPointCloud(
+      { positions: hiiData.positions, colors: hiiData.colors, sizes: hiiData.sizes },
+      {
+        sizeScale: 300,
+        minPx: 1,
+        maxPx: 128,
+        camFade: CAM_FADE,
+        blending: THREE.AdditiveBlending,
+        fragment: ({ d, color, camFade }) =>
+          vec4(color, pow(d.oneMinus(), 2.5).mul(0.2).mul(camFade)),
+      },
+    );
+    cloud.renderOrder = 1;
+    return cloud;
+  }, [hiiData]);
 
-    // H-II glow texture (white radial gradient)
-    const hiiCanvas = document.createElement('canvas');
-    hiiCanvas.width = 128;
-    hiiCanvas.height = 128;
-    const hiiCtx = hiiCanvas.getContext('2d')!;
-    const hiiGrad = hiiCtx.createRadialGradient(64, 64, 0, 64, 64, 64);
-    hiiGrad.addColorStop(0, 'rgba(255,255,255,0.8)');
-    hiiGrad.addColorStop(0.3, 'rgba(255,255,255,0.4)');
-    hiiGrad.addColorStop(0.7, 'rgba(255,255,255,0.1)');
-    hiiGrad.addColorStop(1, 'rgba(255,255,255,0)');
-    hiiCtx.fillStyle = hiiGrad;
-    hiiCtx.fillRect(0, 0, 128, 128);
-    const hiiTex = new THREE.CanvasTexture(hiiCanvas);
+  // Arm fog — additive accumulation for the milky white band
+  const fogCloud = useMemo(() => {
+    if (fogData.positions.length === 0) return null;
+    const cloud = createPointCloud(
+      { positions: fogData.positions, colors: fogData.colors, sizes: fogData.sizes },
+      {
+        sizeScale: 300,
+        minPx: 1,
+        maxPx: 256,
+        camFade: CAM_FADE,
+        blending: THREE.AdditiveBlending,
+        fragment: ({ d, color, camFade }) =>
+          vec4(color, exp(d.mul(d).mul(-2)).mul(0.12).mul(camFade)),
+      },
+    );
+    cloud.renderOrder = 2;
+    return cloud;
+  }, [fogData]);
 
-    // Dust texture (dark radial gradient)
-    const dustCanvas = document.createElement('canvas');
-    dustCanvas.width = 128;
-    dustCanvas.height = 128;
-    const dustCtx = dustCanvas.getContext('2d')!;
-    const dustGrad = dustCtx.createRadialGradient(64, 64, 0, 64, 64, 64);
-    dustGrad.addColorStop(0, 'rgba(0,0,0,0.6)');
-    dustGrad.addColorStop(0.4, 'rgba(0,0,0,0.3)');
-    dustGrad.addColorStop(0.8, 'rgba(0,0,0,0.05)');
-    dustGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    dustCtx.fillStyle = dustGrad;
-    dustCtx.fillRect(0, 0, 128, 128);
-    const dustTex = new THREE.CanvasTexture(dustCanvas);
+  // Dark dust lanes — soft black circles
+  const dustCloud = useMemo(() => {
+    if (dustData.positions.length === 0) return null;
+    const opacity = params.dustOpacity;
+    const cloud = createPointCloud(
+      { positions: dustData.positions, sizes: dustData.sizes },
+      {
+        sizeScale: 300,
+        minPx: 1,
+        maxPx: 128,
+        camFade: CAM_FADE,
+        fragment: ({ d, camFade }) =>
+          vec4(0, 0, 0, pow(d.oneMinus(), 1.5).mul(0.4).mul(opacity).mul(camFade)),
+      },
+    );
+    cloud.renderOrder = 3;
+    return cloud;
+  }, [dustData, params.dustOpacity]);
 
-    return { hiiTexture: hiiTex, dustTexture: dustTex };
-  }, []);
+  useEffect(
+    () => () => {
+      for (const c of [starCloud, hiiCloud, fogCloud, dustCloud]) c?.geometry.dispose();
+    },
+    [starCloud, hiiCloud, fogCloud, dustCloud],
+  );
 
   return (
     <group raycast={() => {}}>
-      {/* Star particles with soft glow shader */}
-      <points geometry={starGeo} material={starMaterial} renderOrder={0} raycast={() => {}} />
-
-      {/* H-II emission nebulae — rendered as points with soft circle shader */}
-      {hiiData.positions.length > 0 && (
-        <points key={`hii-${params.hiiCount}-${params.hiiSize}-${params.hiiBrightness}`} renderOrder={1} raycast={() => {}}>
-          <bufferGeometry>
-            <bufferAttribute attach="attributes-position" array={new Float32Array(hiiData.positions)} count={hiiData.positions.length / 3} itemSize={3} />
-            <bufferAttribute attach="attributes-color" array={new Float32Array(hiiData.colors)} count={hiiData.colors.length / 3} itemSize={3} />
-            <bufferAttribute attach="attributes-size" array={new Float32Array(hiiData.sizes)} count={hiiData.sizes.length} itemSize={1} />
-          </bufferGeometry>
-          <shaderMaterial
-            vertexShader={`
-              attribute float size;
-              varying vec3 vColor;
-              ${CAM_FADE_VARYING}
-              void main() {
-                vColor = color;
-                vec4 mvp = modelViewMatrix * vec4(position, 1.0);
-                gl_PointSize = clamp(size * 300.0 / -mvp.z, 1.0, 128.0);
-                ${CAM_FADE_ASSIGN}
-                gl_Position = projectionMatrix * mvp;
-              }
-            `}
-            fragmentShader={`
-              varying vec3 vColor;
-              ${CAM_FADE_VARYING}
-              void main() {
-                float d = length(gl_PointCoord - vec2(0.5)) * 2.0;
-                if (d > 1.0) discard;
-                float alpha = pow(1.0 - d, 2.5) * 0.2 * vCamFade;
-                gl_FragColor = vec4(vColor, alpha);
-              }
-            `}
-            transparent={true}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-            vertexColors={true}
-          />
-        </points>
-      )}
-
-      {/* Arm fog — additive accumulation for milky white band */}
-      {fogData.positions.length > 0 && (
-        <points key={`fog-${params.fogCount}-${params.fogSize}-${params.fogBrightness}`} renderOrder={2} raycast={() => {}}>
-          <bufferGeometry>
-            <bufferAttribute attach="attributes-position" array={new Float32Array(fogData.positions)} count={fogData.positions.length / 3} itemSize={3} />
-            <bufferAttribute attach="attributes-color" array={new Float32Array(fogData.colors)} count={fogData.colors.length / 3} itemSize={3} />
-            <bufferAttribute attach="attributes-size" array={new Float32Array(fogData.sizes)} count={fogData.sizes.length} itemSize={1} />
-          </bufferGeometry>
-          <shaderMaterial
-            vertexShader={`
-              attribute float size;
-              varying vec3 vColor;
-              ${CAM_FADE_VARYING}
-              void main() {
-                vColor = color;
-                vec4 mvp = modelViewMatrix * vec4(position, 1.0);
-                gl_PointSize = clamp(size * 300.0 / -mvp.z, 1.0, 256.0);
-                ${CAM_FADE_ASSIGN}
-                gl_Position = projectionMatrix * mvp;
-              }
-            `}
-            fragmentShader={`
-              varying vec3 vColor;
-              ${CAM_FADE_VARYING}
-              void main() {
-                float d = length(gl_PointCoord - vec2(0.5)) * 2.0;
-                if (d > 1.0) discard;
-                float alpha = exp(-d * d * 2.0) * 0.12 * vCamFade;
-                gl_FragColor = vec4(vColor, alpha);
-              }
-            `}
-            transparent={true}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-            vertexColors={true}
-          />
-        </points>
-      )}
-
-      {/* Dark dust lanes — rendered as points with soft dark circle shader */}
-      {dustData.positions.length > 0 && (
-        <points key={`dust-${params.dustCount}-${params.dustSize}-${params.dustOpacity}`} renderOrder={3} raycast={() => {}}>
-          <bufferGeometry>
-            <bufferAttribute attach="attributes-position" array={new Float32Array(dustData.positions)} count={dustData.positions.length / 3} itemSize={3} />
-            <bufferAttribute attach="attributes-size" array={new Float32Array(dustData.sizes)} count={dustData.sizes.length} itemSize={1} />
-          </bufferGeometry>
-          <shaderMaterial
-            uniforms={{ uOpacity: { value: params.dustOpacity } }}
-            vertexShader={`
-              attribute float size;
-              ${CAM_FADE_VARYING}
-              void main() {
-                vec4 mvp = modelViewMatrix * vec4(position, 1.0);
-                gl_PointSize = clamp(size * 300.0 / -mvp.z, 1.0, 128.0);
-                ${CAM_FADE_ASSIGN}
-                gl_Position = projectionMatrix * mvp;
-              }
-            `}
-            fragmentShader={`
-              uniform float uOpacity;
-              ${CAM_FADE_VARYING}
-              void main() {
-                float d = length(gl_PointCoord - vec2(0.5)) * 2.0;
-                if (d > 1.0) discard;
-                float alpha = pow(1.0 - d, 1.5) * 0.4 * uOpacity * vCamFade;
-                gl_FragColor = vec4(0.0, 0.0, 0.0, alpha);
-              }
-            `}
-            transparent={true}
-            depthWrite={false}
-          />
-        </points>
-      )}
+      <primitive object={starCloud} />
+      {hiiCloud && <primitive object={hiiCloud} />}
+      {fogCloud && <primitive object={fogCloud} />}
+      {dustCloud && <primitive object={dustCloud} />}
     </group>
   );
 }
