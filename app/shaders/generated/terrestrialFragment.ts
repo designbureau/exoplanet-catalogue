@@ -8,10 +8,9 @@
 export default function build( TSL: any, uniforms: any, varyings: any, lib: any ): Record<string, any> {
 
 	const { varying, vec3, reference, atan, clamp, acos, vec2, Fn, add, smoothstep, sub, mix, abs, mul, If, select, property, float, dot, max, normalize, cross, cos, sin, min, cameraPosition, reflect, pow, vec4 } = TSL;
-	const { vPosition, vNormal, vWorldNormal, vWorldPosition } = varyings;
+	const { vPosition, vSphereDir, vNormal, vWorldNormal, vWorldPosition } = varyings;
 	const { u_seed, u_lod, mod289v3, mod289v4, permute, taylorInvSqrt, fade, cnoise, pnoise3d, hash, hash3, noise, noise3d, fbm, fbm3d, hiFBM, hiRidged, hiInvRidged, hiCloud, ridgedNoise, cloudNoise, enhanceContrast, voronoi, craterProfile, sobelNormal, seededPos, u_sunDirection, u_sunDirectionLocal, u_ambient, u_lavaAmbient, u_wrapRange, u_wrapPower, u_sunIntensity, u_atmosDayColor, u_atmosTwilightColor, u_atmosIntensity, u_atmosFalloff, wrapDiffuse, fresnelAmbient, planetLighting, applyAtmosphere, fbm3d_lod, ridgedNoise_lod, cloudNoise_lod } = lib;
 
-	const vSphereDir = varying( vec3(), 'vSphereDir' );
 
 	// undisplaced sphere direction for clouds
 
