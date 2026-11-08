@@ -1,9 +1,13 @@
 import { useLoaderData, useNavigate, Link } from "react-router";
 import type { MetaFunction } from "react-router";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
+import { GPUCanvas } from "~/gpu/GPUCanvas";
+import { createPointCloud } from "~/gpu/pointSprites";
+import { rawColor } from "~/gpu/rawColor";
+import { smoothstep, vec4 } from "~/shaders/tsl/nodes";
 import { CameraControls, Html } from "@react-three/drei";
 import { useRef, useState, useCallback, useMemo, useEffect } from "react";
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 import chroma from "chroma-js";
 import {
   getSystemPositions,
@@ -127,16 +131,6 @@ function StarField({
     [raycastNearest, onDoubleClick]
   );
 
-  // Update camera distance uniform for point size scaling
-  useFrame(({ camera }) => {
-    if (pointsRef.current) {
-      const mat = (pointsRef.current as any).material;
-      if (mat?.uniforms?.uCamDist) {
-        mat.uniforms.uCamDist.value = camera.position.length();
-      }
-    }
-  });
-
   const handlePointerMove = useCallback(
     (e: any) => {
       e.stopPropagation();
@@ -148,57 +142,49 @@ function StarField({
     [raycastNearest, onHover, onHoverPos]
   );
 
-  return (
-    <points
-      ref={pointsRef}
-      geometry={geometry}
-      renderOrder={10}
-      onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
-      onPointerMove={handlePointerMove}
-      onPointerLeave={() => {
-        document.body.style.cursor = "default";
-        onHover(null);
-        onHoverPos(null);
-      }}
-    >
-      <shaderMaterial
-        transparent
-        depthWrite={false}
-        vertexColors
-        uniforms={{
-          uCamDist: { value: 1000 },
-        }}
-        vertexShader={`
-          varying vec3 vColor;
-          uniform float uCamDist;
-          void main() {
-            vColor = color;
-            vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
-            float dist = -mvPos.z;
-            // Size grows as camera gets closer: min 2px, max 12px
-            float size = clamp(300.0 / dist, 2.0, 12.0);
-            gl_PointSize = size;
-            gl_Position = projectionMatrix * mvPos;
-          }
-        `}
-        fragmentShader={`
-          varying vec3 vColor;
-          void main() {
-            // Radial gradient: soft glow circle
-            float d = length(gl_PointCoord - 0.5) * 2.0;
-            if (d > 1.0) discard;
-            float alpha = 1.0 - d * d; // soft falloff
-            float core = smoothstep(0.5, 0.0, d); // bright centre
+  // WebGPU has no gl_PointSize, so the visible stars are instanced billboards
+  // (soft glow circle, 2–12px, growing as the camera closes in). The THREE.Points
+  // below carries the same positions purely for raycast picking and draws nothing.
+  const cloud = useMemo(
+    () =>
+      createPointCloud(
+        { positions: geometry.getAttribute("position").array, colors },
+        {
+          sizeScale: 300,
+          minPx: 2,
+          maxPx: 12,
+          fragment: ({ d, color }) => {
+            const alpha = d.mul(d).oneMinus(); // soft falloff
+            const core = smoothstep(0, 0.5, d).oneMinus(); // bright centre
             // Multiplicative brighten (not += white): scales each channel by
             // its own colour, so a saturated point stays saturated at its
             // brightest instead of washing toward grey/white at the centre.
-            vec3 col = vColor * (1.0 + core * 0.6);
-            gl_FragColor = vec4(col, alpha * 0.85);
-          }
-        `}
-      />
-    </points>
+            return vec4(color.mul(core.mul(0.6).add(1)), alpha.mul(0.85));
+          },
+        },
+      ),
+    [geometry, colors],
+  );
+  useEffect(() => () => cloud.geometry.dispose(), [cloud]);
+
+  return (
+    <>
+      <primitive object={cloud} renderOrder={10} />
+      <points
+        ref={pointsRef}
+        geometry={geometry}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        onPointerMove={handlePointerMove}
+        onPointerLeave={() => {
+          document.body.style.cursor = "default";
+          onHover(null);
+          onHoverPos(null);
+        }}
+      >
+        <pointsMaterial colorWrite={false} depthWrite={false} depthTest={false} />
+      </points>
+    </>
   );
 }
 
@@ -280,8 +266,7 @@ function SelectionMarker({ system }: { system: SystemPosition }) {
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={8}
-            array={(() => {
+            args={[(() => {
               const pts = new Float32Array(8 * 3);
               const rInner = 1.3;
               const rOuter = 1.6;
@@ -297,19 +282,17 @@ function SelectionMarker({ system }: { system: SystemPosition }) {
                 pts[i * 6 + 5] = 0;
               }
               return pts;
-            })()}
-            itemSize={3}
+            })(), 3]}
           />
         </bufferGeometry>
-        <lineBasicMaterial color="#ffffff" transparent opacity={0.7} depthWrite={false} />
+        <lineBasicMaterial color={rawColor("#ffffff")} transparent opacity={0.7} depthWrite={false} />
       </lineSegments>
       {/* Thin solid circle between outer and inner rings */}
-      <line ref={midRingRef} raycast={() => {}}>
+      <threeLine ref={midRingRef} raycast={() => {}}>
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={65}
-            array={(() => {
+            args={[(() => {
               const pts = new Float32Array(65 * 3);
               const r = 1.215; // midpoint of gap between inner (1.13) and outer (1.3)
               for (let i = 0; i <= 64; i++) {
@@ -319,19 +302,17 @@ function SelectionMarker({ system }: { system: SystemPosition }) {
                 pts[i * 3 + 2] = 0;
               }
               return pts;
-            })()}
-            itemSize={3}
+            })(), 3]}
           />
         </bufferGeometry>
-        <lineBasicMaterial color="#22d3ee" transparent opacity={0.2} depthWrite={false} />
-      </line>
+        <lineBasicMaterial color={rawColor("#22d3ee")} transparent opacity={0.2} depthWrite={false} />
+      </threeLine>
       {/* Inner crosshair ring — quarter marks extend inward */}
       <lineSegments ref={innerRingRef} raycast={() => {}}>
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={128}
-            array={(() => {
+            args={[(() => {
               const pts = new Float32Array(128 * 3);
               const segments = 64;
               const rInner = 1.0;
@@ -351,13 +332,11 @@ function SelectionMarker({ system }: { system: SystemPosition }) {
                 pts[i * 6 + 5] = 0;
               }
               return pts;
-            })()}
-            itemSize={3}
+            })(), 3]}
           />
           <bufferAttribute
             attach="attributes-color"
-            count={128}
-            array={(() => {
+            args={[(() => {
               const cols = new Float32Array(128 * 3);
               const segments = 64;
               for (let i = 0; i < segments; i++) {
@@ -369,11 +348,10 @@ function SelectionMarker({ system }: { system: SystemPosition }) {
                 cols[i * 6 + 3] = r; cols[i * 6 + 4] = g; cols[i * 6 + 5] = b;
               }
               return cols;
-            })()}
-            itemSize={3}
+            })(), 3]}
           />
         </bufferGeometry>
-        <lineBasicMaterial color="#22d3ee" transparent opacity={0.5} depthWrite={false} />
+        <lineBasicMaterial color={rawColor("#22d3ee")} transparent opacity={0.5} depthWrite={false} />
       </lineSegments>
     </group>
   );
@@ -461,39 +439,37 @@ function ConstellationLines({ visible }: { visible: boolean }) {
     return { lines: allLines, starPoints: allStars, labels: allLabels };
   }, []);
 
-  const starGeo = useMemo(() => {
+  // 1.5px constant-size dots (#ffeedd @ 0.85) — instanced billboards, since
+  // WebGPU points are always one pixel.
+  const starCloud = useMemo(() => {
     const positions = new Float32Array(starPoints.length * 3);
     starPoints.forEach((v, i) => {
       positions[i * 3] = v.x;
       positions[i * 3 + 1] = v.y;
       positions[i * 3 + 2] = v.z;
     });
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    return geo;
+    const c = rawColor("#ffeedd");
+    return createPointCloud(
+      { positions },
+      {
+        constantPx: 1.5,
+        fragment: () => vec4(c.r, c.g, c.b, 0.85),
+      },
+    );
   }, [starPoints]);
 
   return (
     <group>
       {/* Constellation star points */}
-      <points geometry={starGeo}>
-        <pointsMaterial
-          size={1.5}
-          sizeAttenuation={false}
-          color="#ffeedd"
-          transparent
-          opacity={0.85}
-          depthWrite={false}
-        />
-      </points>
+      <primitive object={starCloud} />
 
       {/* Connection lines */}
       {lines.map((line, i) => {
         const geo = new THREE.BufferGeometry().setFromPoints(line.points);
         return (
-          <line key={i} geometry={geo}>
-            <lineBasicMaterial color="#aa8855" transparent opacity={0.6} />
-          </line>
+          <threeLine key={i} geometry={geo}>
+            <lineBasicMaterial color={rawColor("#aa8855")} transparent opacity={0.6} />
+          </threeLine>
         );
       })}
 
@@ -543,7 +519,7 @@ function GalacticReference({ onSolClick }: { onSolClick: () => void }) {
         {[200, 400, 600, 800, 1000].map((r) => (
           <mesh key={r} raycast={() => {}} renderOrder={-1}>
             <ringGeometry args={[r - 0.5, r + 0.5, 128]} />
-            <meshBasicMaterial color="#445566" transparent opacity={0.6} side={THREE.DoubleSide} depthWrite={false} />
+            <meshBasicMaterial color={rawColor("#445566")} transparent opacity={0.6} side={THREE.DoubleSide} depthWrite={false} />
           </mesh>
         ))}
         {/* Radial lines every 30° (12 spokes) */}
@@ -555,9 +531,9 @@ function GalacticReference({ onSolClick }: { onSolClick: () => void }) {
           ];
           const geo = new THREE.BufferGeometry().setFromPoints(points);
           return (
-            <line key={i} geometry={geo} raycast={() => {}} renderOrder={-1}>
-              <lineBasicMaterial color="#556677" transparent opacity={0.6} depthWrite={false} />
-            </line>
+            <threeLine key={i} geometry={geo} raycast={() => {}} renderOrder={-1}>
+              <lineBasicMaterial color={rawColor("#556677")} transparent opacity={0.6} depthWrite={false} />
+            </threeLine>
           );
         })}
       </group>
@@ -767,7 +743,8 @@ export default function GalaxyMap() {
         </div>
       )}
 
-      <Canvas
+      <GPUCanvas
+        gpu={{ output: "raw", antialias: true }}
         camera={{
           position: [0, 500, 1000],
           far: 1000000,
@@ -775,7 +752,7 @@ export default function GalaxyMap() {
           fov: 60,
         }}
       >
-        <color attach="background" args={["#050510"]} />
+        <color attach="background" args={[rawColor("#050510")]} />
         <ambientLight intensity={0.1} />
         <MilkyWay sunPosition={[0, 0, 0]} scale={galaxyScale} params={galaxyParams} />
         <StarField
@@ -801,7 +778,7 @@ export default function GalaxyMap() {
           smoothTime={0.5}
           draggingSmoothTime={0.15}
         />
-      </Canvas>
+      </GPUCanvas>
     </div>
   );
 }

@@ -4,6 +4,8 @@ import * as THREE from "three/webgpu";
 // Register every three/webgpu export (node materials, sprite/points node
 // materials, …) so they are usable as JSX elements and `args`-free classes.
 extend(THREE as unknown as Record<string, new (...args: never[]) => unknown>);
+// R3F 9 exposes THREE.Line as <threeLine> (plain <line> clashes with the SVG element).
+extend({ ThreeLine: THREE.Line } as unknown as Record<string, new (...args: never[]) => unknown>);
 
 export interface GPURendererOptions {
   alpha?: boolean;
@@ -29,6 +31,10 @@ export function GPUCanvas({ gpu = {}, ...props }: GPUCanvasProps) {
   const { alpha = false, antialias = true, output = "display" } = gpu;
   return (
     <Canvas
+      // R3F (re)applies tone mapping / output colour space from these props
+      // after the renderer is created, so "raw" has to be expressed here.
+      flat={output === "raw"}
+      linear={output === "raw"}
       {...props}
       gl={async (defaults) => {
         const renderer = new THREE.WebGPURenderer({
@@ -38,10 +44,6 @@ export function GPUCanvas({ gpu = {}, ...props }: GPUCanvasProps) {
           powerPreference: "high-performance",
         });
         await renderer.init();
-        if (output === "raw") {
-          renderer.toneMapping = THREE.NoToneMapping;
-          renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
-        }
         return renderer as unknown as never;
       }}
     />
