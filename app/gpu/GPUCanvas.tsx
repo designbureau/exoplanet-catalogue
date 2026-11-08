@@ -50,6 +50,8 @@ export function GPUCanvas({ gpu = {}, ...props }: GPUCanvasProps) {
           alpha,
           antialias,
           powerPreference: "high-performance",
+          // `?webgl` forces three's WebGL2 backend (testing / escape hatch for flaky WebGPU drivers)
+          forceWebGL: new URLSearchParams(window.location.search).has("webgl"),
         });
         await renderer.init();
         return renderer as unknown as never;

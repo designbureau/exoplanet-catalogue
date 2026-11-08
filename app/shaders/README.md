@@ -8,7 +8,7 @@ fallback otherwise. Classic `ShaderMaterial`/GLSL strings no longer work here.
 
 | File | Purpose |
 | --- | --- |
-| `GPUCanvas.tsx` | R3F `<Canvas>` backed by `WebGPURenderer`. `gpu={{ output: "raw" }}` writes shader values straight to the canvas (no tone mapping / sRGB) — what the old hand-written GLSL did, and what the galaxy's additive blending and the thumbnails rely on. The default `"display"` keeps three's ACES + sRGB; the system view uses `flat` + `PostFX` instead. |
+| `GPUCanvas.tsx` | R3F `<Canvas>` backed by `WebGPURenderer` (add `?webgl` to any URL to force the WebGL2 backend). `gpu={{ output: "raw" }}` writes shader values straight to the canvas (no tone mapping / sRGB) — what the old hand-written GLSL did, and what the galaxy's additive blending and the thumbnails rely on. The default `"display"` keeps three's ACES + sRGB; the system view uses `flat` + `PostFX` instead. |
 | `PostFX.tsx` | Post-processing on three's `RenderPipeline` (SMAA, DoF, tone mapping, grade, hue/sat, brightness/contrast, chromatic aberration, vignette, grain). Replaced `@react-three/postprocessing`. Slider values only touch uniforms; toggles rebuild the pipeline. |
 | `pointSprites.ts` | WebGPU has no `gl_PointSize` (points are always 1px), so sized point clouds (star map, Milky Way) are instanced camera-facing quads with the pixel size computed in the vertex stage. |
 | `rawColor.ts` | Display-referred colours for built-in materials on `"raw"` canvases. |
