@@ -37,6 +37,13 @@ export enum PlanetType {
 
 export interface ShaderParams {
   type: PlanetType;
+  // Eyeball / ice-ocean tuning (set by the classifier for tidally-locked types)
+  eyeAridEdge?: number;
+  eyeIceEdge?: number;
+  eyeIceBergDensity?: number;
+  iceOceanPolarFade?: number;
+  iceOceanEdgeNoise?: number;
+  iceOceanCrackDepth?: number;
   color1: THREE.Color;
   color2: THREE.Color;
   color3: THREE.Color;

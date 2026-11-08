@@ -1,4 +1,4 @@
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 
 // Cached LOD sphere geometries — keyed by "radius:segments"
 const _lodSphereCache = {};
@@ -99,6 +99,7 @@ import { createPlanetMaterial, createCloudMaterial } from "../shaders/planetShad
 import { bakeTerrainMaps } from "../shaders/terrainTexture";
 import { getAtmosphereParams } from "../shaders/atmosphereShader";
 import { getScatteringPreset, createScatteringMaterial } from "../shaders/scatteringShader";
+import { createAtmosphereFallbackMaterial, createHaloMaterial, createOrbitTrailMaterial } from "../shaders/planetEffects";
 // import LavaFlares from "./LavaFlares"; // parked — see ROADMAP.md (lava flares)
 
 const _starWorldPos = new THREE.Vector3();
@@ -207,111 +208,12 @@ const Planet = ({ data, starData, starRef }) => {
       atmosMat._baseSunIntensity = scatterPreset.sunIntensity; // preserve for slider scaling
     } else if (atmosInt > 0) {
       // Non-scattering fallback for types without presets
-      atmosMat = new THREE.ShaderMaterial({
-        vertexShader: `
-          varying vec3 vNormal;
-          varying vec3 vWorldPosition;
-          void main() {
-            vNormal = normalize(normalMatrix * normal);
-            vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `,
-        fragmentShader: `
-          precision highp float;
-          varying vec3 vNormal;
-          varying vec3 vWorldPosition;
-          uniform vec3 uSunDirection;
-          uniform vec3 uAtmosDayColor;
-          uniform vec3 uAtmosTwilightColor;
-          uniform float uFallbackIntensity;
-          uniform float uShellFalloff;
-          uniform float uShellInner;
-          void main() {
-            vec3 viewDirection = normalize(vWorldPosition - cameraPosition);
-            vec3 normal = normalize(vNormal);
-            float sunOrientation = dot(uSunDirection, normal);
-            float atmosphereDayMix = smoothstep(-0.5, 1.0, sunOrientation);
-            vec3 color = mix(uAtmosTwilightColor, uAtmosDayColor, atmosphereDayMix);
-            // BackSide sphere: dot(view, normal) is high at centre, 0 at limb — invert for edge glow
-            float edge = dot(viewDirection, normal);
-            float edgeAlpha = pow(1.0 - smoothstep(0.0, 0.5, edge), uShellFalloff);
-            float dayAlpha = smoothstep(-0.5, 0.0, sunOrientation);
-            float alpha = edgeAlpha * dayAlpha * uFallbackIntensity;
-            gl_FragColor = vec4(color, alpha);
-          }
-        `,
-        transparent: true,
-        depthWrite: false,
-        side: THREE.BackSide,
-        uniforms: {
-          uSunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
-          uAtmosDayColor: { value: atmosDayCol },
-          uAtmosTwilightColor: { value: atmosTwiCol },
-          uFallbackIntensity: { value: atmosInt },
-          uShellFalloff: { value: 1.25 },
-          uShellInner: { value: 0.0 },
-        },
-      });
+      atmosMat = createAtmosphereFallbackMaterial({ day: atmosDayCol, twilight: atmosTwiCol, intensity: atmosInt });
     }
 
     // Stable halo material — uniforms updated via useEffect
     const haloColor = params.atmosDayColor ? params.atmosDayColor.clone().lerp(new THREE.Color(1, 1, 1), params.haloWhiten) : new THREE.Color(0.5, 0.7, 1.0);
-    const hMat = new THREE.ShaderMaterial({
-      transparent: true,
-      depthWrite: false,
-      depthTest: true,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-      uniforms: {
-        uRadius: { value: params.haloScale * 0.3 },
-        uColor: { value: haloColor },
-        uIntensity: { value: params.haloIntensity },
-        uFalloff: { value: params.haloFalloff },
-        uInner: { value: 0.0 },
-        uSunDirection: { value: new THREE.Vector3(1, 0, 0) },
-        uHaloShadow: { value: params.haloShadow },
-      },
-      vertexShader: `
-        attribute vec3 aPos;
-        varying float vRadial;
-        varying vec2 vRingDir;
-        uniform float uRadius;
-        void main() {
-          vRadial = aPos.z;
-          vRingDir = normalize(aPos.xy);
-          vec4 mvCenter = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-          float s = length(vec3(modelMatrix[0][0], modelMatrix[1][0], modelMatrix[2][0]));
-          float r = (1.0 + aPos.z * uRadius) * s;
-          vec3 viewPos = mvCenter.xyz + vec3(aPos.x * r, aPos.y * r, 0.0);
-          gl_Position = projectionMatrix * vec4(viewPos, 1.0);
-        }
-      `,
-      fragmentShader: `
-        precision highp float;
-        varying float vRadial;
-        varying vec2 vRingDir;
-        uniform vec3 uColor;
-        uniform float uIntensity;
-        uniform float uFalloff;
-        uniform float uInner;
-        uniform vec3 uSunDirection;
-        uniform float uHaloShadow;
-        void main() {
-          float alpha = pow(1.0 - vRadial, uFalloff);
-          if (uInner > 0.001) alpha *= smoothstep(0.0, uInner, vRadial);
-
-          // Sun shadow on halo — gentle cosine fade, no hard edges
-          vec3 sunView = normalize(mat3(viewMatrix) * uSunDirection);
-          float sunDot = dot(vRingDir, sunView.xy);
-          float shadow = clamp(sunDot * (1.0 - uHaloShadow) * 0.5 + 0.5 + uHaloShadow * 0.5, 0.0, 1.0);
-          alpha *= shadow;
-
-          alpha *= uIntensity;
-          gl_FragColor = vec4(uColor * alpha, alpha);
-        }
-      `,
-    });
+    const hMat = createHaloMaterial({ radius: params.haloScale * 0.3, color: haloColor, intensity: params.haloIntensity, falloff: params.haloFalloff, shadow: params.haloShadow });
 
     return {
       shaderMaterial: shader,
@@ -769,51 +671,7 @@ const Planet = ({ data, starData, starRef }) => {
     geo.setAttribute("aPosLow", new THREE.BufferAttribute(posLow, 3));
     geo.setAttribute("aT", new THREE.BufferAttribute(tValues, 1));
 
-    const mat = new THREE.ShaderMaterial({
-      transparent: true,
-      depthWrite: false,
-      uniforms: {
-        uPhase: { value: 0 },
-        uCamHigh: { value: new THREE.Vector3() },
-        uCamLow: { value: new THREE.Vector3() },
-        uFade: { value: 1 }, // 0 when camera is right on the planet, 1 when pulled back
-      },
-      vertexShader: `
-        attribute vec3 aPosLow;
-        attribute float aT;
-        uniform vec3 uCamHigh;
-        uniform vec3 uCamLow;
-        varying float vT;
-        void main() {
-          vT = aT;
-          // position (high) − camera (high) cancels the large magnitude exactly;
-          // add the residuals for the precise local offset from the camera.
-          vec3 rel = (position - uCamHigh) + (aPosLow - uCamLow);
-          // rel is local-space camera-relative; rotate to view space (no
-          // translation) and project. The huge translation is already handled.
-          gl_Position = projectionMatrix * mat4(mat3(modelViewMatrix)) * vec4(rel, 1.0);
-        }
-      `,
-      fragmentShader: `
-        precision highp float;
-        varying float vT;
-        uniform float uPhase;
-        uniform float uFade;
-        void main() {
-          // How far behind the planet (0=at planet, 1=full orbit)
-          float dist = vT - uPhase;
-          if (dist < 0.0) dist += 1.0;
-
-          // 75% trail: fade opacity along entire length, taper at end
-          float taper = 1.0 - smoothstep(0.65, 0.75, dist);
-          float fade = 1.0 - dist / 0.75; // linear fade from planet to tail
-          float alpha = taper * fade * 0.3 * uFade;
-          if (alpha < 0.005) discard;
-
-          gl_FragColor = vec4(1.0, 1.0, 1.0, alpha);
-        }
-      `,
-    });
+    const mat = createOrbitTrailMaterial();
 
     return { orbitGeo: geo, orbitMat: mat };
   }, [semimajoraxis, eccentricity]);

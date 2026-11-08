@@ -1,132 +1,8 @@
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
+import * as TSL from "three/tsl";
+import { toUniformNodes, type UniformMaterial } from "~/shaders/planetShader";
+import buildRingFragment from "~/shaders/generated/ringFragment";
 import { PlanetType } from "~/utils/planetClassification";
-
-const ringVertexShader = `
-  varying vec2 vUv;
-  varying vec3 vWorldPos;
-  varying vec3 vNormal;
-  varying float vRadius;
-
-  uniform float u_innerRadius;
-  uniform float u_outerRadius;
-
-  void main() {
-    vUv = uv;
-    vNormal = normalize(normalMatrix * normal);
-    vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
-    // Compute radial distance from centre in local space (ring lies in XZ plane before rotation)
-    float dist = length(position.xy);
-    vRadius = (dist - u_innerRadius) / (u_outerRadius - u_innerRadius);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-const ringFragmentShader = `
-  uniform vec3 u_color1;
-  uniform vec3 u_color2;
-  uniform vec3 u_color3;
-  uniform float u_innerRadius;
-  uniform float u_outerRadius;
-  uniform float u_seed;
-  uniform vec3 u_sunDirection;
-  uniform float u_opacity;
-  uniform vec3 u_planetPos;
-  uniform float u_planetRadius;
-
-  varying vec2 vUv;
-  varying vec3 vWorldPos;
-  varying vec3 vNormal;
-  varying float vRadius;
-
-  // Simple hash for band variation
-  float hash(float p) {
-    return fract(sin(p * 127.1) * 43758.5453123);
-  }
-
-  // 1D noise
-  float noise1d(float p) {
-    float i = floor(p);
-    float f = fract(p);
-    float u = f * f * (3.0 - 2.0 * f);
-    return mix(hash(i), hash(i + 1.0), u);
-  }
-
-  // FBM for ring bands
-  float fbm1d(float p) {
-    float v = 0.0, a = 0.5;
-    for (int i = 0; i < 6; i++) {
-      v += a * noise1d(p);
-      p = p * 2.1 + u_seed * 10.0;
-      a *= 0.5;
-    }
-    return v;
-  }
-
-  void main() {
-    // Use computed radial distance (0=inner edge, 1=outer edge)
-    float r = clamp(vRadius, 0.0, 1.0);
-
-    // Soft edges
-    float edgeFade = smoothstep(0.0, 0.08, r) * smoothstep(1.0, 0.92, r);
-
-    // Procedural band pattern (radial stripes like Saturn)
-    float bandFreq = 30.0 + u_seed * 20.0;
-    float bands = fbm1d(r * bandFreq);
-
-    // Add sharper divisions (Cassini division style)
-    float divisions = smoothstep(0.42, 0.44, r) * smoothstep(0.48, 0.46, r);
-    float division2 = smoothstep(0.72, 0.73, r) * smoothstep(0.76, 0.75, r);
-    float gapDarken = 1.0 - divisions * 0.7 - division2 * 0.5;
-
-    // Additional fine gaps from noise
-    float fineGaps = smoothstep(0.45, 0.5, noise1d(r * 80.0 + u_seed * 50.0));
-    gapDarken *= mix(1.0, 0.6, (1.0 - fineGaps) * 0.3);
-
-    // Colour: blend based on band noise and radial position
-    vec3 color = mix(u_color1, u_color2, bands);
-    color = mix(color, u_color3, smoothstep(0.6, 0.9, r) * 0.5);
-
-    // Apply gaps
-    color *= gapDarken;
-
-    // Planet shadow: check if this ring fragment is behind the planet relative to sun
-    vec3 toFrag = vWorldPos - u_planetPos;
-    // Project onto sun direction — if behind planet and within planet radius, it's in shadow
-    float projDist = dot(toFrag, -u_sunDirection);
-    vec3 perpOffset = toFrag + u_sunDirection * projDist;
-    float perpDist = length(perpOffset);
-    float shadow = 1.0;
-    if (projDist > 0.0 && perpDist < u_planetRadius) {
-      shadow = smoothstep(u_planetRadius * 0.8, u_planetRadius, perpDist);
-    }
-
-    // Ring lighting with translucency
-    // Front: full diffuse reflection
-    // Back: transmitted light passes through thin ring material
-    float sunDot = dot(vNormal, u_sunDirection);
-    float frontLight = max(sunDot, 0.0);
-    float backLight = max(-sunDot, 0.0);
-
-    // Forward scattering: light passing through the ring from behind
-    // Thinner parts (higher alpha = denser = less transmission)
-    float transmission = backLight * 0.4; // 40% light passes through
-
-    float light;
-    if (gl_FrontFacing) {
-      light = frontLight + transmission * 0.3; // front sees some backlit glow
-    } else {
-      light = backLight * 0.15 + transmission; // back is mostly transmitted light
-    }
-
-    float ambient = 0.06;
-    color *= (ambient + (1.0 - ambient) * light) * (0.3 + 0.7 * shadow);
-
-    // Overall opacity with soft edges
-    float alpha = edgeFade * u_opacity * (0.5 + bands * 0.5);
-
-    gl_FragColor = vec4(color, alpha);
-  }
-`;
 
 export interface RingParams {
   hasRing: boolean;
@@ -311,24 +187,39 @@ export function getRingParams(
   };
 }
 
-export function createRingMaterial(params: RingParams, seed: number): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
-    uniforms: {
-      u_color1: { value: params.color1 },
-      u_color2: { value: params.color2 },
-      u_color3: { value: params.color3 },
-      u_innerRadius: { value: params.innerRadius },
-      u_outerRadius: { value: params.outerRadius },
-      u_planetPos: { value: new THREE.Vector3() },
-      u_planetRadius: { value: 1.0 },
-      u_seed: { value: seed },
-      u_sunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
-      u_opacity: { value: params.opacity },
-    },
-    vertexShader: ringVertexShader,
-    fragmentShader: ringFragmentShader,
-    transparent: true,
-    side: THREE.DoubleSide,
-    depthWrite: false,
+export function createRingMaterial(params: RingParams, seed: number): UniformMaterial {
+  const uniforms = toUniformNodes({
+    u_color1: { value: params.color1 },
+    u_color2: { value: params.color2 },
+    u_color3: { value: params.color3 },
+    u_innerRadius: { value: params.innerRadius },
+    u_outerRadius: { value: params.outerRadius },
+    u_planetPos: { value: new THREE.Vector3() },
+    u_planetRadius: { value: 1.0 },
+    u_seed: { value: seed },
+    u_sunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
+    u_opacity: { value: params.opacity },
   });
+
+  // Vertex stage (ring lies in the XY plane of its geometry before rotation)
+  const { varying, uv, positionGeometry, positionWorld, modelNormalMatrix, normalGeometry, length } = TSL as any;
+  const varyings = {
+    vUv: varying(uv(), "vUv"),
+    vNormal: varying(modelNormalMatrix.mul(normalGeometry).normalize(), "vNormal"),
+    vWorldPos: varying(positionWorld, "vWorldPos"),
+    // radial distance from centre in local space, 0 at the inner edge → 1 at the outer
+    vRadius: varying(
+      length(positionGeometry.xy).sub(uniforms.u_innerRadius).div(uniforms.u_outerRadius.sub(uniforms.u_innerRadius)),
+      "vRadius",
+    ),
+  };
+
+  const frag = buildRingFragment({ ...TSL, reference: (_p: string, _t: string, n: unknown) => n }, uniforms, varyings, {});
+  const mat = new THREE.NodeMaterial() as UniformMaterial;
+  mat.transparent = true;
+  mat.side = THREE.DoubleSide;
+  mat.depthWrite = false;
+  mat.fragmentNode = frag.fragMain();
+  mat.uniforms = uniforms;
+  return mat;
 }

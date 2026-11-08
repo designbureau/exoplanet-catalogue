@@ -1,4 +1,7 @@
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
+import * as TSL from "three/tsl";
+import { toUniformNodes, type UniformMaterial } from "~/shaders/planetShader";
+import buildScatteringFragment from "~/shaders/generated/scatteringFragment";
 import { PlanetType } from "~/utils/planetClassification";
 
 // Physical atmospheric scattering parameters
@@ -134,185 +137,46 @@ export function getScatteringPreset(type: PlanetType, hz: number = 0.5): Scatter
 
 // ---- GLSL ----
 
-const scatteringVertex = `
-  varying vec3 vWorldPosition;
-  varying vec3 vNormal;
-  void main() {
-    vNormal = normalize(normalMatrix * normal);
-    vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-// Ray marching atmospheric scattering fragment shader
-// Adapted from wwwtyro/glsl-atmosphere (MIT license)
-const scatteringFragment = `
-  precision highp float;
-
-  #define PI 3.141592653589793
-
-  varying vec3 vWorldPosition;
-  varying vec3 vNormal;
-
-  uniform vec3 uSunDirection;
-  uniform vec3 uPlanetCenter;
-  uniform float uPlanetRadius;
-  uniform float uAtmosRadius;
-  uniform vec3 uBetaR;           // Rayleigh scattering coefficients
-  uniform float uBetaM;          // Mie scattering coefficient
-  uniform float uHr;             // Rayleigh scale height
-  uniform float uHm;             // Mie scale height
-  uniform float uMieG;           // Henyey-Greenstein g parameter
-  uniform float uSunIntensity;
-  uniform int uSteps;            // 0 = fallback, 8 = reduced, 16 = full
-
-  // Fallback uniforms (cheap path)
-  uniform vec3 uAtmosDayColor;
-  uniform vec3 uAtmosTwilightColor;
-  uniform float uFallbackIntensity;
-  uniform float uShellFalloff;
-  uniform float uShellInner;
-
-  // Ray-sphere intersection (sphere at origin)
-  vec2 rsi(vec3 r0, vec3 rd, float sr) {
-    float a = dot(rd, rd);
-    float b = 2.0 * dot(rd, r0);
-    float c = dot(r0, r0) - sr * sr;
-    float d = b * b - 4.0 * a * c;
-    if (d < 0.0) return vec2(1e5, -1e5);
-    float sd = sqrt(d);
-    return vec2((-b - sd) / (2.0 * a), (-b + sd) / (2.0 * a));
-  }
-
-  // Cheap fallback: smoothstep day/twilight (existing Layer 2 logic)
-  vec4 cheapAtmosphere() {
-    vec3 viewDirection = normalize(vWorldPosition - cameraPosition);
-    vec3 normal = normalize(vNormal);
-    float sunOrientation = dot(uSunDirection, normal);
-    float atmosphereDayMix = smoothstep(-0.5, 1.0, sunOrientation);
-    vec3 color = mix(uAtmosTwilightColor, uAtmosDayColor, atmosphereDayMix);
-    // BackSide sphere: dot(view, normal) is high at centre, 0 at limb — invert for edge glow
-    float edge = dot(viewDirection, normal);
-    float edgeAlpha = pow(1.0 - smoothstep(0.0, 0.5, edge), uShellFalloff);
-    float dayAlpha = smoothstep(-0.5, 0.0, sunOrientation);
-    float alpha = edgeAlpha * dayAlpha * uFallbackIntensity;
-    return vec4(color, alpha);
-  }
-
-  void main() {
-    // Fallback path for distant/tiny planets
-    if (uSteps < 1) {
-      gl_FragColor = cheapAtmosphere();
-      return;
-    }
-
-    // Ray setup: camera through this fragment, in planet-local space
-    vec3 rayOrigin = cameraPosition - uPlanetCenter;
-    vec3 rayDir = normalize(vWorldPosition - cameraPosition);
-
-    // Intersect with atmosphere sphere
-    vec2 atmos = rsi(rayOrigin, rayDir, uAtmosRadius);
-    if (atmos.x > atmos.y) { discard; return; }
-
-    // Clip to planet surface (don't march through the planet)
-    vec2 planet = rsi(rayOrigin, rayDir, uPlanetRadius);
-    float marchEnd = (planet.x > 0.0) ? min(atmos.y, planet.x) : atmos.y;
-    float marchStart = max(atmos.x, 0.0);
-
-    if (marchEnd <= marchStart) { discard; return; }
-
-    float stepSize = (marchEnd - marchStart) / float(uSteps);
-    int halfSteps = uSteps / 2;
-    if (halfSteps < 1) halfSteps = 1;
-
-    // Phase functions
-    float mu = dot(rayDir, uSunDirection);
-    float mu2 = mu * mu;
-    float g2 = uMieG * uMieG;
-    float phaseR = 3.0 / (16.0 * PI) * (1.0 + mu2);
-    float phaseM = 3.0 / (8.0 * PI) * ((1.0 - g2) * (mu2 + 1.0)) /
-                   (pow(1.0 + g2 - 2.0 * mu * uMieG, 1.5) * (2.0 + g2));
-
-    // Accumulators
-    vec3 totalR = vec3(0.0);
-    vec3 totalM = vec3(0.0);
-    float odR = 0.0;
-    float odM = 0.0;
-
-    // Primary ray march
-    float t = marchStart;
-    for (int i = 0; i < 16; i++) {
-      if (i >= uSteps) break;
-      vec3 pos = rayOrigin + rayDir * (t + stepSize * 0.5);
-      float h = length(pos) - uPlanetRadius;
-      float hr = max(h / (uPlanetRadius * uHr), 0.0);
-      float hm = max(h / (uPlanetRadius * uHm), 0.0);
-      float dR = exp(-hr) * stepSize;
-      float dM = exp(-hm) * stepSize;
-      odR += dR;
-      odM += dM;
-
-      // Secondary ray march toward sun
-      float sunStepSize = rsi(pos, uSunDirection, uAtmosRadius).y / float(halfSteps);
-      float sOdR = 0.0, sOdM = 0.0;
-      float st = 0.0;
-      for (int j = 0; j < 8; j++) {
-        if (j >= halfSteps) break;
-        vec3 sPos = pos + uSunDirection * (st + sunStepSize * 0.5);
-        float sH = length(sPos) - uPlanetRadius;
-        sOdR += exp(-max(sH / (uPlanetRadius * uHr), 0.0)) * sunStepSize;
-        sOdM += exp(-max(sH / (uPlanetRadius * uHm), 0.0)) * sunStepSize;
-        st += sunStepSize;
-      }
-
-      vec3 attn = exp(-(uBetaM * (odM + sOdM) + uBetaR * (odR + sOdR)));
-      totalR += dR * attn;
-      totalM += dM * attn;
-
-      t += stepSize;
-    }
-
-    vec3 scatter = uSunIntensity * (phaseR * uBetaR * totalR + phaseM * uBetaM * totalM);
-
-    // Optical depth for alpha (how opaque the atmosphere is along this ray)
-    float totalOd = dot(uBetaR, vec3(odR)) / 3.0 + uBetaM * odM;
-    float alpha = 1.0 - exp(-totalOd * 2.0);
-
-    gl_FragColor = vec4(scatter, clamp(alpha, 0.0, 1.0));
-  }
-`;
-
 export function createScatteringMaterial(
   params: ScatteringParams,
   fallbackDayColor: THREE.Color,
   fallbackTwilightColor: THREE.Color,
   fallbackIntensity: number,
   planetRadius: number,
-): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
-    vertexShader: scatteringVertex,
-    fragmentShader: scatteringFragment,
-    transparent: true,
-    depthWrite: false,
-    side: THREE.BackSide,
-    uniforms: {
-      uSunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
-      uPlanetCenter: { value: new THREE.Vector3(0, 0, 0) },
-      uPlanetRadius: { value: planetRadius },
-      uAtmosRadius: { value: planetRadius * params.atmosphereScale },
-      uBetaR: { value: params.betaRayleigh.clone() },
-      uBetaM: { value: params.betaMie },
-      uHr: { value: params.scaleHeightR },
-      uHm: { value: params.scaleHeightM },
-      uMieG: { value: params.mieG },
-      uSunIntensity: { value: params.sunIntensity },
-      uSteps: { value: 0 }, // start in fallback, useFrame sets LOD
-      // Fallback uniforms
-      uAtmosDayColor: { value: fallbackDayColor },
-      uAtmosTwilightColor: { value: fallbackTwilightColor },
-      uFallbackIntensity: { value: fallbackIntensity },
-      uShellFalloff: { value: 1.25 },
-      uShellInner: { value: 0.0 },
-    },
+): UniformMaterial {
+  const uniforms = toUniformNodes({
+    uSunDirection: { value: new THREE.Vector3(1, 0.5, 0.8).normalize() },
+    uPlanetCenter: { value: new THREE.Vector3(0, 0, 0) },
+    uPlanetRadius: { value: planetRadius },
+    uAtmosRadius: { value: planetRadius * params.atmosphereScale },
+    uBetaR: { value: params.betaRayleigh.clone() },
+    uBetaM: { value: params.betaMie },
+    uHr: { value: params.scaleHeightR },
+    uHm: { value: params.scaleHeightM },
+    uMieG: { value: params.mieG },
+    uSunIntensity: { value: params.sunIntensity },
+    // Fallback uniforms
+    uAtmosDayColor: { value: fallbackDayColor },
+    uAtmosTwilightColor: { value: fallbackTwilightColor },
+    uFallbackIntensity: { value: fallbackIntensity },
+    uShellFalloff: { value: 1.25 },
+    uShellInner: { value: 0.0 },
   });
+  // 0 = fallback, 8 = reduced, 16 = full ray-march (set per frame by the LOD logic) — an int loop bound
+  uniforms.uSteps = TSL.uniform(0, "int");
+
+  const { varying, positionWorld, modelNormalMatrix, normalGeometry } = TSL as any;
+  const varyings = {
+    vNormal: varying(modelNormalMatrix.mul(normalGeometry).normalize(), "vNormal"),
+    vWorldPosition: varying(positionWorld, "vWorldPosition"),
+  };
+
+  const frag = buildScatteringFragment({ ...TSL, reference: (_p: string, _t: string, n: unknown) => n }, uniforms, varyings, {});
+  const mat = new THREE.NodeMaterial() as UniformMaterial;
+  mat.transparent = true;
+  mat.depthWrite = false;
+  mat.side = THREE.BackSide;
+  mat.fragmentNode = frag.fragMain();
+  mat.uniforms = uniforms;
+  return mat;
 }

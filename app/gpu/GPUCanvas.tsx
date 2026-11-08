@@ -4,6 +4,9 @@ import * as THREE from "three/webgpu";
 // Register every three/webgpu export (node materials, sprite/points node
 // materials, …) so they are usable as JSX elements and `args`-free classes.
 extend(THREE as unknown as Record<string, new (...args: never[]) => unknown>);
+// Dev only: attach JS stack traces to TSL build errors (otherwise "Invalid generated code" has no origin)
+if (import.meta.env.DEV) (THREE.Node as unknown as { captureStackTrace: boolean }).captureStackTrace = true;
+
 // R3F 9 exposes THREE.Line as <threeLine> (plain <line> clashes with the SVG element).
 extend({ ThreeLine: THREE.Line } as unknown as Record<string, new (...args: never[]) => unknown>);
 
@@ -36,6 +39,11 @@ export function GPUCanvas({ gpu = {}, ...props }: GPUCanvasProps) {
       flat={output === "raw"}
       linear={output === "raw"}
       {...props}
+      onCreated={(state) => {
+        // Dev only: handy for poking at the renderer from the console
+        if (import.meta.env.DEV) (window as unknown as { __r3f?: unknown }).__r3f = state;
+        props.onCreated?.(state);
+      }}
       gl={async (defaults) => {
         const renderer = new THREE.WebGPURenderer({
           canvas: defaults.canvas as HTMLCanvasElement,
