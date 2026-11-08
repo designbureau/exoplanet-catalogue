@@ -290,8 +290,17 @@ export function buildShaderParams(catType: CatType, seed: THREE.Vector3): Shader
 
 // ─── renderer ────────────────────────────────────────────────────────────────
 /** Exported for use by the bake route — renders arbitrary ShaderParams. */
+// The shared renderer's render target is global state, so concurrent async renders
+// would interleave and clobber each other — run them strictly one at a time.
+let _queue: Promise<unknown> = Promise.resolve();
+function enqueue<T>(job: () => Promise<T>): Promise<T> {
+  const run = _queue.then(job, job);
+  _queue = run.catch(() => undefined);
+  return run;
+}
+
 export function renderOffscreenFromParams(params: ShaderParams, size: number): Promise<string> {
-  return renderOffscreen(params, size);
+  return enqueue(() => renderOffscreen(params, size));
 }
 
 async function renderOffscreen(params: ShaderParams, size: number): Promise<string> {
@@ -407,7 +416,7 @@ export function renderPlanetSnapshot(
         // downsampling instead of rendering at native pixel size and looking
         // blocky. Result is cached, so the cost is paid once per unique dot.
         const renderSize = Math.max(size * 4, 256);
-        renderOffscreen(params, renderSize)
+        renderOffscreenFromParams(params, renderSize)
           .then((url) => {
             CACHE.set(key, url);
             resolve(url);
