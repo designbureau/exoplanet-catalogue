@@ -8,6 +8,6 @@ export default defineConfig({
     // Pre-bundle at startup so the dev server doesn't re-optimize mid-session
     // (lazy re-optimization reloads can strand pages on mixed dep-chunk
     // generations — two copies of React and an invalid-hook crash).
-    include: ["react-markdown", "remark-gfm", "three", "@react-three/fiber"],
+    include: ["react-markdown", "remark-gfm", "three", "three/webgpu", "three/tsl", "@react-three/fiber"],
   },
 });
